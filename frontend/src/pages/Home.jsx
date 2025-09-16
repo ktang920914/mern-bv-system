@@ -15,6 +15,7 @@ import Productivity from "../components/Productivity"
 import useThemeStore from "../themeStore"
 import Planning from "../components/Planning"
 import Oee from "../components/Oee"
+import Outputs from "../components/Outputs"
 
 
 const Home = () => {
@@ -49,6 +50,7 @@ const Home = () => {
           { tab === 'Productivity' && <Productivity/>}
           { tab === 'Planning' && <Planning/>}
           { tab === 'Oee' && <Oee/>}
+          { tab === 'Outputs' && <Outputs/>}
           { tab === 'Suppliers' && <Suppliers/>}
           { tab === 'Orders' && <Orders/>}
           { tab === 'Costs' && <Costs/>}

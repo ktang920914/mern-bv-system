@@ -97,7 +97,9 @@ const DashSidebar = () => {
                 <Link to='/?tab=Oee'>
                   <SidebarItem active={tab === 'Oee'} as='div'>OEEs</SidebarItem>
                 </Link>
-                <SidebarItem href="#">Outputs</SidebarItem>
+                <Link to='/?tab=Outputs'>
+                  <SidebarItem active={tab === 'Outputs'} as='div'>Outputs</SidebarItem>
+                </Link>
               </SidebarCollapse>
               
               <SidebarCollapse 
