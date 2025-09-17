@@ -97,6 +97,14 @@ const Oee = () => {
                     <Popover
                         content={
                             <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">Extruder:</p>
+                                <p className="text-xs mb-2">{job.code}</p>
+                                <p className="font-semibold text-sm">Prod start:</p>
+                                <p className="text-xs mb-2">{job.starttime}</p>
+                                <p className="font-semibold text-sm">Prod end:</p>
+                                <p className="text-xs mb-2">{job.endtime}</p>
+                                <p className="font-semibold text-sm">Order date:</p>
+                                <p className="text-xs mb-2">{job.orderdate}</p>
                                 <p className="font-semibold text-sm">Colour code:</p>
                                 <p className="text-xs mb-2">{job.colourcode}</p>
                                 <p className="font-semibold text-sm">Material:</p>
