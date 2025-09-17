@@ -6,6 +6,34 @@ import { HiX, HiCheck } from 'react-icons/hi'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
+// 导入 Chart.js 相关
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js'
+import { Bar, Line, Pie } from 'react-chartjs-2'
+
+// 注册 Chart.js 组件
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+)
+
 const Outputs = () => {
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
@@ -19,6 +47,8 @@ const Outputs = () => {
     const [currentPage,setCurrentPage] = useState(1)
     const [itemsPage] = useState(7)
     const [selectedCodes, setSelectedCodes] = useState([])
+    const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
+    const [selectedDataType, setSelectedDataType] = useState('totaloutput') // 默认显示总产出数据
 
     // 可用的 Job Code 选项
     const jobCodeOptions = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']
@@ -51,6 +81,13 @@ const Outputs = () => {
         { value: 'oee', label: 'OEE' }
     ]
 
+    // 图表类型选项
+    const chartTypes = [
+        { value: 'bar', label: 'Bar' },
+        { value: 'line', label: 'Line' },
+        { value: 'pie', label: 'Pie' }
+    ]
+
     useEffect(() => {
         // 组件加载时自动获取当前年份的所有数据
         fetchOutputsForYear(new Date().getFullYear().toString())
@@ -81,9 +118,20 @@ const Outputs = () => {
                     const data = await res.json()
                     // 确保数据格式正确
                     if (Array.isArray(data)) {
-                        allOutputs.push(...data)
+                        // 为每个数据项添加标识符
+                        const dataWithType = data.map(item => ({
+                            ...item,
+                            dataType: dataType.value,
+                            dataTypeLabel: dataType.label
+                        }))
+                        allOutputs.push(...dataWithType)
                     } else if (typeof data === 'object') {
-                        allOutputs.push(data)
+                        // 为单个数据对象添加标识符
+                        allOutputs.push({
+                            ...data,
+                            dataType: dataType.value,
+                            dataTypeLabel: dataType.label
+                        })
                     }
                 } else {
                     console.error(`Failed to fetch data for ${dataType.value}:`, res.status)
@@ -101,6 +149,100 @@ const Outputs = () => {
             setLoading(false)
         }
     }
+
+    // 准备图表数据
+    const prepareChartData = () => {
+        if (outputs.length === 0) {
+            console.log('No outputs data available');
+            return null;
+        }
+
+        console.log('Available outputs:', outputs);
+        console.log('Looking for data type:', selectedDataType);
+
+        // 获取当前选中的数据类型的输出
+        const selectedData = outputs.find(output => 
+            output.dataType === selectedDataType
+        );
+
+        console.log('Found data for chart:', selectedData);
+
+        if (!selectedData) {
+            console.log('No data found for selected data type');
+            return null;
+        }
+
+        // 月份标签
+        const labels = monthFields.map(month => month.name);
+        
+        // 数据值
+        const data = monthFields.map(month => {
+            const value = selectedData[month.key];
+            // 确保返回数字类型
+            const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+            console.log(`Month ${month.key}:`, value, '->', numericValue);
+            return numericValue;
+        });
+
+        console.log('Chart data values:', data);
+
+        // 图表配置
+        const options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}`,
+                    font: {
+                        size: 16
+                    }
+                },
+            },
+            scales: selectedChartType !== 'pie' ? {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Value'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                }
+            } : undefined
+        };
+
+        // 图表数据
+        const chartData = {
+            labels,
+            datasets: [
+                {
+                    label: dataTypes.find(dt => dt.value === selectedDataType)?.label,
+                    data,
+                    backgroundColor: selectedChartType === 'pie' 
+                        ? [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+                          ]
+                        : 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    fill: selectedChartType === 'line',
+                    tension: selectedChartType === 'line' ? 0.1 : undefined
+                },
+            ],
+        };
+
+        return { options, data: chartData };
+    };
 
     const generateExcelReport = () => {
         if (outputs.length === 0) {
@@ -131,7 +273,7 @@ const Outputs = () => {
             
             // 添加数据行
             outputs.forEach(output => {
-                const rowData = [output.material || 'Unknown']
+                const rowData = [output.dataTypeLabel || 'Unknown']
                 
                 monthFields.forEach(month => {
                     const value = output[month.key] || 0
@@ -222,7 +364,7 @@ const Outputs = () => {
     }
 
     const filteredOutputs = outputs.filter(output => 
-        output.material && output.material.toLowerCase().includes(searchTerm)
+        output.dataTypeLabel && output.dataTypeLabel.toLowerCase().includes(searchTerm)
     )
 
     const handlePageChange = (page) => {
@@ -241,6 +383,9 @@ const Outputs = () => {
         if (value === undefined || value === null) return '0';
         return typeof value === 'number' ? value.toFixed(2) : value;
     }
+
+    // 获取图表数据
+    const chartData = prepareChartData();
 
     return (
         <div>
@@ -336,6 +481,66 @@ const Outputs = () => {
                 </div>
             </div>
 
+            {/* 图表控制区域 */}
+            {outputs.length > 0 && (
+                <div className="mb-6 p-4 bg-white rounded-lg shadow dark:bg-gray-800">
+                    <div className="flex flex-wrap items-center gap-4 mb-4">
+                        <Label className="font-semibold">Chart Options:</Label>
+                        
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="dataType" className="text-sm">Data Type:</Label>
+                            <select
+                                id="dataType"
+                                value={selectedDataType}
+                                onChange={(e) => setSelectedDataType(e.target.value)}
+                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                            >
+                                {dataTypes.map(type => (
+                                    <option key={type.value} value={type.value}>
+                                        {type.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="chartType" className="text-sm">Chart Type:</Label>
+                            <select
+                                id="chartType"
+                                value={selectedChartType}
+                                onChange={(e) => setSelectedChartType(e.target.value)}
+                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                            >
+                                {chartTypes.map(type => (
+                                    <option key={type.value} value={type.value}>
+                                        {type.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* 图表显示区域 */}
+                    {chartData ? (
+                        <div className="h-80">
+                            {selectedChartType === 'bar' && (
+                                <Bar options={chartData.options} data={chartData.data} />
+                            )}
+                            {selectedChartType === 'line' && (
+                                <Line options={chartData.options} data={chartData.data} />
+                            )}
+                            {selectedChartType === 'pie' && (
+                                <Pie options={chartData.options} data={chartData.data} />
+                            )}
+                        </div>
+                    ) : (
+                        <div className="h-80 flex items-center justify-center text-gray-500">
+                            No chart data available for selected data type
+                        </div>
+                    )}
+                </div>
+            )}
+
             {loading ? (
                 <div className="text-center py-8">
                     <Spinner size="xl" />
@@ -357,7 +562,7 @@ const Outputs = () => {
                             {currentOutputs.map((output, index) => ( 
                                 <TableRow key={output._id || index}> 
                                     <TableCell className="font-medium text-gray-900 dark:text-white">
-                                        {output.material || 'Unknown'} 
+                                        {output.dataTypeLabel || 'Unknown'} 
                                     </TableCell>
                                     {monthFields.map(month => (
                                         <TableCell key={month.key}>
