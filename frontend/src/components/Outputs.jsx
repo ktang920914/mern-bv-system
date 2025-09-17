@@ -1,7 +1,8 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge } from 'flowbite-react'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import useUserstore from '../store'
+import { HiX } from 'react-icons/hi'
 
 const Outputs = () => {
     const {currentUser} = useUserstore()
@@ -15,6 +16,10 @@ const Outputs = () => {
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
     const [itemsPage] = useState(7)
+    const [selectedCodes, setSelectedCodes] = useState([])
+
+    // 可用的 Job Code 选项
+    const jobCodeOptions = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']
 
     const monthFields = [
         { key: 'jan', name: 'Jan' },
@@ -58,10 +63,28 @@ const Outputs = () => {
             const allOutputs = []
             
             for (const dataType of dataTypes) {
-                const res = await fetch(`/api/output/calculate?year=${year}&data=${dataType.value}`)
+                // 构建查询参数
+                const params = new URLSearchParams({
+                    year: year,
+                    data: dataType.value
+                })
+                
+                // 如果选择了特定的 Job Code，添加到查询参数
+                if (selectedCodes.length > 0) {
+                    params.append('codes', selectedCodes.join(','))
+                }
+                
+                const res = await fetch(`/api/output/calculate?${params}`)
                 if (res.ok) {
                     const data = await res.json()
-                    allOutputs.push(...data)
+                    // 确保数据格式正确
+                    if (Array.isArray(data)) {
+                        allOutputs.push(...data)
+                    } else if (typeof data === 'object') {
+                        allOutputs.push(data)
+                    }
+                } else {
+                    console.error(`Failed to fetch data for ${dataType.value}:`, res.status)
                 }
             }
             
@@ -71,6 +94,7 @@ const Outputs = () => {
             
         } catch (error) {
             setErrorMessage('Error fetching data: ' + error.message)
+            console.error('Fetch error:', error)
         } finally {
             setLoading(false)
         }
@@ -84,6 +108,18 @@ const Outputs = () => {
 
     const handleYearInputChange = (e) => {
         setYearInput(e.target.value.trim())
+    }
+
+    const handleCodeSelection = (code) => {
+        if (selectedCodes.includes(code)) {
+            setSelectedCodes(selectedCodes.filter(c => c !== code))
+        } else {
+            setSelectedCodes([...selectedCodes, code])
+        }
+    }
+
+    const clearSelectedCodes = () => {
+        setSelectedCodes([])
     }
 
     const handleSubmit = async (e) => {
@@ -139,6 +175,62 @@ const Outputs = () => {
                 </div>
             </div>
 
+            {/* Job Code 筛选器 */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg dark:bg-gray-800">
+                <div className="flex items-center justify-between mb-3">
+                    <Label className="text-lg font-semibold">Filter by Job Code</Label>
+                    {selectedCodes.length > 0 && (
+                        <Button size="xs" color="light" onClick={clearSelectedCodes}>
+                            Clear All
+                        </Button>
+                    )}
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedCodes.map(code => (
+                        <Badge key={code} color="info" className="flex items-center gap-1">
+                            {code}
+                            <HiX 
+                                className="cursor-pointer" 
+                                onClick={() => handleCodeSelection(code)} 
+                            />
+                        </Badge>
+                    ))}
+                    {selectedCodes.length === 0 && (
+                        <span className="text-gray-500 text-sm">All codes selected</span>
+                    )}
+                </div>
+                
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    {jobCodeOptions.map(code => (
+                        <Button
+                            key={code}
+                            size="sm"
+                            color={selectedCodes.includes(code) ? "blue" : "gray"}
+                            onClick={() => handleCodeSelection(code)}
+                            className="text-center"
+                        >
+                            {code}
+                        </Button>
+                    ))}
+                </div>
+                
+                <div className="mt-4">
+                    <Button 
+                        onClick={() => fetchOutputsForYear(displayYear)}
+                        disabled={loading}
+                    >
+                        {loading ? <Spinner size="sm" /> : 'Apply Filters'}
+                    </Button>
+                </div>
+                
+                {selectedCodes.length > 0 && (
+                    <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                        Showing data for: {selectedCodes.join(' + ')}
+                    </div>
+                )}
+            </div>
+
             {loading ? (
                 <div className="text-center py-8">
                     <Spinner size="xl" />
@@ -190,6 +282,11 @@ const Outputs = () => {
             ) : showTable ? (
                 <div className="text-center py-8">
                     <p className="text-gray-500">No data available for {displayYear}.</p>
+                    {selectedCodes.length > 0 && (
+                        <p className="text-gray-400 text-sm mt-2">
+                            Try selecting different job codes or year
+                        </p>
+                    )}
                 </div>
             ) : null}
 

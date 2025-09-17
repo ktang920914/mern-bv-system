@@ -16,19 +16,28 @@ const dataTypes = [
 
 export const calculateOutputs = async (req, res, next) => {
     try {
-        const { year, data } = req.query;
+        const { year, data, codes } = req.query;
         
         if (!year || !data) {
             return res.status(400).json({ error: 'Year and data parameters are required' });
         }
         
-        // 获取指定年份的所有Job数据
-        const jobs = await Job.find({
+        // 构建查询条件
+        let query = {
             endtime: {
                 $exists: true,
                 $ne: null
             }
-        });
+        };
+        
+        // 如果提供了 Job Code，添加到查询条件
+        if (codes && codes !== '') {
+            const codeArray = codes.split(',');
+            query.code = { $in: codeArray };
+        }
+        
+        // 获取符合条件的Job数据
+        const jobs = await Job.find(query);
         
         // 过滤出指定年份的jobs
         const yearJobs = jobs.filter(job => {
@@ -36,6 +45,17 @@ export const calculateOutputs = async (req, res, next) => {
             const endTime = new Date(job.endtime);
             return endTime.getFullYear() === parseInt(year);
         });
+        
+        // 如果没有找到数据
+        if (yearJobs.length === 0) {
+            return res.status(200).json([{
+                year,
+                material: dataTypes.find(dt => dt.value === data)?.label || data,
+                jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0,
+                jul: 0, aug: 0, sep: 0, oct: 0, nov: 0, dec: 0,
+                total: 0
+            }]);
+        }
         
         // 初始化月度数据
         const monthlyData = {
@@ -124,6 +144,7 @@ export const calculateOutputs = async (req, res, next) => {
         
         res.status(200).json([output]);
     } catch (error) {
+        console.error('Error in calculateOutputs:', error);
         next(error);
     }
 };
