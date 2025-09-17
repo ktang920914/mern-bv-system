@@ -111,6 +111,19 @@ const Outputs = () => {
         try {
             const worksheetData = []
             
+            // 添加报告标题和筛选信息
+            worksheetData.push(['Outputs Report'])
+            worksheetData.push([`Year: ${displayYear}`])
+            
+            // 添加筛选的 Job Code 信息
+            if (selectedCodes.length > 0) {
+                worksheetData.push([`Filtered Job Codes: ${selectedCodes.join(', ')}`])
+            } else {
+                worksheetData.push(['Filtered Job Codes: All codes selected'])
+            }
+            
+            worksheetData.push([]) // 空行
+            
             // 添加标题行
             const headers = ['Data Type', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Total']
@@ -143,6 +156,12 @@ const Outputs = () => {
             ]
             worksheet['!cols'] = colWidths
             
+            // 合并标题单元格
+            if (!worksheet['!merges']) worksheet['!merges'] = [];
+            worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }); // 合并标题行
+            worksheet['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }); // 合并年份行
+            worksheet['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }); // 合并筛选信息行
+            
             // 添加工作表到工作簿
             XLSX.utils.book_append_sheet(workbook, worksheet, `Outputs ${displayYear}`)
             
@@ -150,7 +169,13 @@ const Outputs = () => {
             const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
             const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             
-            saveAs(data, `Outputs_Report_${displayYear}.xlsx`)
+            // 生成文件名，包含筛选的 Job Code
+            let fileName = `Outputs_Report_${displayYear}`
+            if (selectedCodes.length > 0) {
+                fileName += `_${selectedCodes.join('_')}`
+            }
+            
+            saveAs(data, `${fileName}.xlsx`)
             
         } catch (error) {
             setErrorMessage('Error generating Excel report: ' + error.message)
