@@ -19,7 +19,7 @@ export const job = async (req, res, next) => {
 
         const wastage = 0 - (Number(totalorder) || 0);
         
-        // 计算operatingtime的算法
+        // 计算operatingtime的算法（不再加上停机时间）
         const calculateOperatingTime = (start, end, downtime) => {
             // 将字符串时间转换为Date对象
             const startDate = new Date(start);
@@ -31,8 +31,7 @@ export const job = async (req, res, next) => {
             // 转换为分钟
             const minutesDiff = timeDiff / (1000 * 60);
             
-            // 加上停机时间
-            return minutesDiff + (Number(downtime) || 0);
+            return minutesDiff - (Number(downtime) || 0);
         };
         
         // 计算prodleadtime的算法（从orderdate到endtime的天数）
@@ -51,8 +50,8 @@ export const job = async (req, res, next) => {
         return roundedDaysDiff;
         };
         
-        // 计算operatingtime
-        const operatingtime = calculateOperatingTime(starttime, endtime, downtime);
+        // 计算operatingtime（不加停机时间）
+        const operatingtime = calculateOperatingTime(starttime, endtime);
         
         // 计算prodleadtime
         const prodleadtime = calculatePlanProdTime(orderdate, endtime);
@@ -210,8 +209,8 @@ export const updateJob = async (req,res,next) => {
         const productivity = await Productivity.findOne({ lotno: oldJob.lotno });
         const planning = await Planning.findOne({ lotno: oldJob.lotno });
         
-        // 计算operatingtime的算法
-        const calculateOperatingTime = (start, end, downtime) => {
+        // 计算operatingtime的算法（不再加上停机时间）
+        const calculateOperatingTime = (start, end) => {
             // 将字符串时间转换为Date对象
             const startDate = new Date(start);
             const endDate = new Date(end);
@@ -222,8 +221,7 @@ export const updateJob = async (req,res,next) => {
             // 转换为分钟
             const minutesDiff = timeDiff / (1000 * 60);
             
-            // 加上停机时间
-            return minutesDiff + (Number(downtime) || 0);
+            return minutesDiff; // 直接返回时间差，不加停机时间
         };
         
         // 计算prodleadtime的算法（从orderdate到endtime的天数）
@@ -242,15 +240,10 @@ export const updateJob = async (req,res,next) => {
             return roundedDaysDiff;
         };
         
-        // 获取停机时间（从productivity或planning）
-        const downtime = productivity ? Number(productivity.downtime) || 0 : 
-                         planning ? Number(planning.downtime) || 0 : 0;
-        
-        // 计算新的operatingtime
+        // 计算新的operatingtime（不加停机时间）
         const operatingtime = calculateOperatingTime(
             req.body.starttime, 
-            req.body.endtime, 
-            downtime
+            req.body.endtime
         );
         
         // 计算新的prodleadtime（如果endtime或orderdate有变化）

@@ -1,9 +1,9 @@
 import express from 'express'
 import { verifyToken } from '../utils/verifyUser.js'
-import { getOutputs } from '../controllers/output.controller.js'
+import { calculateOutputs } from '../controllers/output.controller.js';
 
 const router = express.Router()
 
-router.get('/getoutputs', verifyToken, getOutputs)
+router.get('/calculate', verifyToken, calculateOutputs);
 
 export default router

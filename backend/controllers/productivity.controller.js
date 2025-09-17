@@ -56,7 +56,7 @@ export const updateProductivity = async (req, res, next) => {
             const minutesDiff = timeDiff / (1000 * 60);
             
             // 加上停机时间
-            return minutesDiff + (Number(downtime) || 0);
+            return minutesDiff - (Number(downtime) || 0);
         };
         
         // 计算operatingtime

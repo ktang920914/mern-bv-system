@@ -7,11 +7,11 @@ const Outputs = () => {
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
-    const [openModalCreateOutput,setOpenModalCreateOutput] = useState(false)
+    const [openModal,setOpenModal] = useState(false)
     const [outputs,setOutputs] = useState([])
     const [showTable, setShowTable] = useState(false)
     const [displayYear, setDisplayYear] = useState(new Date().getFullYear().toString())
-    const [formData, setFormData] = useState({year: new Date().getFullYear().toString()})
+    const [yearInput, setYearInput] = useState(new Date().getFullYear().toString())
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
     const [itemsPage] = useState(7)
@@ -34,6 +34,7 @@ const Outputs = () => {
     const dataTypes = [
         { value: 'totalorder', label: 'Total Order' },
         { value: 'totaloutput', label: 'Total Output' },
+        { value: 'totalmeter', label: 'Total Meter' },
         { value: 'wastage', label: 'Wastage' },
         { value: 'downtime', label: 'Downtime' },
         { value: 'operatingtime', label: 'Operating Time' },
@@ -44,59 +45,61 @@ const Outputs = () => {
     ]
 
     useEffect(() => {
-        const fetchOutputs = async () => {
-            try {
-                const res = await fetch('/api/review/getoutputs')
-                const data = await res.json()
-                if (res.ok) {
-                    const currentYear = new Date().getFullYear().toString()
-                    const filteredOutputs = data.filter(output => output.year === currentYear)
-                    setOutputs(filteredOutputs)
-                    setDisplayYear(currentYear) 
-                    setShowTable(true)
-                }
-            } catch (error) {
-                console.error('Error fetching initial costs:', error)
-            }
-        }
-        fetchOutputs()
-    }, [currentUser._id]) 
+        // 组件加载时自动获取当前年份的所有数据
+        fetchOutputsForYear(new Date().getFullYear().toString())
+    }, [currentUser._id])
 
-    const handleCreateOutput = () => {
-        setOpenModalCreateOutput(!openModalCreateOutput)
-        setErrorMessage(null)
-        setLoading(false)
-        setFormData({year: new Date().getFullYear().toString()})
+    const fetchOutputsForYear = async (year) => {
+        try {
+            setLoading(true)
+            setErrorMessage(null)
+            
+            // 为每种数据类型获取数据
+            const allOutputs = []
+            
+            for (const dataType of dataTypes) {
+                const res = await fetch(`/api/output/calculate?year=${year}&data=${dataType.value}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    allOutputs.push(...data)
+                }
+            }
+            
+            setOutputs(allOutputs)
+            setDisplayYear(year)
+            setShowTable(true)
+            
+        } catch (error) {
+            setErrorMessage('Error fetching data: ' + error.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const handleChange = (e) => {
-        setFormData({...formData, [e.target.id]: e.target.value.trim()})
+    const handleYearChange = () => {
+        setOpenModal(!openModal)
+        setYearInput(displayYear)
+        setErrorMessage(null)
+    }
+
+    const handleYearInputChange = (e) => {
+        setYearInput(e.target.value.trim())
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        try {
-            const res = await fetch('/api/review/getoutputs')
-            const data = await res.json()
-            if(data.message === false){
-                setErrorMessage(data.message)
-                setLoading(true)
-            }
-            if (res.ok) {
-                const filteredOutputs = data.filter(output => output.year === formData.year)
-                setOutputs(filteredOutputs)
-                setShowTable(true)
-                setOpenModalCreateOutput(false)
-                setDisplayYear(formData.year)
-            }
-        } catch (error) {
-            setErrorMessage('Error fetching costs: ' + error.message)
+        if (!yearInput) {
+            setErrorMessage('Please enter a year')
+            return
         }
+        
+        await fetchOutputsForYear(yearInput)
+        setOpenModal(false)
     }
 
     const handleSearch = (e) => {
-      setSearchTerm(e.target.value.toLowerCase())
-      setCurrentPage(1)
+        setSearchTerm(e.target.value.toLowerCase())
+        setCurrentPage(1)
     }
 
     const filteredOutputs = outputs.filter(output => 
@@ -114,14 +117,26 @@ const Outputs = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+    // 格式化数字显示（保留2位小数）
+    const formatNumber = (value) => {
+        if (value === undefined || value === null) return '0';
+        return typeof value === 'number' ? value.toFixed(2) : value;
+    }
+
     return (
         <div>
             <div className='flex justify-between items-center mb-4'>
                 <h1 className='text-2xl font-semibold'>Outputs {displayYear}</h1>
                 <div className='flex gap-2'>
-                  <TextInput placeholder='Enter searching' onChange={handleSearch}/>
+                    <TextInput 
+                        placeholder='Search data type...' 
+                        onChange={handleSearch}
+                        disabled={!showTable}
+                    />
+                    <Button className='cursor-pointer' onClick={handleYearChange}>
+                        Change Year
+                    </Button>
                 </div>
-                <Button className='cursor-pointer' onClick={handleCreateOutput}>Create Output</Button>
             </div>
 
             {loading ? (
@@ -129,12 +144,12 @@ const Outputs = () => {
                     <Spinner size="xl" />
                     <p className="mt-2">Loading outputs...</p>
                 </div>
-            ) : showTable && (
+            ) : showTable && outputs.length > 0 ? (
                 <>
                     <Table hoverable className='mb-6'>
                         <TableHead>
                             <TableRow>
-                                <TableHeadCell>Material</TableHeadCell>
+                                <TableHeadCell>Data Type</TableHeadCell>
                                 {monthFields.map(month => (
                                     <TableHeadCell key={month.key}>{month.name}</TableHeadCell>
                                 ))}
@@ -149,11 +164,11 @@ const Outputs = () => {
                                     </TableCell>
                                     {monthFields.map(month => (
                                         <TableCell key={month.key}>
-                                            {output[month.key] || 0} 
+                                            {formatNumber(output[month.key])}
                                         </TableCell>
                                     ))}
                                     <TableCell className="font-semibold">
-                                        {output.total || 0}
+                                        {formatNumber(output.total)}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -172,7 +187,11 @@ const Outputs = () => {
                         />
                     </div>
                 </>
-            )}
+            ) : showTable ? (
+                <div className="text-center py-8">
+                    <p className="text-gray-500">No data available for {displayYear}.</p>
+                </div>
+            ) : null}
 
             {errorMessage && (
                 <Alert color='failure' className='mt-4 font-semibold'>
@@ -180,10 +199,10 @@ const Outputs = () => {
                 </Alert>
             )}
 
-            <Modal show={openModalCreateOutput} size="md" onClose={handleCreateOutput} popup>
+            <Modal show={openModal} size="md" onClose={handleYearChange} popup>
                 <ModalHeader className="border-b border-gray-200">
                     <div className="text-xl font-semibold text-gray-800 dark:text-white px-4 py-2">
-                        Create Outputs
+                        Change Year
                     </div>
                 </ModalHeader>
                 <ModalBody className="p-6">
@@ -192,35 +211,20 @@ const Outputs = () => {
                             <div className="mb-6">
                                 <Label className="text-gray-900 dark:text-white">Year</Label>
                                 <TextInput 
-                                    id="year" 
                                     type="number"
                                     placeholder="Enter year" 
-                                    value={formData.year}
-                                    onChange={handleChange}
+                                    value={yearInput}
+                                    onChange={handleYearInputChange}
                                     required
+                                    min="2000"
+                                    max="2100"
                                     className="w-full" 
                                 />
-                            </div>
-
-                            <div className="mb-6">
-                                <Label className="text-gray-900 dark:text-white">Data</Label>
-                                <Select
-                                    id="data"
-                                    onChange={handleChange}
-                                    required
-                                >
-                                    <option></option>
-                                    {dataTypes.map(dataType => (
-                                        <option key={dataType.value} value={dataType.value}>
-                                            {dataType.label}
-                                        </option>
-                                    ))}
-                                </Select>
                             </div>
                             
                             <div className='mb-4 block'>
                                 <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
-                                    {loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}
+                                    {loading ? <Spinner size='sm'/> : 'LOAD DATA'}
                                 </Button>
                             </div>
                         </form>

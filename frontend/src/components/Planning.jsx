@@ -253,8 +253,8 @@ const Planning = () => {
                         <Popover
                             content={
                                 <div className="p-3 max-w-xs">
-                                    <p className="font-semibold text-sm">{`(Prod end - Prod Start) + Downtime = Operatingtime`}</p>
-                                    <p className="text-xs mb-2">{`(${planning.endtime} - ${planning.starttime}) + ${planning.downtime} = ${planning.operatingtime}`}</p>
+                                    <p className="font-semibold text-sm">{`(Prod end - Prod Start) - Downtime = Operatingtime`}</p>
+                                    <p className="text-xs mb-2">{`(${planning.endtime} - ${planning.starttime}) - ${planning.downtime} = ${planning.operatingtime}`}</p>
                                 </div>
                             }
                                 trigger='hover'

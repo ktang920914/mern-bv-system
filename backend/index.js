@@ -35,7 +35,7 @@ app.use('/api/cost', costRoute)
 app.use('/api/analysis', jobRoute)
 app.use('/api/output', productivityRoute)
 app.use('/api/view', planningRoute)
-app.use('/api/review', outputRoute)
+app.use('/api/output', outputRoute)
 
 app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')
