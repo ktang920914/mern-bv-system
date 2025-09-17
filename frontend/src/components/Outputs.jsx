@@ -1,8 +1,8 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge, Checkbox } from 'flowbite-react'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import useUserstore from '../store'
-import { HiX } from 'react-icons/hi'
+import { HiX, HiCheck } from 'react-icons/hi'
 
 const Outputs = () => {
     const {currentUser} = useUserstore()
@@ -172,13 +172,16 @@ const Outputs = () => {
                     <Button className='cursor-pointer' onClick={handleYearChange}>
                         Change Year
                     </Button>
+                    <Button color='blue' outline className='cursor-pointer'>
+                        Report
+                    </Button>
                 </div>
             </div>
 
-            {/* Job Code 筛选器 */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg dark:bg-gray-800">
-                <div className="flex items-center justify-between mb-3">
-                    <Label className="text-lg font-semibold">Filter by Job Code</Label>
+            {/* Job Code 筛选器 - 单行显示 */}
+            <div className="mb-3 p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
+                <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-semibold">Filter by Job Code</Label>
                     {selectedCodes.length > 0 && (
                         <Button size="xs" color="light" onClick={clearSelectedCodes}>
                             Clear All
@@ -186,49 +189,62 @@ const Outputs = () => {
                     )}
                 </div>
                 
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1 mb-2">
                     {selectedCodes.map(code => (
-                        <Badge key={code} color="info" className="flex items-center gap-1">
+                        <Badge key={code} color="info" className="flex items-center gap-1 py-0.5 px-2 text-xs">
                             {code}
                             <HiX 
-                                className="cursor-pointer" 
+                                className="cursor-pointer text-xs" 
                                 onClick={() => handleCodeSelection(code)} 
                             />
                         </Badge>
                     ))}
                     {selectedCodes.length === 0 && (
-                        <span className="text-gray-500 text-sm">All codes selected</span>
+                        <span className="text-gray-500 text-xs">All codes selected</span>
                     )}
                 </div>
                 
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                {/* 单行显示的 Job Code 选项 */}
+                <div className="flex flex-wrap gap-1 mb-2">
                     {jobCodeOptions.map(code => (
-                        <Button
+                        <div 
                             key={code}
-                            size="sm"
-                            color={selectedCodes.includes(code) ? "blue" : "gray"}
+                            className={`flex items-center p-1 rounded cursor-pointer text-xs ${
+                                selectedCodes.includes(code) 
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                            }`}
                             onClick={() => handleCodeSelection(code)}
-                            className="text-center"
                         >
+                            <div className={`w-3 h-3 flex items-center justify-center rounded-sm border mr-1 ${
+                                selectedCodes.includes(code) 
+                                    ? 'bg-blue-600 border-blue-600' 
+                                    : 'bg-white border-gray-300 dark:bg-gray-600 dark:border-gray-500'
+                            }`}>
+                                {selectedCodes.includes(code) && (
+                                    <HiCheck className="w-2 h-2 text-white" />
+                                )}
+                            </div>
                             {code}
-                        </Button>
+                        </div>
                     ))}
                 </div>
                 
-                <div className="mt-4">
+                <div className="flex items-center gap-2 mt-2">
                     <Button 
+                        size="sm"
                         onClick={() => fetchOutputsForYear(displayYear)}
                         disabled={loading}
                     >
                         {loading ? <Spinner size="sm" /> : 'Apply Filters'}
                     </Button>
+                    
+                    {selectedCodes.length > 0 && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Showing: {selectedCodes.join(' + ')}
+                        </div>
+                    )}
                 </div>
-                
-                {selectedCodes.length > 0 && (
-                    <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                        Showing data for: {selectedCodes.join(' + ')}
-                    </div>
-                )}
             </div>
 
             {loading ? (
