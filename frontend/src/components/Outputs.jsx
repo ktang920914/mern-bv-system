@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 import { useState } from 'react'
 import useUserstore from '../store'
 import { HiX, HiCheck } from 'react-icons/hi'
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 
 const Outputs = () => {
     const {currentUser} = useUserstore()
@@ -100,6 +102,62 @@ const Outputs = () => {
         }
     }
 
+    const generateExcelReport = () => {
+        if (outputs.length === 0) {
+            setErrorMessage('No data to export')
+            return
+        }
+
+        try {
+            const worksheetData = []
+            
+            // 添加标题行
+            const headers = ['Data Type', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Total']
+            worksheetData.push(headers)
+            
+            // 添加数据行
+            outputs.forEach(output => {
+                const rowData = [output.material || 'Unknown']
+                
+                monthFields.forEach(month => {
+                    const value = output[month.key] || 0
+                    rowData.push(typeof value === 'number' ? value.toFixed(2) : value)
+                })
+                
+                const total = output.total || 0
+                rowData.push(typeof total === 'number' ? total.toFixed(2) : total)
+                
+                worksheetData.push(rowData)
+            })
+            
+            // 创建工作簿和工作表
+            const workbook = XLSX.utils.book_new()
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+            
+            // 设置列宽
+            const colWidths = [
+                { wch: 25 }, // Data Type 列
+                ...Array(12).fill({ wch: 10 }), // 月份列
+                { wch: 12 } // Total 列
+            ]
+            worksheet['!cols'] = colWidths
+            
+            // 添加工作表到工作簿
+            XLSX.utils.book_append_sheet(workbook, worksheet, `Outputs ${displayYear}`)
+            
+            // 生成 Excel 文件并下载
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+            const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            
+            saveAs(data, `Outputs_Report_${displayYear}.xlsx`)
+            
+        } catch (error) {
+            setErrorMessage('Error generating Excel report: ' + error.message)
+            console.error('Excel export error:', error)
+        }
+    }
+
     const handleYearChange = () => {
         setOpenModal(!openModal)
         setYearInput(displayYear)
@@ -172,7 +230,13 @@ const Outputs = () => {
                     <Button className='cursor-pointer' onClick={handleYearChange}>
                         Change Year
                     </Button>
-                    <Button color='blue' outline className='cursor-pointer'>
+                    <Button 
+                        color='blue' 
+                        outline 
+                        className='cursor-pointer'
+                        onClick={generateExcelReport}
+                        disabled={outputs.length === 0}
+                    >
                         Report
                     </Button>
                 </div>
