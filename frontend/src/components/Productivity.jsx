@@ -106,6 +106,7 @@ const Productivity = () => {
     const filteredProductivities = productivities.filter(productivity => 
         productivity.lotno.toLowerCase().includes(searchTerm) ||
         productivity.totaloutput.toString().toLowerCase().includes(searchTerm) || 
+        productivity.reject.toString().toLowerCase().includes(searchTerm) || 
         productivity.wastage.toString().toLowerCase().includes(searchTerm) ||
         productivity.downtime.toString().toLowerCase().includes(searchTerm) ||
         productivity.totalmeter.toString().toLowerCase().includes(searchTerm) ||

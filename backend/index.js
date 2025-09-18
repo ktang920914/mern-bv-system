@@ -13,6 +13,8 @@ import jobRoute from './routes/job.route.js'
 import productivityRoute from './routes/productivity.route.js'
 import planningRoute from './routes/planning.route.js'
 import outputRoute from './routes/output.route.js'
+import maintenanceRoute from './routes/maintenance.route.js'
+import caseRoute from './routes/case.route.js'
 
 dotenv.config()
 const app = express()
@@ -36,6 +38,8 @@ app.use('/api/analysis', jobRoute)
 app.use('/api/output', productivityRoute)
 app.use('/api/view', planningRoute)
 app.use('/api/output', outputRoute)
+app.use('/api/maintenance', maintenanceRoute)
+app.use('/api/case', caseRoute)
 
 app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')

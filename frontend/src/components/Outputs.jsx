@@ -484,7 +484,7 @@ const Outputs = () => {
 
             {/* 图表控制区域 */}
             {outputs.length > 0 && (
-                <div className="mb-6 p-4 bg-white rounded-lg shadow dark:bg-gray-800">
+                <div className="mb-6 p-4 bg-white rounded-lg shadow dark:bg-gray-950 dark:text-gray-800">
                     <div className="flex flex-wrap items-center gap-4 mb-4">
                         <Label className="font-semibold">Chart Options:</Label>
                         
@@ -494,7 +494,7 @@ const Outputs = () => {
                                 id="dataType"
                                 value={selectedDataType}
                                 onChange={(e) => setSelectedDataType(e.target.value)}
-                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                                className="text-sm p-2 border rounded-md dark:bg-gray-200 dark:border-gray-600"
                             >
                                 {dataTypes.map(type => (
                                     <option key={type.value} value={type.value}>
@@ -510,7 +510,7 @@ const Outputs = () => {
                                 id="chartType"
                                 value={selectedChartType}
                                 onChange={(e) => setSelectedChartType(e.target.value)}
-                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                                className="text-sm p-2 border rounded-md dark:bg-gray-200 dark:border-gray-600"
                             >
                                 {chartTypes.map(type => (
                                     <option key={type.value} value={type.value}>
@@ -523,15 +523,15 @@ const Outputs = () => {
 
                     {/* 图表显示区域 */}
                     {chartData ? (
-                        <div className="h-80">
+                        <div className="h-80 dark:bg-white">
                             {selectedChartType === 'bar' && (
-                                <Bar options={chartData.options} data={chartData.data} />
+                                <Bar options={chartData.options} data={chartData.data}/>
                             )}
                             {selectedChartType === 'line' && (
-                                <Line options={chartData.options} data={chartData.data} />
+                                <Line options={chartData.options} data={chartData.data}/>
                             )}
                             {selectedChartType === 'pie' && (
-                                <Pie options={chartData.options} data={chartData.data} />
+                                <Pie options={chartData.options} data={chartData.data}/>
                             )}
                         </div>
                     ) : (

@@ -16,6 +16,8 @@ import useThemeStore from "../themeStore"
 import Planning from "../components/Planning"
 import Oee from "../components/Oee"
 import Outputs from "../components/Outputs"
+import Maintenance from "../components/Maintenance"
+import Cases from "../components/Cases"
 
 
 const Home = () => {
@@ -56,6 +58,8 @@ const Home = () => {
           { tab === 'Costs' && <Costs/>}
           { tab === 'Items' && <Items/>}
           { tab === 'Transactions' && <Transactions/>}
+          { tab === 'Maintenance' && <Maintenance/>}
+          { tab === 'Cases' && <Cases/>}
           { tab === 'Users' && <Users/>}
           { tab === 'Logs' && <ActivityLogs/>}
         </div>

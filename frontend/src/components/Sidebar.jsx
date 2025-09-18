@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarCollapse, SidebarItem, SidebarItemGroup, SidebarItems } from "flowbite-react";
-import { HiArrowSmRight, HiChartPie, HiShoppingBag, HiUser, HiMenu, HiX } from "react-icons/hi";
+import { HiArrowSmRight, HiChartPie, HiMenu, HiX } from "react-icons/hi";
+import { HiOutlineDocumentCurrencyDollar } from "react-icons/hi2";
+import { GrDocumentUser } from "react-icons/gr";
 import { MdOutlineInventory } from "react-icons/md";
 import { GrDocumentStore, GrHostMaintenance } from "react-icons/gr";
 import { useNavigate, useLocation, Link } from "react-router-dom";
@@ -103,7 +105,7 @@ const DashSidebar = () => {
               </SidebarCollapse>
               
               <SidebarCollapse 
-                icon={HiShoppingBag} 
+                icon={HiOutlineDocumentCurrencyDollar} 
                 label="Purchase"
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
@@ -127,20 +129,26 @@ const DashSidebar = () => {
                   <SidebarItem active={tab === 'Items'} as='div'>Items</SidebarItem>
                 </Link>
                 <Link to='/?tab=Transactions'>
-                  <SidebarItem active={tab === 'Transactions'} as='div'>Transaction</SidebarItem>
+                  <SidebarItem active={tab === 'Transactions'} as='div'>Transactions</SidebarItem>
                 </Link>
               </SidebarCollapse>
               
-              <SidebarItem 
-                href="#" 
+              <SidebarCollapse 
                 icon={GrHostMaintenance}
+                label="Maintenance"
+                renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
-                Maintenance
-              </SidebarItem>
+                <Link to='/?tab=Maintenance'>
+                  <SidebarItem active={tab === 'Maintenance'} as='div'>Jobs</SidebarItem>
+                </Link>
+                <Link to='/?tab=Cases'>
+                  <SidebarItem active={tab === 'Cases'} as='div'>Cases</SidebarItem>
+                </Link>
+              </SidebarCollapse>
 
               {currentUser.role === 'Admin' && (
               <SidebarCollapse 
-                icon={HiUser} 
+                icon={GrDocumentUser} 
                 label="Users"
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >

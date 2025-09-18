@@ -1,0 +1,156 @@
+// controllers/case.controller.js
+import Case from "../models/case.model.js";
+import Maintenance from "../models/maintenance.model.js";
+import Activity from "../models/activity.model.js";
+
+// 获取案例统计数据
+export const getCases = async (req, res, next) => {
+    try {
+        const { year } = req.query;
+        const query = year ? { year } : {};
+        
+        const cases = await Case.find(query).sort({ year: 1, month: 1 });
+        res.status(200).json(cases);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// 辅助函数：从日期字符串提取年份和月份
+const extractYearAndMonth = (dateString) => {
+    if (!dateString) return null;
+    
+    let year, month;
+    
+    // 格式: YYYY-MM-DD
+    if (dateString.includes('-')) {
+        const parts = dateString.split('-');
+        if (parts.length >= 3) {
+            year = parts[0];
+            month = parts[1];
+        }
+    }
+    // 格式: DD/MM/YYYY
+    else if (dateString.includes('/')) {
+        const parts = dateString.split('/');
+        if (parts.length >= 3) {
+            year = parts[2];
+            month = parts[1];
+        }
+    }
+    
+    // 清理月份数字
+    if (month) {
+        month = parseInt(month, 10);
+    }
+    
+    return year && month ? { year, month } : null;
+};
+
+// 更新案例统计数据（从维护记录生成）
+export const updateCaseStats = async (req, res, next) => {
+    try {
+        const { year } = req.body;
+        
+        if (!year) {
+            return res.status(400).json({ message: 'Year is required' });
+        }
+        
+        console.log(`Updating case statistics for year: ${year}`);
+        
+        // 删除该年的所有现有案例数据
+        await Case.deleteMany({ year });
+        console.log('Deleted existing case data for year:', year);
+        
+        // 获取所有维护记录
+        const maintenances = await Maintenance.find();
+        console.log(`Found ${maintenances.length} maintenance records`);
+        
+        // 月份名称映射
+        const monthNames = {
+            1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
+            5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
+            9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'
+        };
+        
+        // 统计案例数据
+        const caseStats = {};
+        let processedCount = 0;
+        let yearMatchCount = 0;
+        
+        maintenances.forEach(maintenance => {
+            if (!maintenance.jobdate || !maintenance.jobtype) {
+                return;
+            }
+            
+            // 提取年份和月份
+            const dateInfo = extractYearAndMonth(maintenance.jobdate);
+            if (!dateInfo) {
+                return;
+            }
+            
+            // 只处理指定年份的数据
+            if (dateInfo.year !== year) {
+                return;
+            }
+            
+            yearMatchCount++;
+            
+            const monthName = monthNames[dateInfo.month];
+            if (!monthName) {
+                return;
+            }
+            
+            // 确保jobtype是有效的类型
+            const validTypes = ['Breakdown', 'Kaizen', 'Inspect', 'Maintenance'];
+            const caseType = validTypes.includes(maintenance.jobtype) ? maintenance.jobtype : 'Others';
+            
+            // 初始化统计对象
+            const key = `${caseType}-${monthName}-${year}`;
+            if (!caseStats[key]) {
+                caseStats[key] = {
+                    type: caseType,
+                    month: monthName,
+                    year,
+                    count: 0,
+                    totalCost: 0
+                };
+            }
+            
+            caseStats[key].count += 1;
+            // 累加成本（确保cost是数字）
+            const cost = typeof maintenance.cost === 'number' ? maintenance.cost : parseFloat(maintenance.cost) || 0;
+            caseStats[key].totalCost += cost;
+            
+            processedCount++;
+        });
+        
+        console.log(`Processed ${processedCount} maintenance records for statistics`);
+        
+        // 保存到数据库
+        const caseData = Object.values(caseStats);
+        if (caseData.length > 0) {
+            await Case.insertMany(caseData);
+        }
+        
+        // 记录活动
+        const currentDate = new Date().toLocaleString();
+        const newActivity = new Activity({
+            date: currentDate,
+            activity: 'Update case statistics',
+            detail: `${req.user.username} updated case statistics for year ${year}`
+        });
+        await newActivity.save();
+        
+        res.status(200).json({ 
+            message: 'Case statistics updated successfully', 
+            recordsProcessed: processedCount,
+            statisticsGenerated: caseData.length,
+            data: caseData 
+        });
+        
+    } catch (error) {
+        console.error('Error in updateCaseStats:', error);
+        next(error);
+    }
+};
