@@ -243,7 +243,7 @@ const Maintenance = () => {
               <TableRow>
                   <TableHeadCell>Job date</TableHeadCell>
                   <TableHeadCell>Job type</TableHeadCell>
-                  <TableHeadCell>Machine</TableHeadCell>
+                  <TableHeadCell>Item</TableHeadCell>
                   <TableHeadCell>Supplier</TableHeadCell>
                   <TableHeadCell>Completion date</TableHeadCell>
                   <TableHeadCell>Status</TableHeadCell>
@@ -355,7 +355,7 @@ const Maintenance = () => {
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Machine</Label>
+                        <Label>Item</Label>
                         <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                             <option></option>
                         {items.map((item) => (
@@ -472,7 +472,7 @@ const Maintenance = () => {
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Machine</Label>
+                        <Label>Item</Label>
                         <Select  value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                             <option></option>
                         {items.map((item) => (

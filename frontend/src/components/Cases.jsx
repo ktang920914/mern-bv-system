@@ -45,6 +45,7 @@ const Cases = () => {
     const [selectedChartType, setSelectedChartType] = useState('bar')
     const [selectedCaseType, setSelectedCaseType] = useState('Breakdown')
     const [isUpdating, setIsUpdating] = useState(false)
+    const [dataType, setDataType] = useState('count') // 'count' or 'cost'
 
     const caseTypes = ["Breakdown", "Kaizen", "Inspect", "Maintenance"]
 
@@ -67,6 +68,11 @@ const Cases = () => {
         { value: 'bar', label: 'Bar' },
         { value: 'line', label: 'Line' },
         { value: 'pie', label: 'Pie' }
+    ]
+
+    const dataTypes = [
+        { value: 'count', label: 'Case Count' },
+        { value: 'cost', label: 'Cost Amount' }
     ]
 
     useEffect(() => {
@@ -98,8 +104,6 @@ const Cases = () => {
             setErrorMessage(null);
             setSuccessMessage(null);
             
-            console.log('Updating stats for year:', displayYear);
-            
             const res = await fetch('/api/case/updatecasestats', {
                 method: 'POST',
                 headers: {
@@ -109,28 +113,20 @@ const Cases = () => {
             });
             
             const data = await res.json();
-            console.log('Update response:', data);
             
             if (res.ok) {
-                setSuccessMessage(
-                    `Case statistics updated successfully. ` +
-                    `Total records: ${data.totalRecords}, ` +
-                    `Year matches: ${data.yearMatchCount}, ` +
-                    `Generated: ${data.statisticsGenerated} statistics.`
-                );
+                setSuccessMessage('Case statistics updated successfully');
                 
                 // 重新获取数据
                 const res2 = await fetch(`/api/case/getcases?year=${displayYear}`);
                 const data2 = await res2.json();
                 if (res2.ok) {
                     setCases(data2);
-                    console.log('Refreshed case data:', data2);
                 }
             } else {
                 setErrorMessage(data.message || 'Failed to update statistics');
             }
         } catch (error) {
-            console.error('Update error:', error);
             setErrorMessage('Error updating statistics: ' + error.message);
         } finally {
             setIsUpdating(false);
@@ -152,9 +148,9 @@ const Cases = () => {
             
             monthFields.forEach(month => {
                 const caseData = cases.find(c => c.type === type && c.month === month.name)
-                const count = caseData ? caseData.count : 0
-                row[month.key] = count
-                total += count
+                const value = caseData ? (dataType === 'cost' ? caseData.totalCost : caseData.count) : 0
+                row[month.key] = value
+                total += value
             })
             
             row.total = total
@@ -173,23 +169,19 @@ const Cases = () => {
     const prepareChartData = () => {
         if (cases.length === 0) return null
 
-        // 获取当前选中的案例类型的数据
         const selectedData = cases.filter(caseItem => 
             caseItem.type === selectedCaseType
         )
 
         if (selectedData.length === 0) return null
 
-        // 月份标签
         const labels = monthFields.map(month => month.name)
         
-        // 数据值 - 确保所有月份都有数据
         const data = monthFields.map(month => {
             const monthData = selectedData.find(d => d.month === month.name)
-            return monthData ? monthData.count : 0
+            return monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0
         })
 
-        // 图表配置
         const options = {
             responsive: true,
             maintainAspectRatio: false,
@@ -199,7 +191,7 @@ const Cases = () => {
                 },
                 title: {
                     display: true,
-                    text: `${selectedCaseType} Cases - ${displayYear}`,
+                    text: `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}`,
                     font: {
                         size: 16
                     }
@@ -210,10 +202,7 @@ const Cases = () => {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Number of Cases'
-                    },
-                    ticks: {
-                        stepSize: 1
+                        text: dataType === 'cost' ? 'Cost Amount' : 'Number of Cases'
                     }
                 },
                 x: {
@@ -225,12 +214,11 @@ const Cases = () => {
             } : undefined
         }
 
-        // 图表数据
         const chartData = {
             labels,
             datasets: [
                 {
-                    label: selectedCaseType,
+                    label: dataType === 'cost' ? `${selectedCaseType} Cost` : selectedCaseType,
                     data,
                     backgroundColor: selectedChartType === 'pie' 
                         ? [
@@ -238,8 +226,8 @@ const Cases = () => {
                             '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
                             '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
                           ]
-                        : 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
+                        : dataType === 'cost' ? 'rgba(75, 192, 192, 0.5)' : 'rgba(54, 162, 235, 0.5)',
+                    borderColor: dataType === 'cost' ? 'rgba(75, 192, 192, 1)' : 'rgba(54, 162, 235, 1)',
                     borderWidth: 2,
                     fill: selectedChartType === 'line',
                     tension: selectedChartType === 'line' ? 0.1 : undefined
@@ -259,48 +247,41 @@ const Cases = () => {
         try {
             const worksheetData = []
             
-            // 添加报告标题和年份信息
-            worksheetData.push(['Cases Report'])
-            worksheetData.push([`Year: ${displayYear}`])
-            worksheetData.push([]) // 空行
+            worksheetData.push([`${dataType === 'cost' ? 'Cost' : 'Cases'} Report - ${displayYear}`])
+            worksheetData.push([])
             
-            const headers = ['Case Type', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Total']
+            const headers = ['Case Type', ...monthFields.map(month => month.name), 'Total']
             worksheetData.push(headers)
             
             tableData.forEach(row => {
                 const rowData = [row.type]
                 
                 monthFields.forEach(month => {
-                    rowData.push(row[month.key] || 0)
+                    const value = row[month.key] || 0
+                    rowData.push(dataType === 'cost' ? `$${value.toFixed(2)}` : value)
                 })
                 
-                rowData.push(row.total || 0)
+                const totalValue = row.total || 0
+                rowData.push(dataType === 'cost' ? `$${totalValue.toFixed(2)}` : totalValue)
                 worksheetData.push(rowData)
             })
             
             const workbook = XLSX.utils.book_new()
             const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
             
-            // 设置列宽
             const colWidths = [
                 { wch: 20 }, 
-                ...Array(12).fill({ wch: 8 }),
-                { wch: 10 } 
+                ...Array(12).fill({ wch: 10 }),
+                { wch: 12 } 
             ]
             worksheet['!cols'] = colWidths
             
-            // 合并标题单元格
-            if (!worksheet['!merges']) worksheet['!merges'] = [];
-            worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } });
-            worksheet['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 13 } });
-            
-            XLSX.utils.book_append_sheet(workbook, worksheet, `Cases ${displayYear}`)
+            XLSX.utils.book_append_sheet(workbook, worksheet, `${dataType === 'cost' ? 'Cost' : 'Cases'}_${displayYear}`)
             
             const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
             const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             
-            saveAs(data, `Cases_Report_${displayYear}.xlsx`)
+            saveAs(data, `${dataType === 'cost' ? 'Cost' : 'Cases'}_Report_${displayYear}.xlsx`)
             
         } catch (error) {
             setErrorMessage('Error generating Excel report: ' + error.message)
@@ -317,7 +298,9 @@ const Cases = () => {
     return (
         <div>
             <div className='flex justify-between items-center mb-4'>
-                <h1 className='text-2xl font-semibold'>Cases {displayYear}</h1>
+                <h1 className='text-2xl font-semibold'>
+                    {dataType === 'cost' ? 'Costs' : 'Cases'} {displayYear}
+                </h1>
                 <div>
                     <TextInput 
                         placeholder='Search case type...' 
@@ -365,8 +348,24 @@ const Cases = () => {
             {cases.length > 0 && (
                 <div className="mb-6 p-4 bg-white rounded-lg shadow dark:bg-gray-800 dark:text-white">
                     <div className="flex flex-wrap items-center gap-4 mb-4">
-                        <Label className="font-semibold">Chart Options:</Label>
+                        <Label className="font-semibold">Options:</Label>
                         
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="dataType" className="text-sm">Data Type:</Label>
+                            <select
+                                id="dataType"
+                                value={dataType}
+                                onChange={(e) => setDataType(e.target.value)}
+                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                            >
+                                {dataTypes.map(type => (
+                                    <option key={type.value} value={type.value}>
+                                        {type.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="flex items-center gap-2">
                             <Label htmlFor="caseType" className="text-sm">Case Type:</Label>
                             <select
@@ -415,7 +414,7 @@ const Cases = () => {
                         </div>
                     ) : (
                         <div className="h-80 flex items-center justify-center text-gray-500">
-                            No chart data available for selected case type
+                            No chart data available
                         </div>
                     )}
                 </div>
@@ -444,11 +443,17 @@ const Cases = () => {
                                 </TableCell>
                                 {monthFields.map(month => (
                                     <TableCell key={month.key}>
-                                        {item[month.key] || 0} 
+                                        {dataType === 'cost' ? 
+                                            `${item[month.key] ? item[month.key].toFixed(2) : '0.00'}` : 
+                                            item[month.key] || 0
+                                        }
                                     </TableCell>
                                 ))}
                                 <TableCell className="font-semibold">
-                                    {item.total || 0}
+                                    {dataType === 'cost' ? 
+                                        `${item.total ? item.total.toFixed(2) : '0.00'}` : 
+                                        item.total || 0
+                                    }
                                 </TableCell>
                             </TableRow>
                         ))}

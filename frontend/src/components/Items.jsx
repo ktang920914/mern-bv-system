@@ -276,6 +276,7 @@ const Items = () => {
                           <option>Production</option>
                           <option>Dryblent</option>
                           <option>Maintenance</option>
+                          <option>Stock</option>
                       </Select>
                     </div>
 
@@ -364,6 +365,7 @@ const Items = () => {
                           <option>Production</option>
                           <option>Dryblent</option>
                           <option>Maintenance</option>
+                          <option>Stock</option>
                       </Select>
                     </div>
 
