@@ -73,6 +73,7 @@ const Outputs = () => {
         { value: 'totaloutput', label: 'Total Output' },
         { value: 'totalmeter', label: 'Total Meter' },
         { value: 'wastage', label: 'Wastage' },
+        { value: 'reject', label: 'Reject' },
         { value: 'downtime', label: 'Downtime' },
         { value: 'operatingtime', label: 'Operating Time' },
         { value: 'availability', label: 'Availability' },
