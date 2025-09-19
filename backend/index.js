@@ -15,6 +15,8 @@ import planningRoute from './routes/planning.route.js'
 import outputRoute from './routes/output.route.js'
 import maintenanceRoute from './routes/maintenance.route.js'
 import caseRoute from './routes/case.route.js'
+import https from 'https'
+import fs from 'fs'
 
 dotenv.config()
 const app = express()
@@ -45,8 +47,13 @@ app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')
 })
 
-app.listen(port, () => {
-    console.log(`http://localhost:${port}`)
+const httpsOptions = {
+  key: fs.readFileSync('./server.key'),   // mkcert 私钥
+  cert: fs.readFileSync('./server.crt')   // mkcert 证书
+}
+
+https.createServer(httpsOptions, app).listen(port, () => {
+  console.log(`HTTPS Server running at https://localhost:${port}`)
 })
 
 app.use((err,req,res,next) => {
