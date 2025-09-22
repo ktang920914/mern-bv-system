@@ -9,13 +9,13 @@ export default defineConfig({
   server:{
     host:'0.0.0.0',
     port:5173,
-    https:{
+    /*https:{
       key: fs.readFileSync('C:/Users/jayan/Desktop/Bv System/server.key'),   // mkcert 私钥
       cert: fs.readFileSync('C:/Users/jayan/Desktop/Bv System/server.crt'),  // mkcert 证书
-    },
+    },*/
     proxy:{
       '/api':{
-        target:'https://localhost:3000',
+        target:'http://localhost:3000',
         secure:false
       },
     },

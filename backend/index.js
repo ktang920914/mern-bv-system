@@ -47,13 +47,17 @@ app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')
 })
 
-const httpsOptions = {
+/*const httpsOptions = {
   key: fs.readFileSync('./server.key'),   // mkcert 私钥
   cert: fs.readFileSync('./server.crt')   // mkcert 证书
 }
 
 https.createServer(httpsOptions, app).listen(port, () => {
   console.log(`HTTPS Server running at https://localhost:${port}`)
+})*/
+
+app.listen(port, () => {
+  console.log(`http://localhost:${port}`)
 })
 
 app.use((err,req,res,next) => {
