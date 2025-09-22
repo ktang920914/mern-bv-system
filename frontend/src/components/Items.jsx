@@ -135,7 +135,7 @@ const Items = () => {
     // Search & pagination
     const handleSearch = (e) => { setSearchTerm(e.target.value.toLowerCase()); setCurrentPage(1); };
     const filteredItems = items.filter(item =>
-        item.code.toLowerCase().includes(searchTerm) ||
+        item.code.toLowerCase().includes(searchTerm) && item.code.toLowerCase() === searchTerm ||
         item.type.toLowerCase().includes(searchTerm) ||
         item.location.toLowerCase().includes(searchTerm) ||
         item.supplier.toLowerCase().includes(searchTerm) ||
@@ -258,7 +258,7 @@ const Items = () => {
                                     <option>Inactive</option>
                                 </Select>
                             </div>
-                            <Button className="w-full" type="submit" disabled={loading}>{loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}</Button>
+                            <Button className="w-full cursor-pointer" type="submit" disabled={loading}>{loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}</Button>
                         </form>
                         {errorMessage && <Alert color='failure' className='mt-4 font-semibold'>{errorMessage}</Alert>}
                     </div>
@@ -271,6 +271,19 @@ const Items = () => {
                 <ModalBody>
                     <div className="space-y-6">
                         <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update Item</h3>
+                        
+                        {/* 添加 QR 码显示区域 */}
+                        <div className="flex justify-center mb-4">
+                            <div className="text-center">
+                                <QRCodeCanvas className='text-center'
+                                    value={generateQRContent(items.find(item => item._id === itemIdToUpdate) || {})} 
+                                    size={120} 
+                                    level="M" 
+                                    includeMargin={true}
+                                />
+                            </div>
+                        </div>
+
                         <form onSubmit={handleUpdateSubmit}>
                             <div className="mb-4"><Label>Code</Label><TextInput value={updateFormData.code || ''} id="code" onChange={handleUpdateChange} required/></div>
                             <div className="mb-4"><Label>Type</Label><TextInput value={updateFormData.type || ''} id="type" onChange={handleUpdateChange} required/></div>
@@ -291,7 +304,7 @@ const Items = () => {
                                 <option>Active</option>
                                 <option>Inactive</option>
                             </Select></div>
-                            <Button className="w-full" type="submit" disabled={loading}>{loading ? <Spinner size='md' color='failure'/> : 'SUBMIT'}</Button>
+                            <Button className="w-full cursor-pointer" type="submit" disabled={loading}>{loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}</Button>
                         </form>
                         {errorMessage && <Alert color='failure' className='mt-4 font-semibold'>{errorMessage}</Alert>}
                     </div>
