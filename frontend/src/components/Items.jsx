@@ -270,7 +270,7 @@ const Items = () => {
                 <ModalHeader />
                 <ModalBody>
                     <div className="space-y-6">
-                        <h3 className="text-xl font-medium text-gray-900">Update Item</h3>
+                        <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update Item</h3>
                         <form onSubmit={handleUpdateSubmit}>
                             <div className="mb-4"><Label>Code</Label><TextInput value={updateFormData.code || ''} id="code" onChange={handleUpdateChange} required/></div>
                             <div className="mb-4"><Label>Type</Label><TextInput value={updateFormData.type || ''} id="type" onChange={handleUpdateChange} required/></div>
