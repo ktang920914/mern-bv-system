@@ -77,7 +77,8 @@ const DashSidebar = () => {
               <Link to='/?tab=Dashboard'>
                 <SidebarItem  
                   icon={HiChartPie}
-                  active={tab === 'Dashboard'} as='div'>
+                  active={tab === 'Dashboard'} as='div'
+                  onClick={toggleMobileSidebar}>
                   Dashboard
                 </SidebarItem>
               </Link>
@@ -88,19 +89,19 @@ const DashSidebar = () => {
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
                 <Link to='/?tab=Jobs'>
-                  <SidebarItem active={tab === 'Jobs'} as='div'>Jobs</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Jobs'} as='div'>Jobs</SidebarItem>
                 </Link>
                 <Link to='/?tab=Productivity'>
-                  <SidebarItem active={tab === 'Productivity'} as='div'>Productivities</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Productivity'} as='div'>Productivities</SidebarItem>
                 </Link>
                 <Link to='/?tab=Planning'>
-                  <SidebarItem active={tab === 'Planning'} as='div'>Plannings</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Planning'} as='div'>Plannings</SidebarItem>
                 </Link>
                 <Link to='/?tab=Oee'>
-                  <SidebarItem active={tab === 'Oee'} as='div'>OEEs</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Oee'} as='div'>OEEs</SidebarItem>
                 </Link>
                 <Link to='/?tab=Outputs'>
-                  <SidebarItem active={tab === 'Outputs'} as='div'>Outputs</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Outputs'} as='div'>Outputs</SidebarItem>
                 </Link>
               </SidebarCollapse>
               
@@ -110,13 +111,13 @@ const DashSidebar = () => {
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
                 <Link to='/?tab=Suppliers'>
-                  <SidebarItem active={tab === 'Suppliers'} as='div'>Suppliers</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Suppliers'} as='div'>Suppliers</SidebarItem>
                 </Link>
                 <Link to='/?tab=Orders'>
-                  <SidebarItem active={tab === 'Orders'} as='div'>Orders</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Orders'} as='div'>Orders</SidebarItem>
                 </Link>
                 <Link to='/?tab=Costs'>
-                  <SidebarItem active={tab === 'Costs'} as='div' >Costs</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Costs'} as='div' >Costs</SidebarItem>
                 </Link>
               </SidebarCollapse>
               
@@ -126,10 +127,10 @@ const DashSidebar = () => {
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
                 <Link to='/?tab=Items'>
-                  <SidebarItem active={tab === 'Items'} as='div'>Items</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Items'} as='div'>Items</SidebarItem>
                 </Link>
                 <Link to='/?tab=Transactions'>
-                  <SidebarItem active={tab === 'Transactions'} as='div'>Transactions</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Transactions'} as='div'>Transactions</SidebarItem>
                 </Link>
               </SidebarCollapse>
               
@@ -139,10 +140,10 @@ const DashSidebar = () => {
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
                 <Link to='/?tab=Maintenance'>
-                  <SidebarItem active={tab === 'Maintenance'} as='div'>Jobs</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Maintenance'} as='div'>Jobs</SidebarItem>
                 </Link>
                 <Link to='/?tab=Cases'>
-                  <SidebarItem active={tab === 'Cases'} as='div'>Cases</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Cases'} as='div'>Cases</SidebarItem>
                 </Link>
               </SidebarCollapse>
 
@@ -153,10 +154,10 @@ const DashSidebar = () => {
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
                 <Link to='/?tab=Users'>
-                  <SidebarItem active={tab === 'Users'} as='div'>Setting</SidebarItem>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Users'} as='div'>Setting</SidebarItem>
                 </Link>
                 <Link to='/?tab=Logs'>
-                <SidebarItem active={tab === 'Logs'} as='div'>Activities Logs</SidebarItem>
+                <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Logs'} as='div'>Activities Logs</SidebarItem>
                 </Link>
               </SidebarCollapse>
               )}
