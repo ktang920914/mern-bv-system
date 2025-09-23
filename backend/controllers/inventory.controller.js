@@ -2,6 +2,35 @@ import Activity from "../models/activity.model.js"
 import Inventory from "../models/inventory.model.js"
 import { errorHandler } from "../utils/error.js"
 
+// 通用的 QR 码更新函数
+const updateQRCode = async (inventory) => {
+    // 只修改 QR 码中的日期格式
+    const formatDate = (date) => {
+        return new Date(date).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
+    const qrCodeContent = JSON.stringify({
+        code: inventory.code,
+        type: inventory.type,
+        location: inventory.location,
+        supplier: inventory.supplier,
+        balance: inventory.balance,
+        status: inventory.status,
+        createdAt: formatDate(inventory.createdAt),
+        lastUpdated: formatDate(new Date())
+    });
+    
+    inventory.qrCode = qrCodeContent;
+    return await inventory.save();
+};
+
 export const item = async (req,res,next) => {
     const {code,type,location,supplier,balance,status} = req.body
     try {
@@ -10,15 +39,29 @@ export const item = async (req,res,next) => {
             return next(errorHandler(404, 'Item already exists'))
         }
 
-        // 生成固定 QR 内容（创建时生成，后续不变）
+        // 确保balance有默认值
+        const itemBalance = balance || 0;
+
+        // 生成 QR 内容 - 只修改日期格式
+        const formatDate = (date) => {
+            return new Date(date).toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        };
+
         const qrCodeContent = JSON.stringify({
             code,
             type,
             location,
             supplier,
-            balance,
+            balance: itemBalance,
             status,
-            createdAt: new Date().toISOString()
+            createdAt: formatDate(new Date())
         })
 
         const newItem = new Inventory({
@@ -26,7 +69,7 @@ export const item = async (req,res,next) => {
             type,
             location,
             supplier,
-            balance,
+            balance: itemBalance,
             status,
             qrCode: qrCodeContent
         })
@@ -81,7 +124,7 @@ export const updateItem = async (req,res,next) => {
             return next(errorHandler(404, 'Update Failed: code already exists'))
         }
 
-        // 更新其他字段，不改 qrCode
+        // 更新字段并重新生成 QR 码
         const updatedItem = await Inventory.findByIdAndUpdate(req.params.itemId, {
             $set: {
                 code: req.body.code,
@@ -91,7 +134,10 @@ export const updateItem = async (req,res,next) => {
                 balance: req.body.balance,
                 status: req.body.status
             },
-        },{new:true})
+        }, {new: true})
+
+        // 更新 QR 码内容
+        await updateQRCode(updatedItem);
 
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({

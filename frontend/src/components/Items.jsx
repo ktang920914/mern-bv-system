@@ -150,16 +150,25 @@ const Items = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries);
     const handlePageChange = (page) => setCurrentPage(page);
 
-    // QR code content
-    const generateQRContent = (item) => JSON.stringify({
-        code: item.code,
-        type: item.type,
-        location: item.location,
-        supplier: item.supplier,
-        status: item.status,
-        balance: item.balance,
-        createdAt: item.createdAt
-    }, null, 2);
+    // 修改 QR 码生成函数，确保使用最新的数据
+    const generateQRContent = (item) => {
+        // 优先使用后端存储的 QR 码内容
+        if (item && item.qrCode) {
+            return item.qrCode;
+        }
+        
+        // 备用方案：前端生成（包含所有必要字段）
+        return JSON.stringify({
+            code: item?.code || '',
+            type: item?.type || '',
+            location: item?.location || '',
+            supplier: item?.supplier || '',
+            status: item?.status || '',
+            balance: item?.balance !== undefined ? item.balance : 0,
+            createdAt: item?.createdAt || new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+        }, null, 2);
+    };
 
     return (
         <div>
@@ -191,7 +200,7 @@ const Items = () => {
                                         <div className="p-4 text-center">
                                             <h3 className="font-semibold mb-2">QR Code - {item.code}</h3>
                                             <QRCodeCanvas value={generateQRContent(item)} size={150} level="M" includeMargin={true}/>
-                                            <p className="text-xs text-gray-500 mt-2">Scan to view item details</p>
+                                            <p className="text-xs text-gray-300 mt-2">Scan to view item details</p>
                                         </div>
                                     }
                                     trigger="hover"
