@@ -188,7 +188,9 @@ const Items = () => {
                         <TableHeadCell>Status</TableHeadCell>
                         <TableHeadCell>Balance</TableHeadCell>
                         <TableHeadCell>Edit</TableHeadCell>
+                        {currentUser.role === 'Admin' && (
                         <TableHeadCell>Delete</TableHeadCell>
+                        )}
                     </TableRow>
                 </TableHead>
                 {currentItems.map(item => (
@@ -215,8 +217,10 @@ const Items = () => {
                             <TableCell>{item.status}</TableCell>
                             <TableCell>{item.balance}</TableCell>
                             <TableCell><Button className='cursor-pointer' outline onClick={() => handleUpdate(item)}>Edit</Button></TableCell>
+                            {currentUser.role === 'Admin' && (
                             <TableCell><Button className='cursor-pointer' color='red' outline onClick={() => { setItemIdToDelete(item._id); setOpenModalDeleteItem(true); }}>Delete</Button></TableCell>
-                        </TableRow>
+                            )}
+                            </TableRow>
                     </TableBody>
                 ))}
             </Table>
