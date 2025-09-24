@@ -76,6 +76,7 @@ const Outputs = () => {
         { value: 'reject', label: 'Reject' },
         { value: 'downtime', label: 'Downtime' },
         { value: 'operatingtime', label: 'Operating Time' },
+        { value: 'arr', label: 'ARR' },
         { value: 'availability', label: 'Availability' },
         { value: 'performance', label: 'Performance' },
         { value: 'quality', label: 'Quality' },

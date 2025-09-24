@@ -8,6 +8,7 @@ const dataTypes = [
     { value: 'wastage', label: 'Wastage' },
     { value: 'downtime', label: 'Downtime' },
     { value: 'operatingtime', label: 'Operating Time' },
+    { value: 'arr', label: 'ARR' },
     { value: 'availability', label: 'Availability' },
     { value: 'performance', label: 'Performance' },
     { value: 'quality', label: 'Quality' },
@@ -65,7 +66,7 @@ export const calculateOutputs = async (req, res, next) => {
         };
         
         // 计算平均值的数据类型
-        const averageDataTypes = ['availability', 'performance', 'quality', 'oee'];
+        const averageDataTypes = ['arr', 'availability', 'performance', 'quality', 'oee'];
         const isAverage = averageDataTypes.includes(data);
         
         // 初始化计数器和总和（用于计算平均值）
