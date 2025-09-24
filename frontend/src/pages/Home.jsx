@@ -18,6 +18,7 @@ import Oee from "../components/Oee"
 import Outputs from "../components/Outputs"
 import Maintenance from "../components/Maintenance"
 import Cases from "../components/Cases"
+import Products from "../components/Products"
 
 
 const Home = () => {
@@ -58,8 +59,9 @@ const Home = () => {
           { tab === 'Costs' && <Costs/>}
           { tab === 'Items' && <Items/>}
           { tab === 'Transactions' && <Transactions/>}
-          { tab === 'Maintenance' && <Maintenance/>}
+          { tab === 'Maintenances' && <Maintenance/>}
           { tab === 'Cases' && <Cases/>}
+          { tab === 'Products' && <Products/>}
           { tab === 'Users' && <Users/>}
           { tab === 'Logs' && <ActivityLogs/>}
         </div>

@@ -4,7 +4,7 @@ import { HiArrowSmRight, HiChartPie, HiMenu, HiX } from "react-icons/hi";
 import { HiOutlineDocumentCurrencyDollar } from "react-icons/hi2";
 import { GrDocumentUser } from "react-icons/gr";
 import { MdOutlineInventory } from "react-icons/md";
-import { GrDocumentStore, GrHostMaintenance } from "react-icons/gr";
+import { GrDocumentStore, GrHostMaintenance, GrDocumentPpt} from "react-icons/gr";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import useUserstore from "../store";
 
@@ -139,11 +139,21 @@ const DashSidebar = () => {
                 label="Maintenance"
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
-                <Link to='/?tab=Maintenance'>
+                <Link to='/?tab=Maintenances'>
                   <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Maintenance'} as='div'>Jobs</SidebarItem>
                 </Link>
                 <Link to='/?tab=Cases'>
                   <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Cases'} as='div'>Cases</SidebarItem>
+                </Link>
+              </SidebarCollapse>
+
+              <SidebarCollapse 
+                icon={GrDocumentPpt}
+                label="Stock"
+                renderChevronIcon={() => <span className="ml-auto">▼</span>}
+              >
+                <Link to='/?tab=Products'>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Products'} as='div'>Products</SidebarItem>
                 </Link>
               </SidebarCollapse>
 

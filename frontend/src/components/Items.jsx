@@ -202,7 +202,7 @@ const Items = () => {
                                         <div className="p-4 text-center">
                                             <h3 className="font-semibold mb-2">QR Code - {item.code}</h3>
                                             <QRCodeCanvas value={generateQRContent(item)} size={150} level="M" includeMargin={true}/>
-                                            <p className="text-xs text-gray-300 mt-2">Scan to view item details</p>
+                                            <p className="text-xs dark:text-gray-300  text-gray-500 mt-2">Scan to view item details</p>
                                         </div>
                                     }
                                     trigger="hover"
