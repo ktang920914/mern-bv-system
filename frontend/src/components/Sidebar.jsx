@@ -155,6 +155,10 @@ const DashSidebar = () => {
                 <Link to='/?tab=Products'>
                   <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Products'} as='div'>Products</SidebarItem>
                 </Link>
+
+                <Link to='/?tab=Movements'>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Movements'} as='div'>Movements</SidebarItem>
+                </Link>
               </SidebarCollapse>
 
               {currentUser.role === 'Admin' && (

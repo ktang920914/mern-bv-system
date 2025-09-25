@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -18,8 +18,10 @@ const Products = () => {
     const [productIdToDelete,setProductIdToDelete] = useState('')
     const [productIdToUpdate,setProductIdToUpdate] = useState('')
     const [updateFormData,setUpdateFormData] = useState({})
+    const [currentPage,setCurrentPage] = useState(1)
+    const [itemsPage] = useState(7)
 
-    useEffect(() => {
+    /*useEffect(() => {
         const fetchJobs = async () => {
             try {
                 const res = await fetch('/api/analysis/getjobs')
@@ -35,7 +37,7 @@ const Products = () => {
             }
         }
         fetchJobs()
-    },[currentUser._id])
+    },[currentUser._id])*/
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -176,8 +178,30 @@ const Products = () => {
     }
 
     const handleSearch = (e) => {
-        setSearchTerm(e.target.value)
+        setSearchTerm(e.target.value.trim())
     }
+
+    const filteredProducts = products.filter(product => 
+        product.colourcode.toLowerCase().includes(searchTerm) || 
+        product.quantity.toString().toLowerCase().includes(searchTerm) || 
+        product.lotno.toLowerCase().includes(searchTerm) || 
+        product.location.toLowerCase().includes(searchTerm) || 
+        product.user.toLowerCase().includes(searchTerm) || 
+        product.palletno.toLowerCase().includes(searchTerm) ||
+        product.status.toLowerCase().includes(searchTerm) && product.status.toString().toLowerCase() === searchTerm
+    )
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+    }
+
+    const indexOfLastItem = currentPage * itemsPage
+    const indexOfFirstItem = indexOfLastItem - itemsPage
+    const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredProducts.length
+    const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+    const showingTo = Math.min(indexOfLastItem, totalEntries)
+
 
   return (
     <div>
@@ -203,7 +227,7 @@ const Products = () => {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {products.map((p) => (
+                {currentProducts.map((p) => (
                     <TableRow key={p._id}>
                         <TableCell className="align-middle">{p.colourcode}</TableCell>
                         <TableCell className="align-middle">{p.lotno}</TableCell>
@@ -240,6 +264,18 @@ const Products = () => {
             </TableBody>
         </Table>
 
+        <div className="flex-col justify-center text-center mt-4">
+            <p className='text-gray-500 font-semibold'>
+                Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+            </p>
+            <Pagination
+                showIcons
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                onPageChange={handlePageChange}
+            />
+        </div>
+
         <Modal show={openModalCreateProduct} onClose={handleCreateProduct} popup>
             <ModalHeader />
             <ModalBody>
@@ -255,7 +291,7 @@ const Products = () => {
                             
                         <div className="mb-4 block">
                             <Label>Lot no</Label>
-                            <TextInput id="lotno" className='mb-4' placeholder='Enter lotno' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                            <TextInput id="lotno" className='mb-4' placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                         </div>
                             
                         <div className="mb-4 block">

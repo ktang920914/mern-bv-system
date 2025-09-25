@@ -19,6 +19,7 @@ import Outputs from "../components/Outputs"
 import Maintenance from "../components/Maintenance"
 import Cases from "../components/Cases"
 import Products from "../components/Products"
+import Movement from "../components/Movement"
 
 
 const Home = () => {
@@ -62,6 +63,7 @@ const Home = () => {
           { tab === 'Maintenances' && <Maintenance/>}
           { tab === 'Cases' && <Cases/>}
           { tab === 'Products' && <Products/>}
+          { tab === 'Movements' && <Movement/>}
           { tab === 'Users' && <Users/>}
           { tab === 'Logs' && <ActivityLogs/>}
         </div>
