@@ -49,7 +49,7 @@ const Home = () => {
           <DashSidebar />
         </div>
 
-        <div className="flex-1 p-4 lg:ml-12">
+        <div className="flex-1 p-4 lg:ml-1">
           { tab === 'Dashboard' && <Dashboard/>}
           { tab === 'Jobs' && <Jobs/>}
           { tab === 'Productivity' && <Productivity/>}

@@ -113,20 +113,23 @@ export const calculateOutputs = async (req, res, next) => {
             }
         }
         
-        // 计算年度总计
+        // 计算年度总计 - 修复后的逻辑
         if (isAverage) {
-            // 对于平均值数据类型，计算年度平均值
-            let totalSum = 0;
-            let totalCount = 0;
+            // 对于平均值数据类型，计算各月平均值的年度平均（简单平均）
+            let validMonthSum = 0;
+            let validMonthCount = 0;
             
-            for (const monthKey in monthlyCounts) {
+            const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+                              'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            
+            for (const monthKey of monthKeys) {
                 if (monthlyCounts[monthKey] > 0) {
-                    totalSum += monthlyData[monthKey] * monthlyCounts[monthKey];
-                    totalCount += monthlyCounts[monthKey];
+                    validMonthSum += monthlyData[monthKey];
+                    validMonthCount++;
                 }
             }
             
-            monthlyData.total = totalCount > 0 ? totalSum / totalCount : 0;
+            monthlyData.total = validMonthCount > 0 ? validMonthSum / validMonthCount : 0;
         } else {
             // 对于总和数据类型，直接累加所有月份
             monthlyData.total = Object.values(monthlyData).reduce((sum, value, index) => {

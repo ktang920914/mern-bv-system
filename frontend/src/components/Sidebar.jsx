@@ -72,7 +72,7 @@ const DashSidebar = () => {
           className="h-full w-64"
         >
 
-          <SidebarItems className="px-4">
+          <SidebarItems className="">
             <SidebarItemGroup>
               <Link to='/?tab=Dashboard'>
                 <SidebarItem  
