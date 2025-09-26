@@ -156,6 +156,10 @@ const DashSidebar = () => {
                   <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Products'} as='div'>Products</SidebarItem>
                 </Link>
 
+                <Link to='/?tab=Materials'>
+                  <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Materials'} as='div'>Materials</SidebarItem>
+                </Link>
+
                 <Link to='/?tab=Movements'>
                   <SidebarItem onClick={toggleMobileSidebar} active={tab === 'Movements'} as='div'>Movements</SidebarItem>
                 </Link>

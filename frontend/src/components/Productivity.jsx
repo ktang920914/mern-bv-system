@@ -144,6 +144,7 @@ const Productivity = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
+                    <TableHeadCell>Ext</TableHeadCell>
                     <TableHeadCell>Lot no</TableHeadCell>
                     <TableHeadCell>Output</TableHeadCell>
                     <TableHeadCell>Downtime</TableHeadCell>
@@ -155,6 +156,7 @@ const Productivity = () => {
             <TableBody>
                 {currentProductivities.map((productivities) => (
                     <TableRow key={productivities._id}>
+                        <TableCell className="align-middle">{productivities.code}</TableCell>
                         <TableCell className="align-middle">
                             <Popover
                                 content={

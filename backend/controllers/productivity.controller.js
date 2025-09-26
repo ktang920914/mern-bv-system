@@ -23,6 +23,7 @@ export const updateProductivity = async (req, res, next) => {
     try {
         const existingProductivity = await Productivity.findById(req.params.productivityId);
 
+        const operator = req.body.operator
         const totaloutput = Number(req.body.totaloutput) || 0;
         const totalorder = existingProductivity.totalorder || 0;
         const screwout = Number(req.body.screwout) || 0;
@@ -99,6 +100,7 @@ export const updateProductivity = async (req, res, next) => {
 
         const updatedProductivity = await Productivity.findByIdAndUpdate(req.params.productivityId, {
             $set: {
+                operator: operator,
                 totaloutput: totaloutput,
                 reject: reject,
                 startup: startup,
@@ -159,6 +161,7 @@ export const updateProductivity = async (req, res, next) => {
                             meterstart: meterstart,
                             meterend: meterend,
                             totalmeter: totalmeter,
+                            operator:operator,
                             operatingtime: operatingtime, // 更新operatingtime
                             arr: arr, // 更新arr
                             availability: availability, // 更新availability
@@ -197,6 +200,7 @@ export const updateProductivity = async (req, res, next) => {
                             meterstart: meterstart,
                             meterend: meterend,
                             totalmeter: totalmeter,
+                            operator:operator,
                             operatingtime: operatingtime, // 更新operatingtime
                             arr: arr, // 更新arr
                             availability: availability, // 更新availability

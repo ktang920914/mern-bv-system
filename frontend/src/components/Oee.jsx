@@ -63,6 +63,7 @@ const Oee = () => {
             'Meter Start': job.meterstart,
             'Meter End': job.meterend,
             'Total Meter': job.totalmeter,
+            'Operator': job.operator,
             'IRR': job.irr,
             'ARR': job.arr,
             'IPQC': job.ipqc,
@@ -90,7 +91,7 @@ const Oee = () => {
             { wch: 15 }, { wch: 8 }, { wch: 10 }, { wch: 8 },
             { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 },
             { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
-            { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+            { wch: 12 }, { wch: 30 }, { wch: 8 }, { wch: 8 },
             { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
             { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
             { wch: 8 }, { wch: 20 }, { wch: 20 }

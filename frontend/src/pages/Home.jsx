@@ -20,6 +20,7 @@ import Maintenance from "../components/Maintenance"
 import Cases from "../components/Cases"
 import Products from "../components/Products"
 import Movement from "../components/Movement"
+import Materials from "../components/Materials"
 
 
 const Home = () => {
@@ -63,6 +64,7 @@ const Home = () => {
           { tab === 'Maintenances' && <Maintenance/>}
           { tab === 'Cases' && <Cases/>}
           { tab === 'Products' && <Products/>}
+          { tab === 'Materials' && <Materials/>}
           { tab === 'Movements' && <Movement/>}
           { tab === 'Users' && <Users/>}
           { tab === 'Logs' && <ActivityLogs/>}

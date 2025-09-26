@@ -140,6 +140,7 @@ const Planning = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
+                    <TableHeadCell>Ext</TableHeadCell>
                     <TableHeadCell>Lot no</TableHeadCell>
                     <TableHeadCell>Irr</TableHeadCell>
                     <TableHeadCell>Arr</TableHeadCell>
@@ -152,6 +153,7 @@ const Planning = () => {
             <TableBody>
                 {currentPlannings.map((planning) => (
                     <TableRow key={planning._id}>
+                        <TableCell className="align-middle">{planning.code}</TableCell>
                         <TableCell className="align-middle">
                         <Popover
                             content={
