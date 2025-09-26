@@ -22,7 +22,7 @@ const Orders = () => {
     const [orderIdToUpdate,setOrderIdToUpdate] = useState('')
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchSuppliers = async () => {
@@ -214,7 +214,7 @@ const Orders = () => {
             <Button className='cursor-pointer' onClick={handleCreateOrder}>Create Order</Button>
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                 <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
@@ -257,9 +257,9 @@ const Orders = () => {
                     <TableCell>{order.amount}</TableCell>
                     <TableCell>{order.status}</TableCell>
                     <TableCell>
-                        <Button outline className='cursor-pointer' onClick={() => {handleUpdate(order)}}>Edit</Button>
+                        <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(order)}}>Edit</Button>
                     </TableCell>
-                    <TableCell><Button color='red' outline className='cursor-pointer' onClick={() => {setOrderIdToDelete(order._id);setOpenModalDeleteOrder(!openModalDeleteOrder)}}>Delete</Button></TableCell>
+                    <TableCell><Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setOrderIdToDelete(order._id);setOpenModalDeleteOrder(!openModalDeleteOrder)}}>Delete</Button></TableCell>
                     </TableRow>
                 </TableBody>
             ))}

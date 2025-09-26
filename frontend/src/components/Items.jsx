@@ -22,7 +22,7 @@ const Items = () => {
     const [itemIdToUpdate, setItemIdToUpdate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPage] = useState(7);
+    const [itemsPage] = useState(10);
 
     // Fetch suppliers
     useEffect(() => {
@@ -181,7 +181,7 @@ const Items = () => {
                 <Button className='cursor-pointer' onClick={handleCreateItem}>Create Item</Button>
             </div>
 
-            <Table hoverable>
+            <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                 <TableHead>
                     <TableRow>
                         <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Code</TableHeadCell>
@@ -220,9 +220,9 @@ const Items = () => {
                             <TableCell>{item.supplier}</TableCell>
                             <TableCell>{item.status}</TableCell>
                             <TableCell>{item.balance}</TableCell>
-                            <TableCell><Button className='cursor-pointer' outline onClick={() => handleUpdate(item)}>Edit</Button></TableCell>
+                            <TableCell><Button className='cursor-pointer py-1 px-1 text-sm h-8' outline onClick={() => handleUpdate(item)}>Edit</Button></TableCell>
                             {currentUser.role === 'Admin' && (
-                            <TableCell><Button className='cursor-pointer' color='red' outline onClick={() => { setItemIdToDelete(item._id); setOpenModalDeleteItem(true); }}>Delete</Button></TableCell>
+                            <TableCell><Button className='cursor-pointer py-1 px-1 text-sm h-8' color='red' outline onClick={() => { setItemIdToDelete(item._id); setOpenModalDeleteItem(true); }}>Delete</Button></TableCell>
                             )}
                             </TableRow>
                     </TableBody>

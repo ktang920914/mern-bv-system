@@ -22,7 +22,7 @@ const Maintenance = () => {
   const [maintenanceIdToUpdate,setMaintenanceIdToUpdate] = useState('')
   const [searchTerm,setSearchTerm] = useState('')
   const [currentPage,setCurrentPage] = useState(1)
-  const [itemsPage] = useState(7)
+  const [itemsPage] = useState(10)
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -240,7 +240,7 @@ const Maintenance = () => {
                 </Button>
         </div>
 
-         <Table hoverable>
+         <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
           <TableHead>
               <TableRow>
                   <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Job date</TableHeadCell>
@@ -313,10 +313,10 @@ const Maintenance = () => {
                     <TableCell className="align-middle">{maintenance.completiondate}</TableCell>
                     <TableCell className="align-middle">{maintenance.status}</TableCell>
                     <TableCell className="align-middle">
-                        <Button outline className='cursor-pointer'  onClick={() => {handleUpdate(maintenance)}}>Edit</Button>
+                        <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'  onClick={() => {handleUpdate(maintenance)}}>Edit</Button>
                     </TableCell>
                     <TableCell className="align-middle">
-                        <Button color='red' outline className='cursor-pointer'
+                        <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8'
                         onClick={() => {setMaintenanceIdToDelete(maintenance._id);setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)}}
                         >
                             Delete

@@ -21,7 +21,7 @@ const Products = () => {
     const [productIdToUpdate,setProductIdToUpdate] = useState('')
     const [updateFormData,setUpdateFormData] = useState({})
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     /*useEffect(() => {
         const fetchJobs = async () => {
@@ -215,7 +215,7 @@ const Products = () => {
             <Button className='cursor-pointer' onClick={handleCreateProduct}>Create Product</Button>
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                     <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Colour code</TableHeadCell>
@@ -254,10 +254,10 @@ const Products = () => {
                         <TableCell className="align-middle">{p.user}</TableCell>
                         <TableCell className="align-middle">{p.status}</TableCell>
                         <TableCell className="align-middle">
-                            <Button outline className='cursor-pointer' onClick={() => {handleUpdate(p)}}>Edit</Button>
+                            <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(p)}}>Edit</Button>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Button color='red' outline className='cursor-pointer' onClick={() => {setProductIdToDelete(p._id);setOpenModalDeleteProduct(!openModalDeleteProduct)}}>
+                            <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setProductIdToDelete(p._id);setOpenModalDeleteProduct(!openModalDeleteProduct)}}>
                                 Delete
                             </Button>
                         </TableCell>

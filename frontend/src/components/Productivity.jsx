@@ -15,7 +15,7 @@ const Productivity = () => {
     const [productivityIdToUpdate,setProductivityIdToUpdate] = useState('')
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchProductivities = async () => {
@@ -143,7 +143,7 @@ const Productivity = () => {
                 
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                     <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
@@ -209,7 +209,7 @@ const Productivity = () => {
                             <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
-                                        <p className="font-semibold text-sm mb-2">Startup + Screw out + process complication + QC time  = Downtime</p>
+                                        <p className="font-semibold text-sm mb-2">Startup + Screw out + Process complication + QC time  = Downtime</p>
                                         <p className="text-xs mb-2">{`${productivities.startup} + ${productivities.screwout} + ${productivities.processcomplication} + ${productivities.qctime} = ${productivities.downtime}`}</p>
                                         <p className="font-semibold text-sm">Reason:</p>
                                         <p className="text-xs mb-2">{productivities.reason}</p>
@@ -259,7 +259,7 @@ const Productivity = () => {
                             </Popover>
                         </TableCell>
                         <TableCell>
-                        <Button outline className='cursor-pointer' onClick={() => {handleUpdate(productivities)}}>Update</Button>
+                        <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(productivities)}}>Update</Button>
                         </TableCell>
                     </TableRow>
                 ))}

@@ -20,7 +20,7 @@ const Suppliers = () => {
     const [loading,setLoading] = useState(false)
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchSuppliers = async () => {
@@ -196,7 +196,7 @@ const Suppliers = () => {
             <Button className='cursor-pointer' onClick={handleCreateSupplier}>Create Supplier</Button>
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                     <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
@@ -235,10 +235,10 @@ const Suppliers = () => {
                         <TableCell className="align-middle">{supplier.email}</TableCell>
                         <TableCell className="align-middle">{supplier.status}</TableCell>
                         <TableCell className="align-middle">
-                            <Button outline className='cursor-pointer' onClick={() => {handleUpdate(supplier)}}>Edit</Button>
+                            <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(supplier)}}>Edit</Button>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Button color='red' outline className='cursor-pointer' onClick={() => {setSupplierIdToDelete(supplier._id);setOpenModalDeleteSupplier(!openModalDeleteSupplier)}}>
+                            <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setSupplierIdToDelete(supplier._id);setOpenModalDeleteSupplier(!openModalDeleteSupplier)}}>
                                 Delete
                             </Button>
                         </TableCell>

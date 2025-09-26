@@ -13,7 +13,7 @@ const ActivityLogs = () => {
     const {currentUser} = useUserstore()
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -80,7 +80,7 @@ const ActivityLogs = () => {
             <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                     <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
@@ -96,7 +96,7 @@ const ActivityLogs = () => {
                     <TableCell>{log.activity}</TableCell>
                     <TableCell>{log.detail}</TableCell>
                     <TableCell>
-                        <Button color='red' outline className='cursor-pointer' onClick={() => {setLogIdToDelete(log._id);setOpenModalDeleteLog(!openModalDeleteLog)}}>Delete</Button>
+                        <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setLogIdToDelete(log._id);setOpenModalDeleteLog(!openModalDeleteLog)}}>Delete</Button>
                     </TableCell>
                 </TableRow>
                 </TableBody>

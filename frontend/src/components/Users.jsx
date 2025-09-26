@@ -21,7 +21,7 @@ const Users = () => {
     const [updateFormData, setUpdateFormData] = useState({})
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -186,7 +186,7 @@ const Users = () => {
             <Button className='cursor-pointer' onClick={handleCreateUser}>Create User</Button>
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                     <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Username</TableHeadCell>
@@ -200,8 +200,8 @@ const Users = () => {
               <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>{user.role}</TableCell>
-                <TableCell><Button outline className='cursor-pointer' onClick={() => {handleUpdate(user)}}>Edit</Button></TableCell>
-                <TableCell><Button color='red' outline className='cursor-pointer' onClick={() => {setUserIdToDelete(user._id);setOpenModalDeleteUser(!openModalDeleteUser)}}>Delete</Button></TableCell>
+                <TableCell><Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(user)}}>Edit</Button></TableCell>
+                <TableCell><Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setUserIdToDelete(user._id);setOpenModalDeleteUser(!openModalDeleteUser)}}>Delete</Button></TableCell>
               </TableRow>
             </TableBody>
           ))}

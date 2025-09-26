@@ -21,7 +21,7 @@ const Jobs = () => {
     const [jobIdToUpdate,setJobIdToUpdate] = useState('')
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchItems = async () => {
@@ -211,7 +211,7 @@ const Jobs = () => {
                 <Button className='cursor-pointer' onClick={handleCreateJob}>Create job</Button>
         </div>
 
-        <Table hoverable>
+        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
             <TableHead>
                 <TableRow>
                     <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
@@ -252,10 +252,10 @@ const Jobs = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Button outline className='cursor-pointer' onClick={() => {handleUpdate(job)}}>Edit</Button>
+                            <Button outline className='cursor-pointer py-1 px-2 text-sm h-8' onClick={() => {handleUpdate(job)}}>Edit</Button>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Button color='red' outline className='cursor-pointer' onClick={() => {setJobIdToDelete(job._id);setOpenModalDeleteJob(!openModalDeleteJob)}}>
+                            <Button color='red' outline className='cursor-pointer py-1 px-2 text-sm h-8' onClick={() => {setJobIdToDelete(job._id);setOpenModalDeleteJob(!openModalDeleteJob)}}>
                                 Delete
                             </Button>
                         </TableCell>

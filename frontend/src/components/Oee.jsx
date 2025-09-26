@@ -12,7 +12,7 @@ const Oee = () => {
     const [jobs,setJobs] = useState([])
     const [searchTerm,setSearchTerm] = useState('')
     const [currentPage,setCurrentPage] = useState(1)
-    const [itemsPage] = useState(7)
+    const [itemsPage] = useState(10)
 
     useEffect(() => {
         const fetchJobs = async () => {
@@ -136,7 +136,7 @@ const Oee = () => {
         job.availability.toString().toLowerCase().includes(searchTerm) ||
         job.performance.toString().toLowerCase().includes(searchTerm) ||
         job.quality.toString().toLowerCase().includes(searchTerm) ||
-        job.code.toLowerCase().includes(searchTerm)
+        job.code.toLowerCase().includes(searchTerm) && job.code.toString().toLowerCase() === searchTerm
     )
 
     const handlePageChange = (page) => {
@@ -166,7 +166,7 @@ const Oee = () => {
                 </Button>
             </div>
 
-            <Table hoverable>
+            <Table hoverable className="[&_td]:py-3 [&_th]:py-3">
                 <TableHead>
                     <TableRow>
                         <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>

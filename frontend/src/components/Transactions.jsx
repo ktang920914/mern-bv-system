@@ -21,7 +21,7 @@ const Transactions = () => {
   const [recordIdToUpdate,setRecordIdToUpdate] = useState('')
   const [searchTerm,setSearchTerm] = useState('')
   const [currentPage,setCurrentPage] = useState(1)
-  const [itemsPage] = useState(7)
+  const [itemsPage] = useState(10)
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -214,7 +214,7 @@ const Transactions = () => {
         <Button className='cursor-pointer' onClick={handleCreateTransaction}>Create Transaction</Button>
       </div>
 
-      <Table hoverable>
+      <Table hoverable className="[&_td]:py-1 [&_th]:py-2"> 
         <TableHead>
           <TableRow>
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
@@ -242,12 +242,12 @@ const Transactions = () => {
               <TableCell>{record.user}</TableCell>
               {currentUser.role === 'Admin' && (
                 <TableCell>
-                  <Button outline className='cursor-pointer' onClick={() => {handleUpdate(record)}}>Edit</Button>
+                  <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(record)}}>Edit</Button>
                 </TableCell>
               )}
               {currentUser.role === 'Admin' && (
                 <TableCell>
-                  <Button color='red' outline className='cursor-pointer' onClick={() => {setRecordIdToDelete(record._id);handleDeleteTransaction()}}>Delete</Button>
+                  <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setRecordIdToDelete(record._id);handleDeleteTransaction()}}>Delete</Button>
                 </TableCell>
               )}
             </TableRow>
