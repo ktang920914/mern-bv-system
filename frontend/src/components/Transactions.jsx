@@ -2,9 +2,11 @@ import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Select
 import { useState, useEffect } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
+import useThemeStore from '../themeStore';
 
 const Transactions = () => {
 
+  const {theme} = useThemeStore()
   const {currentUser} = useUserstore()
   const [openModalCreateTransaction,setOpenModalCreateTransaction] = useState(false)
   const [formData,setFormData] = useState({})
@@ -215,23 +217,23 @@ const Transactions = () => {
       <Table hoverable>
         <TableHead>
           <TableRow>
-            <TableHeadCell>Date</TableHeadCell>
-            <TableHeadCell>Code</TableHeadCell>
-            <TableHeadCell>Transaction</TableHeadCell>
-            <TableHeadCell>Quantity</TableHeadCell>
-            <TableHeadCell>Balance</TableHeadCell>
-            <TableHeadCell>User</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Code</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Transaction</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Balance</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
             {currentUser.role === 'Admin' && (
-              <TableHeadCell>Edit</TableHeadCell>
+              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
             )}
             {currentUser.role === 'Admin' && (
-              <TableHeadCell>Delete</TableHeadCell>
+              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
             )}
           </TableRow>
         </TableHead>
         {currentRecords.map((record) => (
           <TableBody key={record._id}>
-            <TableRow>
+            <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
               <TableCell>{record.date}</TableCell>
               <TableCell>{record.code}</TableCell>
               <TableCell>{record.transaction}</TableCell>
@@ -254,7 +256,7 @@ const Transactions = () => {
       </Table>
 
       <div className="flex-col justify-center text-center mt-4">
-        <p className='text-gray-500 font-semibold'>
+        <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
             Showing {showingFrom} to {showingTo} of {totalEntries} Entries
         </p>
         <Pagination

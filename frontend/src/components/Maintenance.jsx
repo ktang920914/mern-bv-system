@@ -2,9 +2,11 @@ import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popove
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
+import useThemeStore from '../themeStore';
 
 const Maintenance = () => {
 
+  const {theme} = useThemeStore()
   const {currentUser} = useUserstore()
   const [errorMessage,setErrorMessage] = useState(null)
   const [loading,setLoading] = useState(false)
@@ -241,22 +243,22 @@ const Maintenance = () => {
          <Table hoverable>
           <TableHead>
               <TableRow>
-                  <TableHeadCell>Job date</TableHeadCell>
-                  <TableHeadCell>Job type</TableHeadCell>
-                  <TableHeadCell>Item</TableHeadCell>
-                  <TableHeadCell>Supplier</TableHeadCell>
-                  <TableHeadCell>Completion date</TableHeadCell>
-                  <TableHeadCell>Status</TableHeadCell>
-                  <TableHeadCell>Edit</TableHeadCell>
-                  <TableHeadCell>Delete</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Job date</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Job type</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Item</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Completion date</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                  <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
               </TableRow>
           </TableHead>
           <TableBody>
             {currentMaintenances.map((maintenance,) => (
-                <TableRow key={maintenance._id}>
+                <TableRow key={maintenance._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     <TableCell className="align-middle">{maintenance.jobdate}</TableCell>
                     <TableCell className="align-middle">
-                      <Popover
+                      <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                           content={
                               <div className="p-3 max-w-xs">
                                   <p className="font-semibold text-sm">Job detail:</p>
@@ -273,7 +275,7 @@ const Maintenance = () => {
                       </Popover>
                     </TableCell>
                     <TableCell className="align-middle">
-                      <Popover
+                      <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                           content={
                               <div className="p-3 max-w-xs">
                                   <p className="font-semibold text-sm">Problem:</p>
@@ -292,7 +294,7 @@ const Maintenance = () => {
                       </Popover>
                     </TableCell>
                     <TableCell className="align-middle">
-                      <Popover
+                      <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                           content={
                               <div className="p-3 max-w-xs">
                                   <p className="font-semibold text-sm">Cost:</p>
@@ -326,7 +328,7 @@ const Maintenance = () => {
        </Table>
 
        <div className="flex-col justify-center text-center mt-4">
-        <p className='text-gray-500 font-semibold'>
+        <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
             Showing {showingFrom} to {showingTo} of {totalEntries} Entries
         </p>
         <Pagination

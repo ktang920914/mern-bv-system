@@ -18,6 +18,7 @@ import {
   ArcElement,
 } from 'chart.js'
 import { Bar, Line, Pie } from 'react-chartjs-2'
+import useThemeStore from '../themeStore'
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -33,6 +34,8 @@ ChartJS.register(
 )
 
 const Costs = () => {
+
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [errorMessage, setErrorMessage] = useState(null)
     const [loading, setLoading] = useState(false)
@@ -311,7 +314,7 @@ const Costs = () => {
                     <TextInput placeholder='Search cost category...' onChange={handleSearch}/>
                 </div>
                 <div className='flex items-center gap-2'>
-                    <Button outline className='cursor-pointer' onClick={generateExcelReport} disabled={costs.length === 0}>
+                    <Button className='cursor-pointer' onClick={generateExcelReport} disabled={costs.length === 0}>
                         Report
                     </Button>
                     <Button className='cursor-pointer' onClick={handleCreateCost}>
@@ -332,7 +335,7 @@ const Costs = () => {
                                 id="category"
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                                className={`text-sm p-2 border rounded-md ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
                                 {costCategories.map(category => (
                                     <option key={category} value={category}>
@@ -348,7 +351,7 @@ const Costs = () => {
                                 id="chartType"
                                 value={selectedChartType}
                                 onChange={(e) => setSelectedChartType(e.target.value)}
-                                className="text-sm p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                                className={`text-sm p-2 border rounded-md ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
                                 {chartTypes.map(type => (
                                     <option key={type.value} value={type.value}>
@@ -384,25 +387,25 @@ const Costs = () => {
                 <Table hoverable className='mb-6'>
                     <TableHead>
                         <TableRow>
-                            <TableHeadCell>Cost category</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Cost category</TableHeadCell>
                             {monthFields.map(month => (
-                                <TableHeadCell key={month.key}>{month.name}</TableHeadCell>
+                                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`} key={month.key}>{month.name}</TableHeadCell>
                             ))}
-                            <TableHeadCell>Total</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {currentCosts.map(cost => ( 
                             <TableRow key={cost.type}> 
-                                <TableCell className="font-medium text-gray-900 dark:text-white">
+                                <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                     {cost.type} 
                                 </TableCell>
                                 {monthFields.map(month => (
-                                    <TableCell key={month.key}>
+                                    <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
                                         {cost[month.key] || 0} 
                                     </TableCell>
                                 ))}
-                                <TableCell>
+                                <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                     {cost.total || 0}
                                 </TableCell>
                             </TableRow>
@@ -412,7 +415,7 @@ const Costs = () => {
             )}
 
             <div className="flex-col justify-center text-center mt-4">
-                <p className='text-gray-500 font-semibold'>
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                     Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                 </p>
                 <Pagination

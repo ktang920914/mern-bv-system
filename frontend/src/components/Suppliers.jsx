@@ -2,9 +2,11 @@ import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popove
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
+import useThemeStore from '../themeStore';
 
 const Suppliers = () => {
 
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [formData,setFormData] = useState({})
     const [suppliers,setSuppliers] = useState([])
@@ -197,20 +199,20 @@ const Suppliers = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
-                    <TableHeadCell>Supplier</TableHeadCell>
-                    <TableHeadCell>Contact</TableHeadCell>
-                    <TableHeadCell>PIC</TableHeadCell>
-                    <TableHeadCell>Email</TableHeadCell>
-                    <TableHeadCell>Status</TableHeadCell>
-                    <TableHeadCell>Edit</TableHeadCell>
-                    <TableHeadCell>Delete</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Contact</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>PIC</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Email</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                 </TableRow>
             </TableHead>
             <TableBody>
                 {currentSuppliers.map((supplier) => (
-                    <TableRow key={supplier._id}>
+                    <TableRow key={supplier._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm">Description:</p>
@@ -246,7 +248,7 @@ const Suppliers = () => {
         </Table>
 
       <div className="flex-col justify-center text-center mt-4">
-        <p className='text-gray-500 font-semibold'>
+        <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
             Showing {showingFrom} to {showingTo} of {totalEntries} Entries
         </p>
         <Pagination

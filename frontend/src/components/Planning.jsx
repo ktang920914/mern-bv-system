@@ -1,9 +1,11 @@
 import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
 import { useState, useEffect } from 'react'
 import useUserstore from '../store'
+import useThemeStore from '../themeStore'
 
 const Planning = () => {
 
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
@@ -140,22 +142,22 @@ const Planning = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
-                    <TableHeadCell>Ext</TableHeadCell>
-                    <TableHeadCell>Lot no</TableHeadCell>
-                    <TableHeadCell>Irr</TableHeadCell>
-                    <TableHeadCell>Arr</TableHeadCell>
-                    <TableHeadCell>Prod leadtime</TableHeadCell>
-                    <TableHeadCell>Plan prodtime</TableHeadCell>
-                    <TableHeadCell>Operating time</TableHeadCell>
-                    <TableHeadCell>Update</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Irr</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Arr</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod leadtime</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Plan prodtime</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Operating time</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Update</TableHeadCell>
                 </TableRow>
             </TableHead>
             <TableBody>
                 {currentPlannings.map((planning) => (
-                    <TableRow key={planning._id}>
+                    <TableRow key={planning._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                         <TableCell className="align-middle">{planning.code}</TableCell>
                         <TableCell className="align-middle">
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">Extruder:</p>
@@ -184,7 +186,7 @@ const Planning = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">Extruder:</p>
@@ -201,7 +203,7 @@ const Planning = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) = ARR`}</p>
@@ -218,7 +220,7 @@ const Planning = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">{`Prod end - Order date = Prod leadtime`}</p>
@@ -235,7 +237,7 @@ const Planning = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">{`(Total order / IRR) + IPQC + Setup  = Plan Prodtime`}</p>
@@ -252,7 +254,7 @@ const Planning = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">{`(Prod end - Prod Start) - Downtime = Operatingtime`}</p>
@@ -277,7 +279,7 @@ const Planning = () => {
         </Table>
 
         <div className="flex-col justify-center text-center mt-4">
-            <p className='text-gray-500 font-semibold'>
+            <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                 Showing {showingFrom} to {showingTo} of {totalEntries} Entries
             </p>
             <Pagination

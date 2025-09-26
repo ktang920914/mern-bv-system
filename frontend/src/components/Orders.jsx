@@ -2,9 +2,12 @@ import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popove
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
+import useThemeStore from '../themeStore';
 
 const Orders = () => {
 
+
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [openModalCreateOrder,setOpenModalCreateOrder] = useState(false)
     const [openModalDeleteOrder,setOpenModalDeleteOrder] = useState(false)
@@ -214,22 +217,22 @@ const Orders = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
-                <TableHeadCell>Date</TableHeadCell>
-                <TableHeadCell>Supplier</TableHeadCell>
-                <TableHeadCell>Item</TableHeadCell>
-                <TableHeadCell>Quantity</TableHeadCell>
-                <TableHeadCell>Amount</TableHeadCell>
-                <TableHeadCell>Status</TableHeadCell>
-                <TableHeadCell>Edit</TableHeadCell>
-                <TableHeadCell>Delete</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Item</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Amount</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                 </TableRow>
             </TableHead>
             {currentOrders.map((order) => (
                 <TableBody key={order._id}>
-                    <TableRow>
+                    <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     <TableCell>{order.date}</TableCell>
                     <TableCell className='align-middle'>
-                        <Popover
+                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             content={
                                 <div className="p-3 max-w-xs">
                                     <p className="font-semibold text-sm">Doc no:</p>
@@ -263,7 +266,7 @@ const Orders = () => {
         </Table>
 
         <div className="flex-col justify-center text-center mt-4">
-                <p className='text-gray-500 font-semibold'>
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                     Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                 </p>
                 <Pagination

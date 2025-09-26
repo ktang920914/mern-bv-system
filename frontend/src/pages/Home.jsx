@@ -42,14 +42,14 @@ const Home = () => {
       <Header/>
       <div className="flex">
         <div className="hidden lg:block">
-          <DashSidebar/>
+          <DashSidebar />
         </div>
 
         <div className="lg:hidden">
           <DashSidebar />
         </div>
 
-        <div className="flex-1 p-4 lg:ml-1">
+        <div className={`flex-1 p-4 lg:ml-1 ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-gray-600 text-gray-300'}`}>
           { tab === 'Dashboard' && <Dashboard/>}
           { tab === 'Jobs' && <Jobs/>}
           { tab === 'Productivity' && <Productivity/>}

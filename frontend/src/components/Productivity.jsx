@@ -1,9 +1,11 @@
 import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
 import { useState, useEffect } from 'react'
 import useUserstore from '../store'
+import useThemeStore from '../themeStore'
 
 const Productivity = () => {
 
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
@@ -144,21 +146,21 @@ const Productivity = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
-                    <TableHeadCell>Ext</TableHeadCell>
-                    <TableHeadCell>Lot no</TableHeadCell>
-                    <TableHeadCell>Output</TableHeadCell>
-                    <TableHeadCell>Downtime</TableHeadCell>
-                    <TableHeadCell>Wastage</TableHeadCell>
-                    <TableHeadCell>Meter</TableHeadCell>
-                    <TableHeadCell>Update</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Output</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Downtime</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Wastage</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Meter</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Update</TableHeadCell>
                 </TableRow>
             </TableHead>
             <TableBody>
                 {currentProductivities.map((productivities) => (
-                    <TableRow key={productivities._id}>
+                    <TableRow key={productivities._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                         <TableCell className="align-middle">{productivities.code}</TableCell>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm">Extruder:</p>
@@ -187,7 +189,7 @@ const Productivity = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm">Total order:</p>
@@ -204,7 +206,7 @@ const Productivity = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm mb-2">Startup + Screw out + process complication + QC time  = Downtime</p>
@@ -223,7 +225,7 @@ const Productivity = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm mb-2">Total output - Total order = Wastage</p>
@@ -240,7 +242,7 @@ const Productivity = () => {
                             </Popover>
                         </TableCell>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm mb-2">Meter end - Meter start = Total meter</p>
@@ -265,7 +267,7 @@ const Productivity = () => {
         </Table>
 
         <div className="flex-col justify-center text-center mt-4">
-            <p className='text-gray-500 font-semibold'>
+            <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                 Showing {showingFrom} to {showingTo} of {totalEntries} Entries
             </p>
             <Pagination

@@ -20,6 +20,7 @@ import {
   ArcElement,
 } from 'chart.js'
 import { Bar, Line, Pie } from 'react-chartjs-2'
+import useThemeStore from '../themeStore'
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -35,6 +36,8 @@ ChartJS.register(
 )
 
 const Outputs = () => {
+
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
@@ -406,7 +409,6 @@ const Outputs = () => {
                     </Button>
                     <Button 
                         color='blue' 
-                        outline 
                         className='cursor-pointer'
                         onClick={generateExcelReport}
                         disabled={outputs.length === 0}
@@ -497,7 +499,7 @@ const Outputs = () => {
                                 id="dataType"
                                 value={selectedDataType}
                                 onChange={(e) => setSelectedDataType(e.target.value)}
-                                className="text-sm p-2 border rounded-md dark:bg-gray-200 dark:border-gray-600"
+                                className={`text-sm p-2 border rounded-md ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
                                 {dataTypes.map(type => (
                                     <option key={type.value} value={type.value}>
@@ -513,7 +515,7 @@ const Outputs = () => {
                                 id="chartType"
                                 value={selectedChartType}
                                 onChange={(e) => setSelectedChartType(e.target.value)}
-                                className="text-sm p-2 border rounded-md dark:bg-gray-200 dark:border-gray-600"
+                                className={`text-sm p-2 border rounded-md ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
                                 {chartTypes.map(type => (
                                     <option key={type.value} value={type.value}>
@@ -554,26 +556,26 @@ const Outputs = () => {
                 <>
                     <Table hoverable className='mb-6'>
                         <TableHead>
-                            <TableRow>
-                                <TableHeadCell>Data Type</TableHeadCell>
+                            <TableRow >
+                                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Data Type</TableHeadCell>
                                 {monthFields.map(month => (
-                                    <TableHeadCell key={month.key}>{month.name}</TableHeadCell>
+                                    <TableHeadCell key={month.key} className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>{month.name}</TableHeadCell>
                                 ))}
-                                <TableHeadCell>Total</TableHeadCell>
+                                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {currentOutputs.map((output, index) => ( 
                                 <TableRow key={output._id || index}> 
-                                    <TableCell className="font-medium text-gray-900 dark:text-white">
+                                    <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                         {output.dataTypeLabel || 'Unknown'} 
                                     </TableCell>
                                     {monthFields.map(month => (
-                                        <TableCell key={month.key}>
+                                        <TableCell key={month.key} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                             {formatNumber(output[month.key])}
                                         </TableCell>
                                     ))}
-                                    <TableCell className="font-semibold">
+                                    <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                         {formatNumber(output.total)}
                                     </TableCell>
                                 </TableRow>
@@ -582,7 +584,7 @@ const Outputs = () => {
                     </Table>
 
                     <div className="flex-col justify-center text-center mt-4">
-                        <p className='text-gray-500 font-semibold'>
+                        <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                             Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                         </p>
                         <Pagination

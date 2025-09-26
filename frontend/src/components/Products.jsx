@@ -2,9 +2,11 @@ import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popove
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
+import useThemeStore from '../themeStore';
 
 const Products = () => {
 
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
@@ -216,24 +218,24 @@ const Products = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
-                    <TableHeadCell>Colour code</TableHeadCell>
-                    <TableHeadCell>Lot no</TableHeadCell>
-                    <TableHeadCell>Quantity</TableHeadCell>
-                    <TableHeadCell>Location</TableHeadCell>
-                    <TableHeadCell>User</TableHeadCell>
-                    <TableHeadCell>Status</TableHeadCell>
-                    <TableHeadCell>Edit</TableHeadCell>
-                    <TableHeadCell>Delete</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Colour code</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Location</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                 </TableRow>
             </TableHead>
             <TableBody>
                 {currentProducts.map((p) => (
-                    <TableRow key={p._id}>
+                    <TableRow key={p._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                         <TableCell className="align-middle">{p.colourcode}</TableCell>
                         <TableCell className="align-middle">{p.lotno}</TableCell>
                         <TableCell className="align-middle">{p.quantity}</TableCell>
                         <TableCell className="align-middle">
-                            <Popover
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                 content={
                                     <div className="p-3 max-w-xs">
                                         <p className="font-semibold text-sm">Pallet no:</p>
@@ -265,7 +267,7 @@ const Products = () => {
         </Table>
 
         <div className="flex-col justify-center text-center mt-4">
-            <p className='text-gray-500 font-semibold'>
+            <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                 Showing {showingFrom} to {showingTo} of {totalEntries} Entries
             </p>
             <Pagination

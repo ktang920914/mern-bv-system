@@ -2,9 +2,11 @@ import { Button, Modal, ModalBody, ModalHeader, Pagination, Table, TableBody, Ta
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import { useEffect, useState } from 'react'
+import useThemeStore from '../themeStore';
 
 const ActivityLogs = () => {
 
+    const {theme} = useThemeStore()
     const [activity,setActivities] = useState([])
     const [logIdToDelete,setLogIdToDelete] = useState('')
     const [openModalDeleteLog,setOpenModalDeleteLog] = useState(false)
@@ -81,15 +83,15 @@ const ActivityLogs = () => {
         <Table hoverable>
             <TableHead>
                 <TableRow>
-                    <TableHeadCell>Date</TableHeadCell>
-                    <TableHeadCell>Activity</TableHeadCell>
-                    <TableHeadCell>Detail</TableHeadCell>
-                    <TableHeadCell>Delete</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Activity</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Detail</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                 </TableRow>
             </TableHead>
             {currentLogs.map((log) => (
                 <TableBody key={log._id}>
-                <TableRow>
+                <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     <TableCell>{log.date}</TableCell>
                     <TableCell>{log.activity}</TableCell>
                     <TableCell>{log.detail}</TableCell>
@@ -102,7 +104,7 @@ const ActivityLogs = () => {
         </Table>
 
         <div className="flex-col justify-center text-center mt-4">
-            <p className='text-gray-500 font-semibold'>
+            <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                 Showing {showingFrom} to {showingTo} of {totalEntries} Entries
             </p>
                 <Pagination

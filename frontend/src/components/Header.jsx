@@ -32,13 +32,13 @@ const Header = () => {
 
   return (
     <div >
-         <Navbar fluid rounded className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>
+         <Navbar fluid rounded className={`border-b border-gray-900 ${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>
       <NavbarBrand href="https://www.boldvision.com.my/index.php" target="_blank" className='ml-14'>
         <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSihAmxl1XSIBFJQ3a3P8qyUwlXkvdtKI6OjQ&s" className="mr-3 h-6 sm:h-9" alt="Bold Vision Logo" />
         <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">Bold Vision Sdn Bhd</span>
       </NavbarBrand>
       <div className="flex md:order-2 gap-2">
-        <Button className='sm:block cursor-pointer'color='gray' pill onClick={toggleTheme}>
+        <Button className={`sm:block cursor-pointer ${theme === 'light' ? 'bg-white text-orange-500' : 'bg-gray-900 text-yellow-200'}`} color='white' pill onClick={toggleTheme}>
           {theme === 'light' ? <FaSun /> : <FaMoon />}
         </Button>
         <TextInput value={currentUser.username} className='hidden sm:block' disabled/>

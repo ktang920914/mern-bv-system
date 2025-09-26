@@ -3,8 +3,11 @@ import useUserstore from '../store'
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import useThemeStore from '../themeStore'
 
 const Oee = () => {
+
+    const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [jobs,setJobs] = useState([])
     const [searchTerm,setSearchTerm] = useState('')
@@ -155,7 +158,6 @@ const Oee = () => {
                     <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
                 </div>
                 <Button 
-                    outline 
                     color='blue' 
                     className='cursor-pointer'
                     onClick={generateExcelReport}
@@ -167,20 +169,20 @@ const Oee = () => {
             <Table hoverable>
                 <TableHead>
                     <TableRow>
-                        <TableHeadCell>Ext</TableHeadCell>
-                        <TableHeadCell>Lot no</TableHeadCell>
-                        <TableHeadCell>Availability</TableHeadCell>
-                        <TableHeadCell>Performance</TableHeadCell>
-                        <TableHeadCell>Quality</TableHeadCell>
-                        <TableHeadCell>OEE</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Availability</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Performance</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quality</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>OEE</TableHeadCell>
                     </TableRow>
                 </TableHead>
                 {currentJobs.map((job) => (
                     <TableBody key={job._id}>
-                        <TableRow>
+                        <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                             <TableCell>{job.code}</TableCell>
                             <TableCell className="align-middle">
-                                <Popover
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">Extruder:</p>
@@ -209,7 +211,7 @@ const Oee = () => {
                                 </Popover>
                             </TableCell>
                             <TableCell className="align-middle">
-                                <Popover
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`(Operatingtime / Plan Prodtime) = Availability`}</p>
@@ -226,7 +228,7 @@ const Oee = () => {
                                 </Popover>
                             </TableCell>
                             <TableCell className="align-middle">
-                                <Popover
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) / IRR = Performance`}</p>
@@ -243,7 +245,7 @@ const Oee = () => {
                                 </Popover>
                             </TableCell>
                             <TableCell className="align-middle">
-                                <Popover
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`(Totaloutput - Reject) / Total output = Quality`}</p>
@@ -260,7 +262,7 @@ const Oee = () => {
                                 </Popover>
                             </TableCell>
                             <TableCell className="align-middle">
-                                <Popover
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
@@ -282,7 +284,7 @@ const Oee = () => {
             </Table>
 
             <div className="flex-col justify-center text-center mt-4">
-                <p className='text-gray-500 font-semibold'>
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                     Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                 </p>
                 <Pagination

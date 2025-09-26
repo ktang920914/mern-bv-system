@@ -3,8 +3,11 @@ import { HiOutlineExclamationCircle } from "react-icons/hi";
 import { useState, useEffect } from 'react';
 import useUserstore from '../store';
 import { QRCodeCanvas } from 'qrcode.react';
+import useThemeStore from '../themeStore';
 
 const Items = () => {
+
+    const {theme} = useThemeStore()
     const { currentUser } = useUserstore();
     const [formData, setFormData] = useState({});
     const [updateFormData, setUpdateFormData] = useState({});
@@ -181,23 +184,23 @@ const Items = () => {
             <Table hoverable>
                 <TableHead>
                     <TableRow>
-                        <TableHeadCell>Code</TableHeadCell>
-                        <TableHeadCell>Type</TableHeadCell>
-                        <TableHeadCell>Location</TableHeadCell>
-                        <TableHeadCell>Supplier</TableHeadCell>
-                        <TableHeadCell>Status</TableHeadCell>
-                        <TableHeadCell>Balance</TableHeadCell>
-                        <TableHeadCell>Edit</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Code</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Type</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Location</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Balance</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
                         {currentUser.role === 'Admin' && (
-                        <TableHeadCell>Delete</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                         )}
                     </TableRow>
                 </TableHead>
                 {currentItems.map(item => (
                     <TableBody key={item._id}>
-                        <TableRow>
+                        <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                             <TableCell>
-                                <Popover
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-4 text-center">
                                             <h3 className="font-semibold mb-2">QR Code - {item.code}</h3>
@@ -207,6 +210,7 @@ const Items = () => {
                                     }
                                     trigger="hover"
                                     placement="right"
+                                    arrow={false}
                                 >
                                     <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed border-blue-300">{item.code}</span>
                                 </Popover>
@@ -226,7 +230,7 @@ const Items = () => {
             </Table>
 
             <div className="flex flex-col items-center mt-4">
-                <p className='text-gray-500 font-semibold'>Showing {showingFrom} to {showingTo} of {totalEntries} entries</p>
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>Showing {showingFrom} to {showingTo} of {totalEntries} entries</p>
                 <Pagination showIcons currentPage={currentPage} totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))} onPageChange={handlePageChange} />
             </div>
 
