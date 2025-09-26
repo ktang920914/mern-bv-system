@@ -85,14 +85,14 @@ const DashSidebar = () => {
       )}
 
       <div className={`fixed lg:sticky top-0 left-0 h-screen z-40 transition-all duration-300 ease-in-out
-        w-64 
+        w-64
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         <Sidebar 
           aria-label="Sidebar with multi-level dropdown example" 
           className={`h-full w-64 border-r ${currentTheme.sidebar}`}
         >
-          <SidebarItems>
+          <SidebarItems className={`font-semibold ${theme === 'light' ? 'bg-gray-100' : ' bg-gray-900'}`}>
             <SidebarItemGroup>
               <Link to='/?tab=Dashboard'>
                 <SidebarItem  
