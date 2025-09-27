@@ -220,25 +220,25 @@ const Users = () => {
             </div>
 
         <Modal show={openModalCreateUser} size="md" onClose={handleCreateUser} popup>
-        <ModalHeader />
-        <ModalBody>
+        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
             <div className="space-y-6">
-                <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create User</h3>
+                <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create User</h3>
                 <form onSubmit={handleSubmit}>
                     <div>
                         <div className="mb-4 block">
-                            <Label>Your username</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Your username</Label>
                             <TextInput id="username" placeholder="Enter username" onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label htmlFor="password">Your password</Label>
+                        <Label htmlFor="password" className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Your password</Label>
                         <TextInput id="password" type="password" placeholder='Enter password' onChange={handleChange} onFocus={handleFocus} required/>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label>Your Role</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Your Role</Label>
                         <Select id="role" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                             <option></option>
                             <option>Admin</option>
@@ -288,20 +288,20 @@ const Users = () => {
       </Modal>
 
       <Modal show={openModalUpdateUser} size="md" onClose={() => setOpenModalUpdateUser(!openModalUpdateUser)} popup>
-        <ModalHeader />
-        <ModalBody>
+        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
             <div className="space-y-6">
-                <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update User</h3>
+                <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update User</h3>
                 <form onSubmit={handleUpdateSubmit}>
                     <div>
                         <div className="mb-4 block">
-                            <Label>Your username</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Your username</Label>
                             <TextInput value={updateFormData.username || ''} id="username" placeholder="Enter username" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label>Your Role</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Your Role</Label>
                         <Select value={updateFormData.role} id="role" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                             <option></option>
                             <option>Admin</option>

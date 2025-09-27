@@ -279,104 +279,104 @@ const Productivity = () => {
         </div>
 
         <Modal show={openModalUpdateProductivity} onClose={handleUpdateProductivity} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update Productivity</h3>
+                    <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Productivity</h3>
                     <form onSubmit={handleSubmit}>
  
                         <div className="mb-4 block">
-                            <Label>Total output</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Total output</Label>
                             <TextInput value={formData.totaloutput}  type='number' min='0' id="totaloutput" placeholder='Enter total output'  onChange={handleChange} onFocus={handleFocus} />
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Reject</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Reject</Label>
                             <TextInput value={formData.reject}  type='number' min='0' id="reject" placeholder='Enter reject'  onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Start up</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start up</Label>
                             <TextInput value={formData.startup}  type='number' min='0' id="startup" placeholder='Enter start up' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>Screw out</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Screw out</Label>
                             <TextInput value={formData.screwout} type='number' min='0' id="screwout" placeholder='Enter screw out' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Process complication</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Process complication</Label>
                             <TextInput value={formData.processcomplication} type='number' id="processcomplication" min='0' placeholder='Enter process complication' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>QC time</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>QC time</Label>
                             <TextInput value={formData.qctime} type='number' id="qctime" min='0' placeholder='Enter QC time' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Reason</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Reason</Label>
                             <TextInput value={formData.reason} id="reason" placeholder='Enter reason' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Wash resin</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Wash resin</Label>
                             <TextInput value={formData.washresin} id="washresin" placeholder='Enter wash resin' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Wash up</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Wash up</Label>
                             <TextInput value={formData.washup} type='number' id="washup" min='0' placeholder='Enter wash up' onChange={handleChange} onFocus={handleFocus} />
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Strand drop</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Strand drop</Label>
                             <TextInput value={formData.stranddrop} type='number' id="stranddrop" min='0' placeholder='Enter strand drop' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>White oil evaporate</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>White oil evaporate</Label>
                             <TextInput value={formData.whiteoil} type='number' id="whiteoil" min='0' placeholder='Enter white oil evaporate' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Vent/Port degassing</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Vent/Port degassing</Label>
                             <TextInput value={formData.vent} type='number' id="vent" min='0' placeholder='Enter vent/port degassing' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Uneven pallet</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Uneven pallet</Label>
                             <TextInput value={formData.unevenpallet} type='number' id="unevenpallet" min='0' placeholder='Enter uneven pallet' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Trial run</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Trial run</Label>
                             <TextInput value={formData.trialrun} type='number' id="trialrun" min='0' placeholder='Enter trial run' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Meter start</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Meter start</Label>
                             <TextInput value={formData.meterstart} type='number' id="meterstart" min='0' placeholder='Enter meter start' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Meter end</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Meter end</Label>
                             <TextInput value={formData.meterend} type='number' id="meterend" min='0' placeholder='Enter meter end' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Color</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Color</Label>
                             <TextInput value={formData.color} id="color" placeholder='Enter color' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>MFI density</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>MFI density</Label>
                             <TextInput value={formData.density} id="density" type='number' min='1' placeholder='Enter MFI density' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Operator</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Operator</Label>
                             <TextInput value={formData.operator} id="operator" placeholder='Enter operator' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
                             

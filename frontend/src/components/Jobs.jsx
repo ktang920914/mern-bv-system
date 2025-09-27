@@ -277,14 +277,14 @@ const Jobs = () => {
         </div>
 
         <Modal show={openModalCreateJob} onClose={handleCreateJob} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Job</h3>
+                    <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Create Job</h3>
                     <form onSubmit={handleSubmit}>
                         <div>
                             <div className="mb-4 block">
-                                <Label>Extruder</Label>
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
                                 <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                     <option></option>
                                 {items.map((item) => (
@@ -295,37 +295,37 @@ const Jobs = () => {
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Prod start</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod start</Label>
                             <TextInput  type='datetime-local' id="starttime"  onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Prod end</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod end</Label>
                             <TextInput  type='datetime-local' id="endtime"  onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Order date</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order date</Label>
                             <TextInput  type='date' id="orderdate"  onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>Lot no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
                             <TextInput id="lotno" placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Colour code</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
                             <TextInput id="colourcode" placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Material</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
                             <TextInput id="material" placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Total order</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
                             <TextInput type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
                             
@@ -349,7 +349,7 @@ const Jobs = () => {
         </Modal>
 
         <Modal show={openModalDeleteJob} size="md" onClose={() => setOpenModalDeleteJob(!openModalDeleteJob)} popup>
-            <ModalHeader />
+            <ModalHeader/>
             <ModalBody>
             <div className="text-center">
                 <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
@@ -369,14 +369,14 @@ const Jobs = () => {
         </Modal>
 
         <Modal show={openModalUpdateJob} onClose={() => setOpenModalUpdateJob(!openModalUpdateJob)} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+            <ModalBody className={`${theme === 'light' ? '' : 'text-gray-50 bg-gray-900'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update Job</h3>
+                    <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update Job</h3>
                     <form onSubmit={handleUpdateSubmit}>
                         <div>
                             <div className="mb-4 block">
-                                <Label>Extruder</Label>
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
                                 <Select  value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                     <option></option>
                                 {items.map((item) => (
@@ -387,37 +387,37 @@ const Jobs = () => {
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Prod start</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod start</Label>
                             <TextInput value={updateFormData.starttime}  type='datetime-local' id="starttime"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Prod end</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod end</Label>
                             <TextInput value={updateFormData.endtime} type='datetime-local' id="endtime"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Order date</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order date</Label>
                             <TextInput value={updateFormData.orderdate}  type='date' id="orderdate"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>Lot no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
                             <TextInput value={updateFormData.lotno} id="lotno" placeholder='Enter lot no' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Colour code</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
                             <TextInput value={updateFormData.colourcode} id="colourcode" placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Material</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
                             <TextInput value={updateFormData.material} id="material" placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Total order</Label>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
                             <TextInput value={updateFormData.totalorder} type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
                             

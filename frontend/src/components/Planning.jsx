@@ -290,20 +290,20 @@ const Planning = () => {
             />
         </div>
 
-        <Modal show={openModalUpdatePlanning} onClose={handleUpdatePlanning} popup>
-            <ModalHeader />
-            <ModalBody>
+        <Modal show={openModalUpdatePlanning} size='sm'onClose={handleUpdatePlanning} popup>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Planning</h3>
+                    <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Planning</h3>
                     <form onSubmit={handleSubmit}>
     
                         <div className="mb-4 block">
-                            <Label>IRR</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IRR</Label>
                             <TextInput value={formData.irr} type='number' min='0.5' max='6.0' step='any'id="irr" placeholder='Enter IRR'  onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>IPQC</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IPQC</Label>
                             <Select value={formData.ipqc} id="ipqc" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>0</option>
@@ -313,7 +313,7 @@ const Planning = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Setup</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Setup</Label>
                             <Select value={formData.setup} id="setup" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>0</option>

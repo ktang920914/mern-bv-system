@@ -278,20 +278,20 @@ const Orders = () => {
               </div>
 
         <Modal show={openModalCreateOrder} onClose={handleCreateOrder} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Order</h3>
+                    <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Order</h3>
                     <form onSubmit={handleSubmit}>
                         <div>
                             <div className="mb-4 block">
-                                <Label htmlFor='date'>Date</Label>
+                                <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Date</Label>
                                 <TextInput type='date' id="date" placeholder="Enter date" onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Supplier</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
                             <Select id="supplier" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                             {suppliers.map((supplier) => (
@@ -301,7 +301,7 @@ const Orders = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Doc</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Doc</Label>
                             <Select id="doc" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Invoice</option>
@@ -310,27 +310,27 @@ const Orders = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Doc no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Doc no</Label>
                             <TextInput id="docno" placeholder="Enter doc no" onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Item</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
                             <TextInput id="item" placeholder="Enter item" onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Quantity</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                             <TextInput id="quantity" type='number' min='1' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Amount</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Amount</Label>
                             <TextInput id="amount" type='number' min='0' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Cost category</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cost category</Label>
                             <Select id="costcategory" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Spareparts</option>
@@ -344,7 +344,7 @@ const Orders = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Status</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                             <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Complete</option>
@@ -393,20 +393,20 @@ const Orders = () => {
         </Modal>
 
         <Modal show={openModalUpdateOrder} onClose={() => setOpenModalUpdateOrder(!openModalUpdateOrder)} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Order</h3>
+                    <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Order</h3>
                     <form onSubmit={handleUpdateSubmit}>
                         <div>
                             <div className="mb-4 block">
-                                <Label htmlFor='date'>Date</Label>
+                                <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Date</Label>
                                 <TextInput value={updateFormData.date || ''} type='date' id="date" placeholder="Enter date" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                             </div>
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Supplier</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
                             <Select value={updateFormData.supplier || ''} id="supplier" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                             {suppliers.map((supplier) => (
@@ -416,7 +416,7 @@ const Orders = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Doc</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Doc</Label>
                             <Select value={updateFormData.doc || ''} id="doc" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Invoice</option>
@@ -425,27 +425,27 @@ const Orders = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Doc no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Doc no</Label>
                             <TextInput value={updateFormData.docno || ''} id="docno" placeholder="Enter doc no" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Item</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
                             <TextInput value={updateFormData.item || ''} id="item" placeholder="Enter item" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Quantity</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                             <TextInput value={updateFormData.quantity || ''} id="quantity" type='number' min='1' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Amount</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Amount</Label>
                             <TextInput value={updateFormData.amount || ''} id="amount" type='number' min='0' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Cost category</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cost category</Label>
                             <Select value={updateFormData.costcategory || ''} id="costcategory" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Spareparts</option>
@@ -459,7 +459,7 @@ const Orders = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Status</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                             <Select value={updateFormData.status || ''} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Complete</option>

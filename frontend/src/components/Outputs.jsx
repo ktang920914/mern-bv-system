@@ -613,16 +613,16 @@ const Outputs = () => {
             )}
 
             <Modal show={openModal} size="md" onClose={handleYearChange} popup>
-                <ModalHeader className="border-b border-gray-200">
-                    <div className="text-xl font-semibold text-gray-800 dark:text-white px-4 py-2">
+                <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                    <div className={`px-4 py-2 text-xl font-semibold ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                         Change Year
                     </div>
                 </ModalHeader>
-                <ModalBody className="p-6">
+                <ModalBody className={`p-6 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                     <div className="space-y-6">
                         <form onSubmit={handleSubmit}>
                             <div className="mb-6">
-                                <Label className="text-gray-900 dark:text-white">Year</Label>
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Year</Label>
                                 <TextInput 
                                     type="number"
                                     placeholder="Enter year" 

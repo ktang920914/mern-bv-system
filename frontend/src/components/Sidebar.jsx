@@ -59,8 +59,8 @@ const DashSidebar = () => {
       sidebar: 'bg-gray-900 text-gray-200 hover:text-gray-200',
       button: 'bg-gray-700 text-white hover:bg-gray-600',
       item: 'bg-gray-900 text-gray-100 hover:bg-gray-200 hover:text-gray-800',
-      itemActive: 'bg-gray-500 text-gray-200 hover:text-gray-100 hover:bg-gray-500',
-      collapse: 'bg-gray-700 text-gray-100 hover:bg-gray-700 hover:text-gray-200'
+      itemActive: 'bg-gray-500 text-gray-100 hover:text-gray-100 hover:bg-gray-500',
+      collapse: 'bg-gray-700 text-gray-100 hover:bg-gray-700 hover:text-gray-200',
     }
   };
 
@@ -90,7 +90,7 @@ const DashSidebar = () => {
       >
         <Sidebar 
           aria-label="Sidebar with multi-level dropdown example" 
-          className={`h-full w-64 border-r ${currentTheme.sidebar}`}
+          className={`dash-sidebar h-full w-64 border-r ${currentTheme.sidebar}`}
         >
           <SidebarItems className={`font-semibold ${theme === 'light' ? 'bg-gray-100' : ' bg-gray-900'}`}>
             <SidebarItemGroup>

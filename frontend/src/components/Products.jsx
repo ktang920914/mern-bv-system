@@ -279,35 +279,35 @@ const Products = () => {
         </div>
 
         <Modal show={openModalCreateProduct} onClose={handleCreateProduct} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Product</h3>
+                    <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Product</h3>
                     <form onSubmit={handleSubmit}>
                         <div>
                             <div className="mb-4 block">
-                                <Label>Colour code</Label>
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Colour code</Label>
                                 <TextInput id="colourcode" className='mb-4' placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                             </div>
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Lot no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Lot no</Label>
                             <TextInput id="lotno" className='mb-4' placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Quantity</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                             <TextInput id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Pallet no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>
                             <TextInput id="palletno" className='mb-4' placeholder='Enter pallet no' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>Location</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Location</Label>
                             <Select id="location" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>QA/QC</option>
@@ -320,7 +320,7 @@ const Products = () => {
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>User</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>User</Label>
                             <Select id="user" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>{currentUser.username}</option>
@@ -329,7 +329,7 @@ const Products = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Status</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                             <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Active</option>
@@ -377,35 +377,35 @@ const Products = () => {
         </Modal>
 
         <Modal show={openModalUpdateProduct} onClose={() => setOpenModalUpdateProduct(!openModalUpdateProduct)} popup>
-            <ModalHeader />
-            <ModalBody>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update Product</h3>
+                    <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Product</h3>
                     <form onSubmit={handleUpdateSubmit}>
                         <div>
                             <div className="mb-4 block">
-                                <Label>Colour code</Label>
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Colour code</Label>
                                 <TextInput value={updateFormData.colourcode} id="colourcode" className='mb-4' placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                             </div>
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Lot no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Lot no</Label>
                             <TextInput value={updateFormData.lotno} id="lotno" className='mb-4' placeholder='Enter lotno' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                         </div>
                             
                         <div className="mb-4 block">
-                            <Label>Quantity</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                             <TextInput value={updateFormData.quantity} id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Pallet no</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>
                             <TextInput value={updateFormData.palletno} id="palletno" className='mb-4' placeholder='Enter pallet no' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>Location</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Location</Label>
                             <Select value={updateFormData.location} id="location" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>QA/QC</option>
@@ -418,7 +418,7 @@ const Products = () => {
                         </div>
     
                         <div className="mb-4 block">
-                            <Label>User</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>User</Label>
                             <Select value={updateFormData.user} id="user" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>{currentUser.username}</option>
@@ -426,7 +426,7 @@ const Products = () => {
                         </div>
 
                         <div className="mb-4 block">
-                            <Label>Status</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                             <Select value={updateFormData.status} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                 <option></option>
                                 <option>Active</option>

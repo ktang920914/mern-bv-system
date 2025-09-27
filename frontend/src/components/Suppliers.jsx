@@ -260,45 +260,45 @@ const Suppliers = () => {
       </div>
 
       <Modal show={openModalCreateSupplier} onClose={handleCreateSupplier} popup>
-        <ModalHeader />
-        <ModalBody>
+        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`} />
+        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`}>
             <div className="space-y-6">
-                <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Supplier</h3>
+                <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Supplier</h3>
                 <form onSubmit={handleSubmit}>
                     <div>
                         <div className="mb-4 block">
-                            <Label>Supplier</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
                             <TextInput id="supplier" placeholder="Enter supplier" onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label>Contact</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Contact</Label>
                         <TextInput id="contact" placeholder='Enter contact' onChange={handleChange} onFocus={handleFocus} required/>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label>Description</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
                         <TextInput id="description" className='mb-4' placeholder='Enter description' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Address</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
                         <TextInput id="address" className='mb-4' placeholder='Enter address' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>PIC</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>PIC</Label>
                         <TextInput id="pic" className='mb-4' placeholder='Enter PIC' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label htmlFor='email'>Email</Label>
+                        <Label htmlFor='email' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Email</Label>
                         <TextInput id="email" type='email' className='mb-4' placeholder='Enter email' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Status</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                         <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                             <option></option>
                             <option>Active</option>
@@ -346,45 +346,45 @@ const Suppliers = () => {
       </Modal>
 
       <Modal show={openModalUpdateSupplier} onClose={() => setOpenModalUpdateSupplier(!openModalUpdateSupplier)} popup>
-        <ModalHeader />
-        <ModalBody>
+        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
             <div className="space-y-6">
-                <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update User</h3>
+                <h3 className={`text-xl font-medium`}>Update User</h3>
                 <form onSubmit={handleUpdateSubmit}>
                     <div>
                         <div className="mb-4 block">
-                            <Label>Supplier</Label>
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
                             <TextInput value={updateFormData.supplier || ''} id="supplier" placeholder="Enter supplier" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label>Contact</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Contact</Label>
                         <TextInput value={updateFormData.contact || ''} id="contact" placeholder='Enter contact' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                     </div>
                         
                     <div className="mb-4 block">
-                        <Label>Description</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
                         <TextInput value={updateFormData.description || ''} id="description" className='mb-4' placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Address</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
                         <TextInput value={updateFormData.address} id="address" className='mb-4' placeholder='Enter address' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>PIC</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>PIC</Label>
                         <TextInput value={updateFormData.pic} id="pic" className='mb-4' placeholder='Enter PIC' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label htmlFor='email'>Email</Label>
+                        <Label htmlFor='email' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Email</Label>
                         <TextInput value={updateFormData.email} id="email" type='email' className='mb-4' placeholder='Enter email' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Status</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                         <Select value={updateFormData.status} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                             <option></option>
                             <option>Active</option>

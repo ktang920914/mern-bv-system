@@ -1,3 +1,29 @@
 @import "tailwindcss";
 @plugin "flowbite-react/plugin/tailwindcss";
 @source "../.flowbite-react/class-list.json";
+
+/* 只针对 DashSidebar 组件的侧边栏背景颜色 */
+.dash-sidebar .sidebar {
+  background-color: inherit !important;
+}
+
+.dash-sidebar .sidebar-items {
+  background-color: inherit !important;
+}
+
+.dash-sidebar .sidebar-item-group {
+  background-color: inherit !important;
+}
+
+/* 确保 Flowbite 的默认背景色被覆盖，但只在 dash-sidebar 内 */
+.dash-sidebar .bg-gray-50 {
+  background-color: inherit !important;
+}
+
+.dash-sidebar .bg-white {
+  background-color: inherit !important;
+}
+
+.dash-sidebar .bg-gray-100 {
+  background-color: inherit !important;
+}

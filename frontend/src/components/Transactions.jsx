@@ -268,20 +268,20 @@ const Transactions = () => {
       </div>
 
       <Modal show={openModalCreateTransaction} onClose={handleCreateTransaction} popup>
-        <ModalHeader />
-        <ModalBody>
+        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
             <div className="space-y-6">
-                <h3 className="text-xl font-medium text-gray-900 dark:text-white">Create Transaction</h3>
+                <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Transaction</h3>
                 <form onSubmit={handleSubmit}>
                     <div>
                         <div className="mb-4 block">
-                            <Label htmlFor='date'>Date</Label>
+                            <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Date</Label>
                             <TextInput  type='date' id="date" placeholder="Enter date" onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
                     </div>
                         
                     <div className="mb-4 block">
-                      <Label>Item</Label>
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
                       <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                           <option></option>
                       {items.map((item) => (
@@ -291,7 +291,7 @@ const Transactions = () => {
                     </div>
 
                     <div className="mb-4 block">
-                      <Label>Transaction</Label>
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Transaction</Label>
                       <Select id="transaction" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                           <option></option>
                           <option>In</option>
@@ -300,12 +300,12 @@ const Transactions = () => {
                     </div>
 
                     <div className="mb-4 block">
-                        <Label>Quantity</Label>
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                         <TextInput id="quantity" type='number' min='1' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required/>
                     </div>
 
                     <div className="mb-4 block">
-                      <Label>User</Label>
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>User</Label>
                       <Select id="user" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                           <option></option>
                           <option>{currentUser.username}</option>
@@ -359,13 +359,13 @@ const Transactions = () => {
       </Modal>
 
       <Modal show={openModalUpdateRecord} size='md' onClose={() => setOpenModalUpdateRecord(!openModalUpdateRecord)} popup>
-        <ModalHeader />
-        <ModalBody>
+        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
             <div className="space-y-6">
-                <h3 className="text-xl font-medium text-gray-900 dark:text-white">Update Transaction</h3>
+                <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Transaction</h3>
                 <form onSubmit={handleUpdateSubmit}>
                     <div className="mb-4 block">
-                      <Label>Balance</Label>
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Balance</Label>
                       <TextInput value={updateFormData.balance || ''} id="balance" type='number' placeholder='Enter balance' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                     </div>
    
