@@ -9,9 +9,11 @@ export const material = async (req,res,next) => {
     if(existingMaterial){
         return next(errorHandler(404, 'Material is exists'))
     }
+
+    const materialQuantity = quantity || 0;
     const newMaterial = new Material({
         material,
-        quantity,
+        quantity:materialQuantity,
         palletno,
         location,
         user,

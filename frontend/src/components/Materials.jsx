@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput} from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput} from 'flowbite-react'
 import useThemeStore from '../themeStore'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from 'react-icons/hi'
@@ -19,6 +19,8 @@ const Materials = () => {
   const [updateFormData,setUpdateFormData] = useState({})
   const [materials,setMaterials] = useState([])
   const [searchTerm,setSearchTerm] = useState('')
+  const [currentPage,setCurrentPage] = useState(1)
+  const [itemsPage] = useState(10)
   
   useEffect(() => {
       const fetchMaterials = async () => {
@@ -162,6 +164,26 @@ const Materials = () => {
     setSearchTerm(e.target.value.trim())
   }
 
+  const filteredMaterials = materials.filter(material => 
+        material.material.toLowerCase().includes(searchTerm) || 
+        material.quantity.toString().toLowerCase().includes(searchTerm) ||
+        material.location.toLowerCase().includes(searchTerm) || 
+        material.user.toLowerCase().includes(searchTerm) || 
+        material.palletno.toLowerCase().includes(searchTerm) ||
+        material.status.toLowerCase().includes(searchTerm) && material.status.toString().toLowerCase() === searchTerm
+    )
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+    }
+
+    const indexOfLastItem = currentPage * itemsPage
+    const indexOfFirstItem = indexOfLastItem - itemsPage
+    const currentMaterials = filteredMaterials.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredMaterials.length
+    const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+    const showingTo = Math.min(indexOfLastItem, totalEntries)
+
   return (
     <div>
       <div className='flex justify-between items-center mb-4'>
@@ -185,7 +207,7 @@ const Materials = () => {
             </TableRow>
         </TableHead>
         <TableBody>
-            {materials.map((m) => (
+            {currentMaterials.map((m) => (
                 <TableRow key={m._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     <TableCell className="align-middle">{m.material}</TableCell>
                     <TableCell className="align-middle">{m.quantity}</TableCell>
@@ -223,6 +245,18 @@ const Materials = () => {
         </TableBody>
       </Table>
 
+      <div className="flex-col justify-center text-center mt-4">
+        <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+            Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+        </p>
+        <Pagination
+            showIcons
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+            onPageChange={handlePageChange}
+        />
+    </div>
+
       <Modal show={openModalCreateMaterial} onClose={handleCreateMaterial} popup>
         <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
         <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
@@ -236,10 +270,10 @@ const Materials = () => {
                         </div>
                     </div>
                         
-                    <div className="mb-4 block">
+                    {/*<div className="mb-4 block">
                         <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                         <TextInput id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                    </div>
+                    </div>*/}
 
                     <div className="mb-4 block">
                         <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>
@@ -354,7 +388,7 @@ const Materials = () => {
 
                 <div className="mb-4 block">
                     <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>User</Label>
-                    <Select defaultValue={updateFormData.user}  id="user" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                    <Select defaultValue={updateFormData.user} id="user" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                         <option></option>
                         <option>{currentUser.username}</option>
                         

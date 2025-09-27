@@ -9,10 +9,12 @@ export const product = async (req,res,next) => {
     if(existingProduct){
         return next(errorHandler(404, 'Lot no is exists'))
     }
+
+    const productQuantity = quantity || 0;
     const newProduct = new Product({
         lotno,
         colourcode,
-        quantity,
+        quantity:productQuantity,
         palletno,
         location,
         user,
