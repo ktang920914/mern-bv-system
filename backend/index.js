@@ -16,6 +16,7 @@ import outputRoute from './routes/output.route.js'
 import maintenanceRoute from './routes/maintenance.route.js'
 import caseRoute from './routes/case.route.js'
 import productRoute from './routes/product.route.js'
+import materialRoute from './routes/material.route.js'
 import https from 'https'
 import fs from 'fs'
 
@@ -44,6 +45,7 @@ app.use('/api/output', outputRoute)
 app.use('/api/maintenance', maintenanceRoute)
 app.use('/api/case', caseRoute)
 app.use('/api/new', productRoute)
+app.use('/api/raw', materialRoute)
 
 app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')
