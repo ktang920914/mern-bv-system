@@ -136,7 +136,7 @@ const Transactions = () => {
 
   const handleUpdate = (record) => {
     setRecordIdToUpdate(record._id)
-    setUpdateFormData({balance: record.balance})
+    setUpdateFormData({quantity: record.quantity,status:record.status})
     setOpenModalUpdateRecord(!openModalUpdateRecord)
     setErrorMessage(null)
     setLoading(false)
@@ -223,6 +223,7 @@ const Transactions = () => {
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Balance</TableHeadCell>
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
             {currentUser.role === 'Admin' && (
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
             )}
@@ -240,6 +241,7 @@ const Transactions = () => {
               <TableCell>{record.quantity}</TableCell>
               <TableCell>{record.balance}</TableCell>
               <TableCell>{record.user}</TableCell>
+              <TableCell>{record.status}</TableCell>
               {currentUser.role === 'Admin' && (
                 <TableCell>
                   <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(record)}}>Edit</Button>
@@ -374,8 +376,17 @@ const Transactions = () => {
                 <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Transaction</h3>
                 <form onSubmit={handleUpdateSubmit}>
                     <div className="mb-4 block">
-                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Balance</Label>
-                      <TextInput value={updateFormData.balance || ''} id="balance" type='number' placeholder='Enter balance' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
+                      <TextInput value={updateFormData.quantity || ''} id="quantity" type='number' placeholder='Enter balance' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                    </div>
+
+                    <div className="mb-4 block">
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
+                      <Select value={updateFormData.status || ''} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                          <option></option>
+                          <option>Active</option>
+                          <option>Inactive</option>
+                      </Select>
                     </div>
    
                     <div className='mb-4 block'>
