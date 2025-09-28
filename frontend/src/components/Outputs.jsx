@@ -47,24 +47,34 @@ const Outputs = () => {
     const [showTable, setShowTable] = useState(false)
     const [displayYear, setDisplayYear] = useState(new Date().getFullYear().toString())
     const [yearInput, setYearInput] = useState(new Date().getFullYear().toString())
-    const [searchTerm,setSearchTerm] = useState('')
     const [searchParams, setSearchParams] = useSearchParams()
+    const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(7)
     const [selectedCodes, setSelectedCodes] = useState([])
     const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
     const [selectedDataType, setSelectedDataType] = useState('totaloutput') // 默认显示总产出数据
 
-    // 当页码变化时更新 URL
+    // 当页码或搜索词变化时更新 URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
+        
+        // 处理页码参数
         if (currentPage === 1) {
             params.delete('page')
         } else {
             params.set('page', currentPage.toString())
         }
+        
+        // 处理搜索参数
+        if (searchTerm === '') {
+            params.delete('search')
+        } else {
+            params.set('search', searchTerm)
+        }
+        
         setSearchParams(params)
-    }, [currentPage, searchParams, setSearchParams])
+    }, [currentPage, searchTerm, searchParams, setSearchParams])
 
     // 可用的 Job Code 选项
     const jobCodeOptions = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']
@@ -411,12 +421,14 @@ const Outputs = () => {
         <div>
             <div className='flex justify-between items-center mb-4'>
                 <h1 className='text-2xl font-semibold'>Outputs {displayYear}</h1>
-                <div className='flex gap-2'>
+                <div>
                     <TextInput 
                         placeholder='Search data type...' 
                         onChange={handleSearch}
                         disabled={!showTable}
                     />
+                </div>
+                <div className='flex gap-2'>
                     <Button className='cursor-pointer' onClick={handleYearChange}>
                         Change Year
                     </Button>

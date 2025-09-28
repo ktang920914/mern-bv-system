@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
 import useThemeStore from '../themeStore';
+import { useSearchParams } from 'react-router-dom';
 
 const Maintenance = () => {
 
@@ -20,9 +21,31 @@ const Maintenance = () => {
   const [maintenances,setMaintenances] = useState([])
   const [maintenanceIdToDelete,setMaintenanceIdToDelete] = useState('')
   const [maintenanceIdToUpdate,setMaintenanceIdToUpdate] = useState('')
-  const [searchTerm,setSearchTerm] = useState('')
-  const [currentPage,setCurrentPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
+  const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [itemsPage] = useState(10)
+
+  // 当页码或搜索词变化时更新 URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        
+        // 处理页码参数
+        if (currentPage === 1) {
+            params.delete('page')
+        } else {
+            params.set('page', currentPage.toString())
+        }
+        
+        // 处理搜索参数
+        if (searchTerm === '') {
+            params.delete('search')
+        } else {
+            params.set('search', searchTerm)
+        }
+        
+        setSearchParams(params)
+    }, [currentPage, searchTerm, searchParams, setSearchParams])
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -219,6 +242,7 @@ const Maintenance = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const indexOfLastItem = currentPage * itemsPage

@@ -13,20 +13,44 @@ const ActivityLogs = () => {
     const [logIdToDelete,setLogIdToDelete] = useState('')
     const [openModalDeleteLog,setOpenModalDeleteLog] = useState(false)
     const {currentUser} = useUserstore()
-    const [searchTerm,setSearchTerm] = useState('')
+    const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
 
-    // 当页码变化时更新 URL
+    // 当页码或搜索词变化时更新 URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
+        
+        // 处理页码参数
         if (currentPage === 1) {
             params.delete('page')
         } else {
             params.set('page', currentPage.toString())
         }
+        
+        // 处理搜索参数
+        if (searchTerm === '') {
+            params.delete('search')
+        } else {
+            params.set('search', searchTerm)
+        }
+        
         setSearchParams(params)
-    }, [currentPage, searchParams, setSearchParams])
+    }, [currentPage, searchTerm, searchParams, setSearchParams])
+
+    // 当 URL 参数变化时同步状态
+    useEffect(() => {
+        const page = searchParams.get('page')
+        const search = searchParams.get('search')
+        
+        if (page && Number(page) !== currentPage) {
+            setCurrentPage(Number(page))
+        }
+        
+        if (search !== null && search !== searchTerm) {
+            setSearchTerm(search)
+        }
+    }, [searchParams])
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -65,8 +89,9 @@ const ActivityLogs = () => {
     }
 
     const handleSearch = (e) => {
-        setSearchTerm(e.target.value.toLowerCase())
-        setCurrentPage(1)
+        const newSearchTerm = e.target.value.toLowerCase()
+        setSearchTerm(newSearchTerm)
+        setCurrentPage(1) // 搜索时重置到第一页
     }
 
     const filteredLogs = activity.filter(log => 
@@ -92,7 +117,11 @@ const ActivityLogs = () => {
     <div>
         <div className='flex justify-between items-center mb-4'>
             <h1 className='text-2xl font-semibold'>Activities Logs</h1>
-            <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
+            <TextInput 
+                placeholder='Enter searching' 
+                value={searchTerm} 
+                onChange={handleSearch}
+            />
         </div>
 
         <Table hoverable className="[&_td]:py-1 [&_th]:py-2">

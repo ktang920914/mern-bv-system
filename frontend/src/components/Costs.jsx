@@ -19,6 +19,7 @@ import {
 } from 'chart.js'
 import { Bar, Line, Pie } from 'react-chartjs-2'
 import useThemeStore from '../themeStore'
+import { useSearchParams } from 'react-router-dom';
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -44,11 +45,33 @@ const Costs = () => {
     const [formData, setFormData] = useState({year: new Date().getFullYear().toString()})
     const [showTable, setShowTable] = useState(false)
     const [displayYear, setDisplayYear] = useState(new Date().getFullYear().toString())
-    const [searchTerm,setSearchTerm] = useState('')
-    const [currentPage,setCurrentPage] = useState(1)
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
+    const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(7)
     const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
     const [selectedCategory, setSelectedCategory] = useState('Spareparts') // 默认显示第一个类别
+
+    // 当页码或搜索词变化时更新 URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        
+        // 处理页码参数
+        if (currentPage === 1) {
+            params.delete('page')
+        } else {
+            params.set('page', currentPage.toString())
+        }
+        
+        // 处理搜索参数
+        if (searchTerm === '') {
+            params.delete('search')
+        } else {
+            params.set('search', searchTerm)
+        }
+        
+        setSearchParams(params)
+    }, [currentPage, searchTerm, searchParams, setSearchParams])
 
     const costCategories = [
         "Spareparts",
