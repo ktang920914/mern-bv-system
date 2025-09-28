@@ -311,6 +311,15 @@ const Transactions = () => {
                           <option>{currentUser.username}</option>
                       </Select>
                     </div>
+
+                    <div className="mb-4 block">
+                      <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
+                      <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                          <option></option>
+                          <option>Active</option>
+                          <option>Inactive</option>
+                      </Select>
+                    </div>
                         
                     <div className='mb-4 block'>
                         <Button className='cursor-pointer w-full' type='submit' disabled={loading}>

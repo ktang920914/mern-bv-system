@@ -1,5 +1,6 @@
 import Activity from "../models/activity.model.js"
 import Inventory from "../models/inventory.model.js"
+import Transaction from "../models/transaction.model.js"
 import { errorHandler } from "../utils/error.js"
 
 // 通用的 QR 码更新函数
@@ -99,17 +100,32 @@ export const getItems = async (req,res,next) => {
 
 export const deleteItem = async (req,res,next) => {
     try {
-        await Inventory.findByIdAndDelete(req.params.itemId)
+        // 先找到要删除的物品
+        const itemToDelete = await Inventory.findById(req.params.itemId);
+        if (!itemToDelete) {
+            return next(errorHandler(404, 'Item not found'));
+        }
+
+        // 获取物品的code，用于删除相关的交易记录
+        const itemCode = itemToDelete.code;
+
+        // 同时删除物品和相关的交易记录
+        await Promise.all([
+            Inventory.findByIdAndDelete(req.params.itemId),
+            Transaction.deleteMany({ code: itemCode }) // 删除所有与该物品code相关的交易记录
+        ]);
+
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete item',
-            detail: `${req.user.username} deleted item from the system`
-        })
-        await newActivity.save()
-        res.status(200).json({message:'Item deleted successfully'})
+            detail: `${req.user.username} deleted item and all related transactions from the system`
+        });
+        await newActivity.save();
+        
+        res.status(200).json({message:'Item and all related transactions deleted successfully'});
     } catch (error) {
-        next(error)
+        next(error);
     }
 }
 

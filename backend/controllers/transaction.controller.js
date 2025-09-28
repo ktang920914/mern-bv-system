@@ -32,7 +32,7 @@ const updateQRCode = async (inventory) => {
 };
 
 export const record = async (req,res,next) => {
-    const {date,code,transaction,quantity,user} = req.body
+    const {date,code,transaction,quantity,user,status} = req.body
     try {
         let inventory = await Inventory.findOne({code})
 
@@ -67,7 +67,8 @@ export const record = async (req,res,next) => {
             transaction,
             quantity: qty,
             user,
-            balance: newBalance
+            balance: newBalance,
+            status
         })
 
         // 更新inventory的balance
@@ -105,23 +106,33 @@ export const getRecords = async (req,res,next) => {
 
 export const deleteRecord = async (req,res,next) => {
     try {
-        const record = await Transaction.findById(req.params.recordId)
-        if(!record){
-            return next(errorHandler(404, 'Failed'))
+        // 获取要删除的记录
+        const recordToDelete = await Transaction.findById(req.params.recordId);
+        if(!recordToDelete){
+            return next(errorHandler(404, 'Transaction not found'))
         }
-        const inventory = await Inventory.findOne({code: record.code});
+
+        // 检查这是否是最新的记录（按创建时间排序）
+        const latestRecord = await Transaction.findOne({ code: recordToDelete.code })
+            .sort({ createdAt: -1 });
+        
+        if (!latestRecord || latestRecord._id.toString() !== recordToDelete._id.toString()) {
+            return next(errorHandler(400, 'Delete Failed: Can only delete the latest transaction. Please delete from the most recent one first.'))
+        }
+
+        const inventory = await Inventory.findOne({ code: recordToDelete.code });
         if(!inventory){
-            return next(errorHandler(404, 'Failed'))
+            return next(errorHandler(404, 'Inventory item not found'))
         }
 
         let newBalance;
-        if(record.transaction === 'In'){
-            if(inventory.balance < record.quantity){
+        if(recordToDelete.transaction === 'In'){
+            if(inventory.balance < recordToDelete.quantity){
                 return next(errorHandler(400, 'Delete Failed: Insufficient stock'))
             }
-            newBalance = inventory.balance - record.quantity
-        }else if (record.transaction === 'Out') {
-            newBalance = inventory.balance + record.quantity
+            newBalance = inventory.balance - recordToDelete.quantity
+        }else if (recordToDelete.transaction === 'Out') {
+            newBalance = inventory.balance + recordToDelete.quantity
         }
 
         // 更新inventory的balance
