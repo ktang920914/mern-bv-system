@@ -18,6 +18,9 @@ const movementSchema = new mongoose.Schema({
     },
     user:{
         type:String,
+    },
+    status:{
+        type:String,
     }
 },{timestamps:true})
 

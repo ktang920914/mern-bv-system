@@ -112,7 +112,7 @@ const Materials = () => {
   const handleUpdate = (m) => {
         setMaterialIdToUpdate(m._id)
         setOpenModalUpdateMaterial(!openModalUpdateMaterial)
-        setUpdateFormData({material:m.material, quantity:m.quantity, location:m.location,
+        setUpdateFormData({material:m.material, /*quantity:m.quantity,*/ location:m.location,
             palletno:m.palletno, user:m.user, status:m.status
         })
         setErrorMessage(null)
@@ -363,10 +363,10 @@ const Materials = () => {
                     </div>
                 </div>
                     
-                <div className="mb-4 block">
+                {/*<div className="mb-4 block">
                     <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                     <TextInput defaultValue={updateFormData.quantity} id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                </div>
+                </div>*/}
 
                 <div className="mb-4 block">
                     <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>

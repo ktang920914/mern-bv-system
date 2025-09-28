@@ -1,4 +1,4 @@
-import { TextInput, Button, Table, TableHead, TableHeadCell, TableRow, Modal, ModalHeader, ModalBody, Label, Select, Spinner, Alert, TableBody, TableCell} from "flowbite-react";
+import { TextInput, Button, Table, TableHead, TableHeadCell, TableRow, Modal, ModalHeader, ModalBody, Label, Select, Spinner, Alert, TableBody, TableCell, Pagination} from "flowbite-react";
 import { useEffect, useState } from "react";
 import useThemeStore from "../themeStore";
 import useUserstore from "../store";
@@ -12,12 +12,17 @@ const Movement = () => {
   const [loading,setLoading] = useState(false)
   const [openModalCreateMovement,setOpenModalCreateMovement] = useState(false)
   const [openModalDeleteMovement,setOpenModalDeleteMovement] = useState(false)
+  const [openModalUpdateMovement,setOpenModalUpdateMovement] = useState(false)
   const [formData,setFormData] = useState({})
+  const [updateFormData,setUpdateFormData] = useState({})
   const [products,setProducts] = useState([])
   const [materials,setMaterials] = useState([])
   const [movements,setMovements] = useState([])
   const [movementIdToDelete,setMovementIdToDelete] = useState('')
+  const [movementIdToUpdate,setMovementIdToUpdate] = useState('')
   const [searchTerm,setSearchTerm] = useState('')
+  const [currentPage,setCurrentPage] = useState(1)
+  const [itemsPage] = useState(10)
 
   useEffect(() => {
       const fetchProducts = async () => {
@@ -134,15 +139,98 @@ const Movement = () => {
 
   const handleDeleteMovement = () => {
     setOpenModalDeleteMovement(!openModalDeleteMovement)
+    setErrorMessage(null)
+    setLoading(false)
   }
 
   const handleDelete = async () => {
+    try {
+      const res = await fetch(`/api/stock/delete/${movementIdToDelete}`,{
+          method:'DELETE',
+      })
+      const data = await res.json()
+      if(data.success === false){
+        setErrorMessage(data.message)
+        console.log(data.message)
+      }
+      if(res.ok){
+        setOpenModalDeleteMovement(false)
+        setMovements((prev) => prev.filter((movement) => movement._id !== movementIdToDelete))
+      }
+  } catch (error) {
+      console.log(error.message)
+  }
+  }
 
+  const handleUpdate = (m) => {
+    setMovementIdToUpdate(m._id)
+    setUpdateFormData({quantity: m.quantity,status:m.status})
+    setOpenModalUpdateMovement(!openModalUpdateMovement)
+    setErrorMessage(null)
+    setLoading(false)
+  }
+
+  const handleUpdateChange = (e) => {
+    setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
+  }
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault()
+      try {
+          const res = await fetch(`/api/stock/update/${movementIdToUpdate}`,{
+              method:'PUT',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify(updateFormData)
+          })
+          const data = await res.json()
+          if(data.success === false){
+              setErrorMessage(data.message)
+              setLoading(true)
+          }
+          if(res.ok){
+              setOpenModalUpdateMovement(false)
+              const fetchMovements = async () => {
+                  try {
+                      const res = await fetch('/api/stock/getmovements')
+                      const data = await res.json()
+                      if(res.ok){
+                          setMovements(data)
+                      }
+                  } catch (error) {
+                      console.log(error.message)
+                  }
+              }
+              fetchMovements()
+          }
+      } catch (error) {
+          console.log(error.message)
+      }
   }
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value.trim())
   }
+
+  const filteredMovements = movements.filter(movement => 
+        movement.date.toLowerCase().includes(searchTerm) || 
+        movement.item.toLowerCase().includes(searchTerm) || 
+        movement.quantity.toString().toLowerCase().includes(searchTerm) || 
+        movement.transaction.toLowerCase().includes(searchTerm) || 
+        movement.user.toLowerCase().includes(searchTerm) || 
+        movement.balance.toString().toLowerCase().includes(searchTerm) ||
+        movement.status.toLowerCase().includes(searchTerm) && movement.status.toString().toLowerCase() === searchTerm
+    )
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+    }
+
+    const indexOfLastItem = currentPage * itemsPage
+    const indexOfFirstItem = indexOfLastItem - itemsPage
+    const currentMovements = filteredMovements.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredMovements.length
+    const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+    const showingTo = Math.min(indexOfLastItem, totalEntries)
 
   return (
     <div>
@@ -163,6 +251,7 @@ const Movement = () => {
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Balance</TableHeadCell>
             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
+            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
             {currentUser.role === 'Admin' && (
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
             )}
@@ -171,7 +260,7 @@ const Movement = () => {
             )}
           </TableRow>
         </TableHead>
-        {movements.map((m) => (
+        {currentMovements.map((m) => (
           <TableBody key={m._id}>
             <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
               <TableCell>{m.date}</TableCell>
@@ -180,9 +269,12 @@ const Movement = () => {
               <TableCell>{m.quantity}</TableCell>
               <TableCell>{m.balance}</TableCell>
               <TableCell>{m.user}</TableCell>
+              <TableCell>{m.status}</TableCell>
               {currentUser.role === 'Admin' && (
                 <TableCell  >
-                  <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'>Edit</Button>
+                  <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'
+                  onClick={() => {handleUpdate(m)}}
+                  >Edit</Button>
                 </TableCell>
               )}
               {currentUser.role === 'Admin' && (
@@ -195,11 +287,23 @@ const Movement = () => {
         ))}
         </Table>
 
+        <div className="flex-col justify-center text-center mt-4">
+          <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+              Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+          </p>
+          <Pagination
+              showIcons
+              currentPage={currentPage}
+              totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+              onPageChange={handlePageChange}
+          />
+        </div>
+
         <Modal show={openModalCreateMovement} onClose={handleCreateMovement} popup>
           <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
           <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
               <div className="space-y-6">
-                  <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Transaction</h3>
+                  <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Movement</h3>
                   <form onSubmit={handleSubmit}>
                       <div>
                           <div className="mb-4 block">
@@ -250,6 +354,15 @@ const Movement = () => {
                             <option>{currentUser.username}</option>
                         </Select>
                       </div>
+
+                      <div className="mb-4 block">
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
+                        <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                            <option></option>
+                            <option>Active</option>
+                            <option>Inactive</option>
+                        </Select>
+                      </div>
                           
                       <div className='mb-4 block'>
                           <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
@@ -294,6 +407,45 @@ const Movement = () => {
                 </Alert>
             )
           }
+          </ModalBody>
+        </Modal>
+
+        <Modal show={openModalUpdateMovement} size='md' onClose={() => setOpenModalUpdateMovement(!openModalUpdateMovement)} popup>
+          <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+          <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+              <div className="space-y-6">
+                  <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Movement</h3>
+                  <form onSubmit={handleUpdateSubmit}>
+                      <div className="mb-4 block">
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
+                        <TextInput value={updateFormData.quantity || ''} id="quantity" type='number' placeholder='Enter balance' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                      </div>
+  
+                      <div className="mb-4 block">
+                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
+                        <Select value={updateFormData.status || ''} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                            <option></option>
+                            <option>Active</option>
+                            <option>Inactive</option>
+                        </Select>
+                      </div>
+      
+                      <div className='mb-4 block'>
+                          <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                              {
+                                  loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
+                              }
+                          </Button>
+                      </div>
+                  </form>
+                  {
+                      errorMessage && (
+                          <Alert color='failure' className='mt-4 font-semibold'>
+                              {errorMessage}
+                          </Alert>
+                      )
+                  }
+              </div>
           </ModalBody>
         </Modal>
     </div>

@@ -190,7 +190,8 @@ const Transactions = () => {
       record.transaction.toLowerCase().includes(searchTerm) && record.transaction.toLowerCase() === searchTerm ||
       record.quantity.toString().toLowerCase().includes(searchTerm) ||
       record.balance.toString().toLowerCase().includes(searchTerm) ||
-      record.user.toLowerCase().includes(searchTerm) && record.user.toString().toLowerCase() === searchTerm
+      record.user.toLowerCase().includes(searchTerm) && record.user.toString().toLowerCase() === searchTerm ||
+      record.status.toLowerCase().includes(searchTerm) && record.status.toString().toLowerCase() === searchTerm
     );
 
     const handlePageChange = (page) => {

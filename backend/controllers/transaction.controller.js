@@ -164,14 +164,14 @@ export const deleteRecord = async (req,res,next) => {
     }
 }
 
-export const updateRecord = async (req,res,next) => {
+export const updateRecord = async (req, res, next) => {
     try {
         const record = await Transaction.findById(req.params.recordId);
         if (!record) {
             return next(errorHandler(404, 'Record not found'));
         }
 
-        const inventory = await Inventory.findOne({code: record.code});
+        const inventory = await Inventory.findOne({ code: record.code });
         if (!inventory) {
             return next(errorHandler(404, 'Inventory item not found'));
         }
@@ -179,6 +179,11 @@ export const updateRecord = async (req,res,next) => {
         // 获取新的状态和数量
         const newStatus = req.body.status || record.status;
         const newQuantity = Number(req.body.quantity) || record.quantity;
+
+        // 检查是否需要重新计算所有记录
+        const needsRecalculation = 
+            record.status !== newStatus || 
+            record.quantity !== newQuantity;
 
         // 1. 先回滚原记录的影响（如果原来是Active）
         let tempInventoryBalance = inventory.balance;
@@ -203,49 +208,51 @@ export const updateRecord = async (req,res,next) => {
             }
         }
 
-        // 3. 重新计算所有记录的余额
-        const allRecords = await Transaction.find({ code: record.code })
-            .sort({ createdAt: 1 });
+        // 3. 如果需要重新计算，更新所有记录的余额
+        if (needsRecalculation) {
+            const allRecords = await Transaction.find({ code: record.code })
+                .sort({ createdAt: 1 });
 
-        let runningBalance = 0;
-        const updatePromises = [];
+            let runningBalance = 0;
+            const updatePromises = [];
 
-        for (const rec of allRecords) {
-            let effectiveQuantity = rec.quantity;
-            let effectiveStatus = rec.status;
+            for (const rec of allRecords) {
+                let effectiveQuantity = rec.quantity;
+                let effectiveStatus = rec.status;
 
-            // 如果是当前更新的记录，使用新的值
-            if (rec._id.toString() === record._id.toString()) {
-                effectiveQuantity = newQuantity;
-                effectiveStatus = newStatus;
-            }
-
-            // 计算余额
-            if (effectiveStatus === 'Active') {
-                if (rec.transaction === 'In') {
-                    runningBalance += effectiveQuantity;
-                } else if (rec.transaction === 'Out') {
-                    runningBalance -= effectiveQuantity;
+                // 如果是当前更新的记录，使用新的值
+                if (rec._id.toString() === record._id.toString()) {
+                    effectiveQuantity = newQuantity;
+                    effectiveStatus = newStatus;
                 }
+
+                // 计算余额
+                if (effectiveStatus === 'Active') {
+                    if (rec.transaction === 'In') {
+                        runningBalance += effectiveQuantity;
+                    } else if (rec.transaction === 'Out') {
+                        runningBalance -= effectiveQuantity;
+                    }
+                }
+
+                // 更新记录的余额
+                updatePromises.push(
+                    Transaction.findByIdAndUpdate(rec._id, {
+                        $set: { balance: runningBalance }
+                    }, { new: true })
+                );
             }
 
-            // 更新记录的余额
-            updatePromises.push(
-                Transaction.findByIdAndUpdate(rec._id, {
-                    $set: { balance: runningBalance }
-                }, { new: true })
-            );
+            // 等待所有更新完成
+            await Promise.all(updatePromises);
         }
-
-        // 等待所有更新完成
-        await Promise.all(updatePromises);
 
         // 4. 更新当前记录
         const updatedRecord = await Transaction.findByIdAndUpdate(req.params.recordId, {
             $set: {
                 quantity: newQuantity,
-                balance: runningBalance, // 使用最终计算的余额
-                status: newStatus
+                status: newStatus,
+                // 如果不需要重新计算，保持原balance；否则会在上面的循环中更新
             },
         }, { new: true });
 

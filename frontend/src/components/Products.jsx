@@ -131,7 +131,7 @@ const Products = () => {
     const handleUpdate = (p) => {
         setProductIdToUpdate(p._id)
         setOpenModalUpdateProduct(!openModalUpdateProduct)
-        setUpdateFormData({lotno:p.lotno, colourcode:p.colourcode, quantity:p.quantity, location:p.location,
+        setUpdateFormData({lotno:p.lotno, colourcode:p.colourcode, /*quantity:p.quantity,*/ location:p.location,
             palletno:p.palletno, user:p.user, status:p.status
         })
         setErrorMessage(null)
@@ -393,10 +393,10 @@ const Products = () => {
                             <TextInput value={updateFormData.lotno} id="lotno" className='mb-4' placeholder='Enter lotno' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                         </div>
                             
-                        <div className="mb-4 block">
+                        {/*<div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
                             <TextInput value={updateFormData.quantity} id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                        </div>
+                        </div>*/}
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>
