@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore';
+import { useSearchParams } from 'react-router-dom';
 
 const Jobs = () => {
 
     const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
+    const [searchParams, setSearchParams] = useSearchParams()
     const [openModalCreateJob,setOpenModalCreateJob] = useState(false)
     const [openModalDeleteJob,setOpenModalDeleteJob] = useState(false)
     const [openModalUpdateJob,setOpenModalUpdateJob] = useState(false)
@@ -20,8 +22,19 @@ const Jobs = () => {
     const [jobIdToDelete,setJobIdToDelete] = useState('')
     const [jobIdToUpdate,setJobIdToUpdate] = useState('')
     const [searchTerm,setSearchTerm] = useState('')
-    const [currentPage,setCurrentPage] = useState(1)
+    const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+
+    // 当页码变化时更新 URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        if (currentPage === 1) {
+            params.delete('page')
+        } else {
+            params.set('page', currentPage.toString())
+        }
+        setSearchParams(params)
+    }, [currentPage, searchParams, setSearchParams])
 
     useEffect(() => {
         const fetchItems = async () => {
@@ -191,6 +204,7 @@ const Jobs = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const indexOfLastItem = currentPage * itemsPage

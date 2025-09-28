@@ -21,6 +21,7 @@ import {
 } from 'chart.js'
 import { Bar, Line, Pie } from 'react-chartjs-2'
 import useThemeStore from '../themeStore'
+import { useSearchParams } from 'react-router-dom';
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -47,11 +48,23 @@ const Outputs = () => {
     const [displayYear, setDisplayYear] = useState(new Date().getFullYear().toString())
     const [yearInput, setYearInput] = useState(new Date().getFullYear().toString())
     const [searchTerm,setSearchTerm] = useState('')
-    const [currentPage,setCurrentPage] = useState(1)
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(7)
     const [selectedCodes, setSelectedCodes] = useState([])
     const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
     const [selectedDataType, setSelectedDataType] = useState('totaloutput') // 默认显示总产出数据
+
+    // 当页码变化时更新 URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        if (currentPage === 1) {
+            params.delete('page')
+        } else {
+            params.set('page', currentPage.toString())
+        }
+        setSearchParams(params)
+    }, [currentPage, searchParams, setSearchParams])
 
     // 可用的 Job Code 选项
     const jobCodeOptions = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']

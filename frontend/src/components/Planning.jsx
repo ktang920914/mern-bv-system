@@ -2,6 +2,7 @@ import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popove
 import { useState, useEffect } from 'react'
 import useUserstore from '../store'
 import useThemeStore from '../themeStore'
+import { useSearchParams } from 'react-router-dom';
 
 const Planning = () => {
 
@@ -14,8 +15,20 @@ const Planning = () => {
     const [plannings,setPlannings] = useState([])
     const [planningIdToUpdate,setPlanningIdToUpdate] = useState('')
     const [searchTerm,setSearchTerm] = useState('')
-    const [currentPage,setCurrentPage] = useState(1)
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+
+    // 当页码变化时更新 URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        if (currentPage === 1) {
+            params.delete('page')
+        } else {
+            params.set('page', currentPage.toString())
+        }
+        setSearchParams(params)
+    }, [currentPage, searchParams, setSearchParams])
 
     useEffect(() => {
         const fetchPlannings = async () => {
@@ -120,6 +133,7 @@ const Planning = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const indexOfLastItem = currentPage * itemsPage

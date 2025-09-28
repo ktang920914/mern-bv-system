@@ -3,17 +3,30 @@ import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import { useEffect, useState } from 'react'
 import useThemeStore from '../themeStore';
+import { useSearchParams } from 'react-router-dom';
 
 const ActivityLogs = () => {
 
     const {theme} = useThemeStore()
+    const [searchParams, setSearchParams] = useSearchParams()
     const [activity,setActivities] = useState([])
     const [logIdToDelete,setLogIdToDelete] = useState('')
     const [openModalDeleteLog,setOpenModalDeleteLog] = useState(false)
     const {currentUser} = useUserstore()
     const [searchTerm,setSearchTerm] = useState('')
-    const [currentPage,setCurrentPage] = useState(1)
+    const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+
+    // 当页码变化时更新 URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        if (currentPage === 1) {
+            params.delete('page')
+        } else {
+            params.set('page', currentPage.toString())
+        }
+        setSearchParams(params)
+    }, [currentPage, searchParams, setSearchParams])
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -59,11 +72,13 @@ const ActivityLogs = () => {
     const filteredLogs = activity.filter(log => 
       log.date.toLowerCase().includes(searchTerm) ||
       log.activity.toLowerCase().includes(searchTerm) ||
-      log.detail.toLowerCase().includes(searchTerm) && log.detail.toLowerCase() === searchTerm
+      log.detail.toLowerCase().includes(searchTerm) ||
+      log.detail.toLowerCase() === searchTerm
     );
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const indexOfLastItem = currentPage * itemsPage
