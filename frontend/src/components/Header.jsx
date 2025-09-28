@@ -51,7 +51,7 @@ const Header = () => {
         </NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>About</NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Services</NavbarLink>
-        <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Pricing</NavbarLink>
+        <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Profile</NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Contact</NavbarLink>
       </NavbarCollapse>
     </Navbar>

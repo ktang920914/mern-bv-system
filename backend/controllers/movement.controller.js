@@ -183,16 +183,20 @@ export const updateMovement = async (req, res, next) => {
         const newStatus = req.body.status || movement.status;
         const newQuantity = Number(req.body.quantity) || movement.quantity;
 
-        // 检查是否需要重新计算所有记录
-        const needsRecalculation = 
-            movement.status !== newStatus || 
-            movement.quantity !== newQuantity;
+        // 如果没有实际更改，直接返回
+        if (movement.status === newStatus && movement.quantity === newQuantity) {
+            return res.status(200).json(movement);
+        }
 
         // 1. 先回滚原记录的影响（如果原来是Active）
         let tempInventoryBalance = stockItem.quantity;
         if (movement.status === 'Active') {
             if (movement.transaction === 'In') {
                 tempInventoryBalance -= movement.quantity;
+                // 检查回滚后余额是否为负数
+                if (tempInventoryBalance < 0) {
+                    return next(errorHandler(400, 'Cannot update: This would make stock balance negative'));
+                }
             } else if (movement.transaction === 'Out') {
                 tempInventoryBalance += movement.quantity;
             }
@@ -204,6 +208,7 @@ export const updateMovement = async (req, res, next) => {
             if (movement.transaction === 'In') {
                 finalInventoryBalance += newQuantity;
             } else if (movement.transaction === 'Out') {
+                // 检查库存是否足够
                 if (tempInventoryBalance < newQuantity) {
                     return next(errorHandler(400, 'Insufficient stock'));
                 }
@@ -211,50 +216,58 @@ export const updateMovement = async (req, res, next) => {
             }
         }
 
-        // 3. 如果需要重新计算，更新所有记录的余额
-        if (needsRecalculation) {
-            const allMovements = await Movement.find({ item: movement.item })
-                .sort({ createdAt: 1 });
+        // 额外检查：确保最终余额不为负数
+        if (finalInventoryBalance < 0) {
+            return next(errorHandler(400, 'Cannot update: This operation would result in negative inventory balance'));
+        }
 
-            let runningBalance = 0;
-            const updatePromises = [];
+        // 3. 重新计算所有记录的余额
+        const allMovements = await Movement.find({ item: movement.item })
+            .sort({ createdAt: 1 });
 
-            for (const mov of allMovements) {
-                let effectiveQuantity = mov.quantity;
-                let effectiveStatus = mov.status;
+        let runningBalance = 0;
+        const updatePromises = [];
 
-                // 如果是当前更新的记录，使用新的值
-                if (mov._id.toString() === movement._id.toString()) {
-                    effectiveQuantity = newQuantity;
-                    effectiveStatus = newStatus;
-                }
+        for (const mov of allMovements) {
+            let effectiveQuantity = mov.quantity;
+            let effectiveStatus = mov.status;
 
-                // 计算余额
-                if (effectiveStatus === 'Active') {
-                    if (mov.transaction === 'In') {
-                        runningBalance += effectiveQuantity;
-                    } else if (mov.transaction === 'Out') {
-                        runningBalance -= effectiveQuantity;
-                    }
-                }
-
-                // 更新记录的余额
-                updatePromises.push(
-                    Movement.findByIdAndUpdate(mov._id, {
-                        $set: { balance: runningBalance }
-                    }, { new: true })
-                );
+            // 如果是当前更新的记录，使用新的值
+            if (mov._id.toString() === movement._id.toString()) {
+                effectiveQuantity = newQuantity;
+                effectiveStatus = newStatus;
             }
 
-            // 等待所有更新完成
-            await Promise.all(updatePromises);
+            // 计算余额
+            if (effectiveStatus === 'Active') {
+                if (mov.transaction === 'In') {
+                    runningBalance += effectiveQuantity;
+                } else if (mov.transaction === 'Out') {
+                    // 检查是否会变成负数
+                    if (runningBalance < effectiveQuantity) {
+                        return next(errorHandler(400, 'Cannot update: This would make historical balance negative'));
+                    }
+                    runningBalance -= effectiveQuantity;
+                }
+            }
+
+            // 更新记录的余额
+            updatePromises.push(
+                Movement.findByIdAndUpdate(mov._id, {
+                    $set: { balance: runningBalance }
+                }, { new: true })
+            );
         }
+
+        // 等待所有更新完成
+        await Promise.all(updatePromises);
 
         // 4. 更新当前记录
         const updatedMovement = await Movement.findByIdAndUpdate(req.params.movementId, {
             $set: {
                 quantity: newQuantity,
                 status: newStatus,
+                balance: runningBalance // 确保当前记录也有正确的余额
             },
         }, { new: true });
 
