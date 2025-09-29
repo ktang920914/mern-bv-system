@@ -22,6 +22,10 @@ const productSchema = new mongoose.Schema({
     },
     status:{
         type:String,
+    },
+    qrCode: {  // 可选：如果您想存储QR码图片
+        type: String,
+        default: ''
     }
 },{timestamps:true})
 

@@ -4,6 +4,7 @@ import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const Products = () => {
 
@@ -135,8 +136,14 @@ const Products = () => {
     const handleUpdate = (p) => {
         setProductIdToUpdate(p._id)
         setOpenModalUpdateProduct(!openModalUpdateProduct)
-        setUpdateFormData({lotno:p.lotno, colourcode:p.colourcode, /*quantity:p.quantity,*/ location:p.location,
-            palletno:p.palletno, user:p.user, status:p.status
+        setUpdateFormData({
+            lotno:p.lotno, 
+            colourcode:p.colourcode, 
+            quantity:p.quantity, 
+            location:p.location,
+            palletno:p.palletno, 
+            user:p.user, 
+            status:p.status
         })
         setErrorMessage(null)
         setLoading(false)
@@ -209,6 +216,27 @@ const Products = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+    // 修改 QR 码生成函数，确保使用最新的数据
+    const generateQRContent = (product) => {
+        // 优先使用后端存储的 QR 码内容
+        if (product && product.qrCode) {
+            return product.qrCode;
+        }
+        
+        // 备用方案：前端生成（包含所有必要字段）
+        return JSON.stringify({
+            colourcode: product?.colourcode || '',
+            lotno: product?.lotno || '',
+            quantity: product?.quantity !== undefined ? product.quantity : 0,
+            palletno: product?.palletno || '',
+            location: product?.location || '',
+            user: product?.user || '',
+            status: product?.status || '',
+            createdAt: product?.createdAt || new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+        }, null, 2);
+    };
+
   return (
     <div>
         <div className='flex justify-between items-center mb-4'>
@@ -235,7 +263,24 @@ const Products = () => {
             <TableBody>
                 {currentProducts.map((p) => (
                     <TableRow key={p._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                        <TableCell className="align-middle">{p.colourcode}</TableCell>
+                        <TableCell className="align-middle">
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                content={
+                                    <div className="p-4 text-center">
+                                        <h3 className="font-semibold mb-2">QR Code - {p.colourcode}</h3>
+                                        <QRCodeCanvas value={generateQRContent(p)} size={150} level="M" includeMargin={true}/>
+                                        <p className="text-xs dark:text-gray-300 text-gray-500 mt-2">Scan to view product details</p>
+                                    </div>
+                                }
+                                trigger="hover"
+                                placement="right"
+                                arrow={false}
+                            >
+                                <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed border-blue-300">
+                                    {p.colourcode}
+                                </span>
+                            </Popover>
+                        </TableCell>
                         <TableCell className="align-middle">{p.lotno}</TableCell>
                         <TableCell className="align-middle">{p.quantity}</TableCell>
                         <TableCell className="align-middle">
@@ -298,12 +343,7 @@ const Products = () => {
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Lot no</Label>
                             <TextInput id="lotno" className='mb-4' placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                        </div>
-                            
-                        {/*<div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
-                            <TextInput id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                        </div>*/}
+                        </div>           
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>
@@ -385,6 +425,19 @@ const Products = () => {
             <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
                     <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Update Product</h3>
+                    
+                    {/* 添加 QR 码显示区域 */}
+                    <div className="flex justify-center mb-4">
+                        <div className="text-center">
+                            <QRCodeCanvas className='text-center'
+                                value={generateQRContent(products.find(product => product._id === productIdToUpdate) || {})} 
+                                size={120} 
+                                level="M" 
+                                includeMargin={true}
+                            />
+                        </div>
+                    </div>
+
                     <form onSubmit={handleUpdateSubmit}>
                         <div>
                             <div className="mb-4 block">
@@ -397,11 +450,6 @@ const Products = () => {
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Lot no</Label>
                             <TextInput value={updateFormData.lotno} id="lotno" className='mb-4' placeholder='Enter lotno' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                         </div>
-                            
-                        {/*<div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
-                            <TextInput value={updateFormData.quantity} id="quantity" type='number' min='0' className='mb-4' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                        </div>*/}
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Pallet no</Label>
