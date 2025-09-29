@@ -1,5 +1,6 @@
 import Activity from "../models/activity.model.js"
 import Product from "../models/product.model.js"
+import Movement from "../models/movement.model.js"
 import { errorHandler } from "../utils/error.js"
 
 export const product = async (req,res,next) => {
@@ -46,17 +47,35 @@ export const getProducts = async (req,res,next) => {
 
 export const deleteProduct = async (req,res,next) => {
     try {
-        await Product.findByIdAndDelete(req.params.productId)
+        // 先找到要删除的物品
+        const itemToDelete = await Product.findById(req.params.productId);
+        if (!itemToDelete) {
+            return next(errorHandler(404, 'Item not found'));
+        }
+
+        // 获取物品的colourcode，用于删除相关的交易记录
+        const itemCode = itemToDelete.colourcode;
+        
+        // 构造movement中item字段的格式
+        const movementItemName = `Product: ${itemCode}`;
+
+        // 同时删除物品和相关的交易记录
+        await Promise.all([
+            Product.findByIdAndDelete(req.params.productId),
+            Movement.deleteMany({ item: movementItemName }) // 使用正确的格式
+        ]);
+
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete product',
-            detail: `${req.user.username} delete product from the system`
-        })
-        await newActivity.save()
-        res.status(200).json('Product is deleted')
+            detail: `${req.user.username} delete product ${itemCode} and all related movements from the system`
+        });
+        await newActivity.save();
+        
+        res.status(200).json('Product and related movements are deleted');
     } catch (error) {
-        next(error)
+        next(error);
     }
 }
 
