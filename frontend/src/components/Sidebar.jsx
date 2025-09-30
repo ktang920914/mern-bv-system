@@ -4,7 +4,7 @@ import { HiArrowSmRight, HiChartPie, HiMenu, HiX } from "react-icons/hi";
 import { HiOutlineDocumentCurrencyDollar } from "react-icons/hi2";
 import { GrDocumentUser } from "react-icons/gr";
 import { MdOutlineInventory } from "react-icons/md";
-import { GrDocumentStore, GrHostMaintenance, GrDocumentPpt} from "react-icons/gr";
+import { GrDocumentStore, GrHostMaintenance, GrDocumentVerified} from "react-icons/gr";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import useUserstore from "../store";
 import useThemeStore from "../themeStore";
@@ -259,7 +259,7 @@ const DashSidebar = () => {
               </SidebarCollapse>
 
               <SidebarCollapse 
-                icon={GrDocumentPpt}
+                icon={GrDocumentVerified}
                 label="Stock"
                 className={currentTheme.collapse}
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
