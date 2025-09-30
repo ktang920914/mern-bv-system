@@ -342,17 +342,18 @@ const Cases = () => {
                     />
                     <Button 
                         className='cursor-pointer' 
-                        onClick={generateExcelReport} 
-                        disabled={tableData.length === 0}
-                    >
-                        Report
-                    </Button>
-                    <Button 
-                        className='cursor-pointer' 
                         onClick={handleUpdateStats}
                         disabled={isUpdating}
                     >
                         {isUpdating ? <Spinner size="sm" /> : 'Update Stats'}
+                    </Button>
+                    <Button 
+                        className='cursor-pointer' 
+                        onClick={generateExcelReport} 
+                        color='green'
+                        disabled={tableData.length === 0}
+                    >
+                        Report
                     </Button>
                 </div>
             </div>

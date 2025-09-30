@@ -337,11 +337,11 @@ const Costs = () => {
                     <TextInput placeholder='Search cost category...' onChange={handleSearch}/>
                 </div>
                 <div className='flex items-center gap-2'>
-                    <Button className='cursor-pointer' onClick={generateExcelReport} disabled={costs.length === 0}>
-                        Report
-                    </Button>
                     <Button className='cursor-pointer' onClick={handleCreateCost}>
                         Change Year
+                    </Button>
+                    <Button className='cursor-pointer' color='green' onClick={generateExcelReport} disabled={costs.length === 0}>
+                        Report
                     </Button>
                 </div>
             </div>

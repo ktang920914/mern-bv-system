@@ -4,6 +4,8 @@ import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx' // 新增导入
+import { saveAs } from 'file-saver' // 新增导入
 
 const Orders = () => {
 
@@ -227,6 +229,57 @@ const Orders = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+     // 生成Excel报告的函数 - 新增
+    const generateExcelReport = () => {
+        // 准备Excel数据 - 包含所有订单字段
+        const excelData = orders.map(order => ({
+            'Date': order.date,
+            'Supplier': order.supplier,
+            'Document Type': order.doc,
+            'Document No': order.docno,
+            'Item': order.item,
+            'Quantity': order.quantity,
+            'Amount': order.amount,
+            'Cost Category': order.costcategory,
+            'Status': order.status,
+            'Created At': new Date(order.createdAt).toLocaleString(),
+            'Updated At': new Date(order.updatedAt).toLocaleString()
+        }))
+
+        // 创建工作簿和工作表
+        const workbook = XLSX.utils.book_new()
+        const worksheet = XLSX.utils.json_to_sheet(excelData)
+        
+        // 设置列宽
+        const colWidths = [
+            { wch: 12 }, // Date
+            { wch: 20 }, // Supplier
+            { wch: 15 }, // Document Type
+            { wch: 15 }, // Document No
+            { wch: 25 }, // Item
+            { wch: 10 }, // Quantity
+            { wch: 12 }, // Amount
+            { wch: 20 }, // Cost Category
+            { wch: 12 }, // Status
+            { wch: 20 }, // Created At
+            { wch: 20 }  // Updated At
+        ]
+        worksheet['!cols'] = colWidths
+
+        // 添加工作表到工作簿
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Orders Report')
+        
+        // 生成Excel文件并下载
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+        const blob = new Blob([excelBuffer], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        })
+        
+        // 使用当前日期作为文件名
+        const date = new Date().toISOString().split('T')[0]
+        saveAs(blob, `Orders_Report_${date}.xlsx`)
+    }
+
   return (
     <div>
         <div className='flex justify-between items-center mb-4'>
@@ -234,7 +287,10 @@ const Orders = () => {
             <div>
                 <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
             </div>
-            <Button className='cursor-pointer' onClick={handleCreateOrder}>Create Order</Button>
+            <div className='flex gap-2'>
+                <Button className='cursor-pointer' onClick={handleCreateOrder}>Create Order</Button>
+                <Button className='cursor-pointer' color='green' onClick={generateExcelReport}>Report</Button>
+            </div>
         </div>
 
         <Table hoverable className="[&_td]:py-1 [&_th]:py-2">

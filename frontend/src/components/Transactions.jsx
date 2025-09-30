@@ -4,6 +4,8 @@ import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx' // 新增导入
+import { saveAs } from 'file-saver' // 新增导入
 
 const Transactions = () => {
 
@@ -229,6 +231,53 @@ const Transactions = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+    // 生成Excel报告的函数 - 新增
+  const generateExcelReport = () => {
+    // 准备Excel数据 - 包含所有交易字段
+    const excelData = records.map(record => ({
+      'Date': record.date,
+      'Item Code': record.code,
+      'Transaction Type': record.transaction,
+      'Quantity': record.quantity,
+      'Balance': record.balance,
+      'User': record.user,
+      'Status': record.status,
+      'Created At': new Date(record.createdAt).toLocaleString(),
+      'Updated At': new Date(record.updatedAt).toLocaleString()
+    }))
+
+    // 创建工作簿和工作表
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.json_to_sheet(excelData)
+    
+    // 设置列宽
+    const colWidths = [
+      { wch: 12 }, // Date
+      { wch: 15 }, // Item Code
+      { wch: 15 }, // Transaction Type
+      { wch: 10 }, // Quantity
+      { wch: 10 }, // Balance
+      { wch: 15 }, // User
+      { wch: 10 }, // Status
+      { wch: 20 }, // Created At
+      { wch: 20 }  // Updated At
+    ]
+    worksheet['!cols'] = colWidths
+
+    // 添加工作表到工作簿
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions Report')
+    
+    // 生成Excel文件并下载
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([excelBuffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    // 使用当前日期作为文件名
+    const date = new Date().toISOString().split('T')[0]
+    saveAs(blob, `Transactions_Report_${date}.xlsx`)
+  }
+
   return (
     <div>
       <div className='flex justify-between items-center mb-4'>
@@ -236,7 +285,10 @@ const Transactions = () => {
         <div>
             <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
         </div>
+        <div className='flex gap-2'>
         <Button className='cursor-pointer' onClick={handleCreateTransaction}>Create Transaction</Button>
+        <Button className='cursor-pointer' onClick={generateExcelReport} color='green'>Report</Button>
+        </div>
       </div>
 
       <Table hoverable className="[&_td]:py-1 [&_th]:py-2"> 

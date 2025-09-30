@@ -4,6 +4,8 @@ import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx' // 新增导入
+import { saveAs } from 'file-saver' // 新增导入
 
 const Maintenance = () => {
 
@@ -252,6 +254,59 @@ const Maintenance = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+    // 生成Excel报告的函数 - 新增
+  const generateExcelReport = () => {
+    // 准备Excel数据 - 包含所有维护作业字段
+    const excelData = maintenances.map(maintenance => ({
+      'Job Date': maintenance.jobdate,
+      'Job Type': maintenance.jobtype,
+      'Item Code': maintenance.code,
+      'Problem': maintenance.problem,
+      'Job Detail': maintenance.jobdetail,
+      'Root Cause': maintenance.rootcause,
+      'Supplier': maintenance.supplier,
+      'Cost': maintenance.cost,
+      'Completion Date': maintenance.completiondate,
+      'Status': maintenance.status,
+      'Created At': new Date(maintenance.createdAt).toLocaleString(),
+      'Updated At': new Date(maintenance.updatedAt).toLocaleString()
+    }))
+
+    // 创建工作簿和工作表
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.json_to_sheet(excelData)
+    
+    // 设置列宽
+    const colWidths = [
+      { wch: 12 }, // Job Date
+      { wch: 15 }, // Job Type
+      { wch: 15 }, // Item Code
+      { wch: 25 }, // Problem
+      { wch: 30 }, // Job Detail
+      { wch: 25 }, // Root Cause
+      { wch: 20 }, // Supplier
+      { wch: 10 }, // Cost
+      { wch: 15 }, // Completion Date
+      { wch: 15 }, // Status
+      { wch: 20 }, // Created At
+      { wch: 20 }  // Updated At
+    ]
+    worksheet['!cols'] = colWidths
+
+    // 添加工作表到工作簿
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Maintenance Jobs Report')
+    
+    // 生成Excel文件并下载
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([excelBuffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    // 使用当前日期作为文件名
+    const date = new Date().toISOString().split('T')[0]
+    saveAs(blob, `Maintenance_Jobs_Report_${date}.xlsx`)
+  }
+
   return (
     <div>
         <div className='flex justify-between items-center mb-4'>
@@ -259,9 +314,14 @@ const Maintenance = () => {
             <div>
                 <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
             </div>
+            <div className='flex gap-2'>
                 <Button className='cursor-pointer' onClick={handleCreateJob}>
                   Create job
                 </Button>
+                <Button className='cursor-pointer' onClick={generateExcelReport} color='green'>
+                    Report
+                </Button>
+            </div>
         </div>
 
          <Table hoverable className="[&_td]:py-1 [&_th]:py-2">

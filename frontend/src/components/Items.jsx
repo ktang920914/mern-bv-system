@@ -5,6 +5,8 @@ import useUserstore from '../store';
 import { QRCodeCanvas } from 'qrcode.react';
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx' // 新增导入
+import { saveAs } from 'file-saver' // 新增导入
 
 const Items = () => {
 
@@ -201,12 +203,62 @@ const Items = () => {
         }, null, 2);
     };
 
+    // 生成Excel报告的函数 - 新增
+    const generateExcelReport = () => {
+        // 准备Excel数据 - 包含所有物品字段
+        const excelData = items.map(item => ({
+            'Code': item.code,
+            'Type': item.type,
+            'Location': item.location,
+            'Supplier': item.supplier,
+            'Status': item.status,
+            'Balance': item.balance,
+            'QR Code Content': item.qrCode || generateQRContent(item),
+            'Created At': new Date(item.createdAt).toLocaleString(),
+            'Updated At': new Date(item.updatedAt).toLocaleString()
+        }))
+
+        // 创建工作簿和工作表
+        const workbook = XLSX.utils.book_new()
+        const worksheet = XLSX.utils.json_to_sheet(excelData)
+        
+        // 设置列宽
+        const colWidths = [
+            { wch: 15 }, // Code
+            { wch: 20 }, // Type
+            { wch: 15 }, // Location
+            { wch: 20 }, // Supplier
+            { wch: 10 }, // Status
+            { wch: 10 }, // Balance
+            { wch: 50 }, // QR Code Content
+            { wch: 20 }, // Created At
+            { wch: 20 }  // Updated At
+        ]
+        worksheet['!cols'] = colWidths
+
+        // 添加工作表到工作簿
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Items Report')
+        
+        // 生成Excel文件并下载
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+        const blob = new Blob([excelBuffer], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        })
+        
+        // 使用当前日期作为文件名
+        const date = new Date().toISOString().split('T')[0]
+        saveAs(blob, `Items_Report_${date}.xlsx`)
+    }
+
     return (
         <div>
             <div className='flex justify-between items-center mb-4'>
                 <h1 className='text-2xl font-semibold'>Items</h1>
                 <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
-                <Button className='cursor-pointer' onClick={handleCreateItem}>Create Item</Button>
+                <div className='flex gap-2'>
+                    <Button className='cursor-pointer' onClick={handleCreateItem}>Create Item</Button>
+                    <Button className='cursor-pointer' onClick={generateExcelReport} color='green'>Report</Button>
+                </div>
             </div>
 
             <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
