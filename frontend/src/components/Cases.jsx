@@ -1,8 +1,9 @@
-import { Button, Label, TextInput, Spinner, Alert, Table, TableHead, TableRow, TableHeadCell, TableBody, TableCell, Pagination, Select } from 'flowbite-react'
+import { Button, Label, TextInput, Spinner, Alert, Table, TableHead, TableRow, TableHeadCell, TableBody, TableCell, Pagination, Badge } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import { HiX, HiCheck } from 'react-icons/hi'
 
 // 导入 Chart.js 相关
 import {
@@ -51,8 +52,10 @@ const Cases = () => {
     const [selectedCaseType, setSelectedCaseType] = useState('Breakdown')
     const [isUpdating, setIsUpdating] = useState(false)
     const [dataType, setDataType] = useState('count') // 'count' or 'cost'
+    const [selectedCodes, setSelectedCodes] = useState([]) // 新增：选中的 Job Codes
+    const [availableCodes, setAvailableCodes] = useState([]) // 可用的 Job Code 列表
 
-     // 当页码或搜索词变化时更新 URL
+    // 当页码或搜索词变化时更新 URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
         
@@ -72,6 +75,24 @@ const Cases = () => {
         
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
+
+    // 获取可用的 Job Code 列表
+    useEffect(() => {
+        const fetchAvailableCodes = async () => {
+            try {
+                const res = await fetch('/api/maintenance/getJobCodes');
+                const data = await res.json();
+                if (res.ok) {
+                    setAvailableCodes(data);
+                }
+            } catch (error) {
+                console.error('Error fetching job codes:', error);
+                // 如果 API 不存在，使用默认列表
+                setAvailableCodes(['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']);
+            }
+        };
+        fetchAvailableCodes();
+    }, []);
 
     const caseTypes = ["Breakdown", "Kaizen", "Inspect", "Maintenance"]
 
@@ -105,7 +126,17 @@ const Cases = () => {
         const fetchCases = async () => {
             try {
                 setLoading(true)
-                const res = await fetch(`/api/case/getcases?year=${displayYear}`)
+                // 构建查询参数
+                const params = new URLSearchParams({
+                    year: displayYear
+                })
+                
+                // 如果选择了特定的 Job Code，添加到查询参数
+                if (selectedCodes.length > 0) {
+                    params.append('codes', selectedCodes.join(','))
+                }
+                
+                const res = await fetch(`/api/case/getcases?${params}`)
                 const data = await res.json()
                 if (res.ok) {
                     setCases(data)
@@ -117,7 +148,7 @@ const Cases = () => {
             }
         }
         fetchCases()
-    }, [displayYear])
+    }, [displayYear, selectedCodes]) // 添加 selectedCodes 作为依赖
 
     const handleYearChange = (e) => {
         setDisplayYear(e.target.value)
@@ -125,43 +156,67 @@ const Cases = () => {
     }
 
     const handleUpdateStats = async () => {
-        try {
-            setIsUpdating(true);
-            setErrorMessage(null);
-            setSuccessMessage(null);
+    try {
+        setIsUpdating(true);
+        setErrorMessage(null);
+        setSuccessMessage(null); // 清空成功消息
+        
+        const res = await fetch('/api/case/updatecasestats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                year: displayYear
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            // 移除成功消息的显示
+            // setSuccessMessage('Case statistics updated successfully');
             
-            const res = await fetch('/api/case/updatecasestats', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ year: displayYear })
-            });
+            // 重新获取数据
+            const params = new URLSearchParams({
+                year: displayYear
+            })
             
-            const data = await res.json();
-            
-            if (res.ok) {
-                setSuccessMessage('Case statistics updated successfully');
-                
-                // 重新获取数据
-                const res2 = await fetch(`/api/case/getcases?year=${displayYear}`);
-                const data2 = await res2.json();
-                if (res2.ok) {
-                    setCases(data2);
-                }
-            } else {
-                setErrorMessage(data.message || 'Failed to update statistics');
+            if (selectedCodes.length > 0) {
+                params.append('codes', selectedCodes.join(','))
             }
-        } catch (error) {
-            setErrorMessage('Error updating statistics: ' + error.message);
-        } finally {
-            setIsUpdating(false);
+            
+            const res2 = await fetch(`/api/case/getcases?${params}`);
+            const data2 = await res2.json();
+            if (res2.ok) {
+                setCases(data2);
+            }
+        } else {
+            setErrorMessage(data.message || 'Failed to update statistics');
         }
-    };
+    } catch (error) {
+        setErrorMessage('Error updating statistics: ' + error.message);
+    } finally {
+        setIsUpdating(false);
+    }
+};
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value.toLowerCase())
         setCurrentPage(1)
+    }
+
+    // Job Code 选择处理函数
+    const handleCodeSelection = (code) => {
+        if (selectedCodes.includes(code)) {
+            setSelectedCodes(selectedCodes.filter(c => c !== code))
+        } else {
+            setSelectedCodes([...selectedCodes, code])
+        }
+    }
+
+    const clearSelectedCodes = () => {
+        setSelectedCodes([])
     }
 
     // 准备表格数据
@@ -217,7 +272,7 @@ const Cases = () => {
                 },
                 title: {
                     display: true,
-                    text: `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}`,
+                    text: `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
                     }
@@ -274,6 +329,14 @@ const Cases = () => {
             const worksheetData = []
             
             worksheetData.push([`${dataType === 'cost' ? 'Cost' : 'Cases'} Report - ${displayYear}`])
+            
+            // 添加筛选的 Job Code 信息
+            if (selectedCodes.length > 0) {
+                worksheetData.push([`Filtered Job Codes: ${selectedCodes.join(', ')}`])
+            } else {
+                worksheetData.push(['Filtered Job Codes: All codes selected'])
+            }
+            
             worksheetData.push([])
             
             const headers = ['Case Type', ...monthFields.map(month => month.name), 'Total']
@@ -302,12 +365,23 @@ const Cases = () => {
             ]
             worksheet['!cols'] = colWidths
             
+            // 合并标题单元格
+            if (!worksheet['!merges']) worksheet['!merges'] = [];
+            worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }); // 合并标题行
+            worksheet['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }); // 合并筛选信息行
+            
             XLSX.utils.book_append_sheet(workbook, worksheet, `${dataType === 'cost' ? 'Cost' : 'Cases'}_${displayYear}`)
             
             const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
             const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             
-            saveAs(data, `${dataType === 'cost' ? 'Cost' : 'Cases'}_Report_${displayYear}.xlsx`)
+            // 生成文件名，包含筛选的 Job Code
+            let fileName = `${dataType === 'cost' ? 'Cost' : 'Cases'}_Report_${displayYear}`
+            if (selectedCodes.length > 0) {
+                fileName += `_${selectedCodes.join('_')}`
+            }
+            
+            saveAs(data, `${fileName}.xlsx`)
             
         } catch (error) {
             setErrorMessage('Error generating Excel report: ' + error.message)
@@ -355,6 +429,67 @@ const Cases = () => {
                     >
                         Report
                     </Button>
+                </div>
+            </div>
+
+            {/* Job Code 筛选器 - 单行显示 */}
+            <div className="mb-3 p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
+                <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-semibold">Filter by Job Code</Label>
+                    {selectedCodes.length > 0 && (
+                        <Button size="xs" color="light" onClick={clearSelectedCodes}>
+                            Clear All
+                        </Button>
+                    )}
+                </div>
+                
+                <div className="flex flex-wrap gap-1 mb-2">
+                    {selectedCodes.map(code => (
+                        <Badge key={code} color="info" className="flex items-center gap-1 py-0.5 px-2 text-xs">
+                            {code}
+                            <HiX 
+                                className="cursor-pointer text-xs" 
+                                onClick={() => handleCodeSelection(code)} 
+                            />
+                        </Badge>
+                    ))}
+                    {selectedCodes.length === 0 && (
+                        <span className="text-gray-500 text-xs">All codes selected</span>
+                    )}
+                </div>
+                
+                {/* 单行显示的 Job Code 选项 */}
+                <div className="flex flex-wrap gap-1 mb-2">
+                    {availableCodes.map(code => (
+                        <div 
+                            key={code}
+                            className={`flex items-center p-1 rounded cursor-pointer text-xs ${
+                                selectedCodes.includes(code) 
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                            }`}
+                            onClick={() => handleCodeSelection(code)}
+                        >
+                            <div className={`w-3 h-3 flex items-center justify-center rounded-sm border mr-1 ${
+                                selectedCodes.includes(code) 
+                                    ? 'bg-blue-600 border-blue-600' 
+                                    : 'bg-white border-gray-300 dark:bg-gray-600 dark:border-gray-500'
+                            }`}>
+                                {selectedCodes.includes(code) && (
+                                    <HiCheck className="w-2 h-2 text-white" />
+                                )}
+                            </div>
+                            {code}
+                        </div>
+                    ))}
+                </div>
+                
+                <div className="flex items-center gap-2 mt-2">
+                    {selectedCodes.length > 0 && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Showing: {selectedCodes.join(' + ')}
+                        </div>
+                    )}
                 </div>
             </div>
 

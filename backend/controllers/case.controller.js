@@ -3,12 +3,20 @@ import Case from "../models/case.model.js";
 import Maintenance from "../models/maintenance.model.js";
 import Activity from "../models/activity.model.js";
 
-// 获取案例统计数据
+// 获取案例统计数据 - 修改为支持 Job Code 筛选
 export const getCases = async (req, res, next) => {
     try {
-        const { year } = req.query;
+        const { year, codes } = req.query;
         const query = year ? { year } : {};
         
+        // 如果有 Job Code 筛选，需要重新计算统计数据
+        if (codes) {
+            const jobCodes = codes.split(',');
+            const filteredCases = await calculateFilteredCases(year, jobCodes);
+            return res.status(200).json(filteredCases);
+        }
+        
+        // 如果没有筛选，返回现有的统计数据
         const cases = await Case.find(query).sort({ year: 1, month: 1 });
         res.status(200).json(cases);
     } catch (error) {
@@ -16,38 +24,83 @@ export const getCases = async (req, res, next) => {
     }
 };
 
-// 辅助函数：从日期字符串提取年份和月份
-const extractYearAndMonth = (dateString) => {
-    if (!dateString) return null;
-    
-    let year, month;
-    
-    // 格式: YYYY-MM-DD
-    if (dateString.includes('-')) {
-        const parts = dateString.split('-');
-        if (parts.length >= 3) {
-            year = parts[0];
-            month = parts[1];
+// 辅助函数：根据 Job Code 筛选计算案例统计数据
+const calculateFilteredCases = async (year, jobCodes) => {
+    try {
+        // 构建查询条件
+        const maintenanceQuery = { 
+            jobdate: { $regex: `^${year}` } // 匹配指定年份的记录
+        };
+        
+        // 如果有特定的 Job Code，添加到查询条件
+        if (jobCodes && jobCodes.length > 0) {
+            maintenanceQuery.code = { $in: jobCodes };
         }
+        
+        // 获取维护记录
+        const maintenances = await Maintenance.find(maintenanceQuery);
+        
+        // 月份名称映射
+        const monthNames = {
+            '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+            '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
+        };
+        
+        // 统计案例数据
+        const caseStats = {};
+        
+        maintenances.forEach(maintenance => {
+            if (!maintenance.jobdate || !maintenance.jobtype) {
+                return;
+            }
+            
+            // 从 jobdate 中提取月份
+            let monthNum;
+            if (maintenance.jobdate.includes('-')) {
+                // 格式: YYYY-MM-DD
+                monthNum = maintenance.jobdate.split('-')[1];
+            } else if (maintenance.jobdate.includes('/')) {
+                // 格式: DD/MM/YYYY
+                monthNum = maintenance.jobdate.split('/')[1];
+            }
+            
+            if (!monthNum) return;
+            
+            const monthName = monthNames[monthNum];
+            if (!monthName) return;
+            
+            // 确保 jobtype 是有效的类型
+            const validTypes = ['Breakdown', 'Kaizen', 'Inspect', 'Maintenance'];
+            const caseType = validTypes.includes(maintenance.jobtype) ? maintenance.jobtype : 'Others';
+            
+            // 初始化统计对象
+            const key = `${caseType}-${monthName}-${year}`;
+            if (!caseStats[key]) {
+                caseStats[key] = {
+                    type: caseType,
+                    month: monthName,
+                    year,
+                    count: 0,
+                    totalCost: 0
+                };
+            }
+            
+            caseStats[key].count += 1;
+            // 累加成本（确保 cost 是数字）
+            const cost = typeof maintenance.cost === 'number' ? maintenance.cost : parseFloat(maintenance.cost) || 0;
+            caseStats[key].totalCost += cost;
+        });
+        
+        return Object.values(caseStats);
+        
+    } catch (error) {
+        console.error('Error calculating filtered cases:', error);
+        return [];
     }
-    // 格式: DD/MM/YYYY
-    else if (dateString.includes('/')) {
-        const parts = dateString.split('/');
-        if (parts.length >= 3) {
-            year = parts[2];
-            month = parts[1];
-        }
-    }
-    
-    // 清理月份数字
-    if (month) {
-        month = parseInt(month, 10);
-    }
-    
-    return year && month ? { year, month } : null;
 };
 
-// 更新案例统计数据（从维护记录生成）
+// 更新案例统计数据（从维护记录生成）- 保持原有逻辑不变
 export const updateCaseStats = async (req, res, next) => {
     try {
         const { year } = req.body;
@@ -68,9 +121,9 @@ export const updateCaseStats = async (req, res, next) => {
         
         // 月份名称映射
         const monthNames = {
-            1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
-            5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
-            9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'
+            '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+            '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
         };
         
         // 统计案例数据
@@ -83,20 +136,32 @@ export const updateCaseStats = async (req, res, next) => {
                 return;
             }
             
-            // 提取年份和月份
-            const dateInfo = extractYearAndMonth(maintenance.jobdate);
-            if (!dateInfo) {
-                return;
+            // 从 jobdate 中提取年份和月份
+            let yearFromDate, monthNum;
+            if (maintenance.jobdate.includes('-')) {
+                // 格式: YYYY-MM-DD
+                const parts = maintenance.jobdate.split('-');
+                if (parts.length >= 3) {
+                    yearFromDate = parts[0];
+                    monthNum = parts[1];
+                }
+            } else if (maintenance.jobdate.includes('/')) {
+                // 格式: DD/MM/YYYY
+                const parts = maintenance.jobdate.split('/');
+                if (parts.length >= 3) {
+                    yearFromDate = parts[2];
+                    monthNum = parts[1];
+                }
             }
             
             // 只处理指定年份的数据
-            if (dateInfo.year !== year) {
+            if (yearFromDate !== year) {
                 return;
             }
             
             yearMatchCount++;
             
-            const monthName = monthNames[dateInfo.month];
+            const monthName = monthNames[monthNum];
             if (!monthName) {
                 return;
             }

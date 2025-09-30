@@ -49,11 +49,16 @@ const Dashboard = () => {
   const [selectedCostCategory, setSelectedCostCategory] = useState('Spareparts')
   const [selectedCostChartType, setSelectedCostChartType] = useState('bar')
 
-  // Cases 相关状态
+  // Cases 相关状态 - 更新为匹配新的 Cases.jsx
   const [casesData, setCasesData] = useState([])
   const [selectedCaseType, setSelectedCaseType] = useState('Breakdown')
   const [selectedCaseChartType, setSelectedCaseChartType] = useState('bar')
   const [casesDataType, setCasesDataType] = useState('count')
+  const [casesSelectedCodes, setCasesSelectedCodes] = useState([]) // Cases 专用的 Job Code 筛选
+  const [availableCodes, setAvailableCodes] = useState([]) // 可用的 Job Code 列表
+  const [isUpdatingCases, setIsUpdatingCases] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState(null)
+
 
   // 数据配置
   const outputDataTypes = [
@@ -113,9 +118,31 @@ const Dashboard = () => {
     { key: 'dec', name: 'Dec' }
   ]
 
+  // 获取可用的 Job Code 列表
+  useEffect(() => {
+    const fetchAvailableCodes = async () => {
+      try {
+        const res = await fetch('/api/maintenance/getJobCodes');
+        const data = await res.json();
+        if (res.ok) {
+          setAvailableCodes(data);
+        }
+      } catch (error) {
+        console.error('Error fetching job codes:', error);
+        setAvailableCodes(jobCodeOptions);
+      }
+    };
+    fetchAvailableCodes();
+  }, []);
+
   useEffect(() => {
     fetchDashboardData()
   }, [displayYear]) // 当 displayYear 改变时重新获取数据
+
+  // 当 Cases Job Code 筛选改变时重新获取 Cases 数据
+  useEffect(() => {
+    fetchCasesData();
+  }, [displayYear, casesSelectedCodes]);
 
   const fetchDashboardData = async () => {
     try {
@@ -142,13 +169,7 @@ const Dashboard = () => {
       }
 
       // 获取 Cases 数据
-      const casesRes = await fetch(`/api/case/getcases?year=${displayYear}`)
-      if (casesRes.ok) {
-        const casesData = await casesRes.json()
-        setCasesData(casesData)
-      } else {
-        setCasesData([])
-      }
+      await fetchCasesData();
 
     } catch (error) {
       setErrorMessage('Error fetching dashboard data: ' + error.message)
@@ -158,6 +179,32 @@ const Dashboard = () => {
       setCasesData([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 获取 Cases 数据（支持 Job Code 筛选）
+  const fetchCasesData = async () => {
+    try {
+      // 构建查询参数
+      const params = new URLSearchParams({
+        year: displayYear
+      })
+      
+      // 如果选择了特定的 Job Code，添加到查询参数
+      if (casesSelectedCodes.length > 0) {
+        params.append('codes', casesSelectedCodes.join(','))
+      }
+      
+      const res = await fetch(`/api/case/getcases?${params}`)
+      if (res.ok) {
+        const casesData = await res.json()
+        setCasesData(casesData)
+      } else {
+        setCasesData([])
+      }
+    } catch (error) {
+      console.error('Error fetching cases data:', error)
+      setCasesData([])
     }
   }
 
@@ -183,7 +230,7 @@ const Dashboard = () => {
     setErrorMessage(null)
   }
 
-  // Job Code 选择处理
+  // Job Code 选择处理 - Outputs
   const handleCodeSelection = (code) => {
     if (selectedCodes.includes(code)) {
       setSelectedCodes(selectedCodes.filter(c => c !== code))
@@ -194,6 +241,19 @@ const Dashboard = () => {
 
   const clearSelectedCodes = () => {
     setSelectedCodes([])
+  }
+
+  // Cases Job Code 选择处理
+  const handleCasesCodeSelection = (code) => {
+    if (casesSelectedCodes.includes(code)) {
+      setCasesSelectedCodes(casesSelectedCodes.filter(c => c !== code))
+    } else {
+      setCasesSelectedCodes([...casesSelectedCodes, code])
+    }
+  }
+
+  const clearCasesSelectedCodes = () => {
+    setCasesSelectedCodes([])
   }
 
   // 重新获取 Outputs 数据（当 Job Code 改变时）
@@ -273,7 +333,7 @@ const Dashboard = () => {
         },
         title: {
           display: true,
-          text: `${outputDataTypes.find(dt => dt.value === selectedOutputDataType)?.label} - ${displayYear}`,
+          text: `${outputDataTypes.find(dt => dt.value === selectedOutputDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
           font: { size: 14 }
         },
       },
@@ -364,7 +424,7 @@ const Dashboard = () => {
     return { options, data: chartData }
   }
 
-  // 准备 Cases 图表数据
+  // 准备 Cases 图表数据 - 更新为匹配新的 Cases.jsx
   const prepareCasesChartData = () => {
     if (casesData.length === 0) return null
 
@@ -389,7 +449,7 @@ const Dashboard = () => {
         },
         title: {
           display: true,
-          text: `${selectedCaseType} ${casesDataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}`,
+          text: `${selectedCaseType} ${casesDataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}${casesSelectedCodes.length > 0 ? ` (${casesSelectedCodes.join(', ')})` : ''}`,
           font: { size: 14 }
         },
       },
@@ -471,6 +531,41 @@ const Dashboard = () => {
     )
   }
 
+  // 新增：更新 Cases 统计数据的函数
+  const handleUpdateCasesStats = async () => {
+    try {
+      setIsUpdatingCases(true)
+      setUpdateMessage(null)
+      setErrorMessage(null)
+
+      const res = await fetch('/api/case/updatecasestats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          year: displayYear
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (res.ok) {
+        setUpdateMessage('Case statistics updated successfully')
+        // 重新获取 Cases 数据
+        await fetchCasesData()
+        // 3秒后自动清除成功消息
+        setTimeout(() => setUpdateMessage(null), 3000)
+      } else {
+        setErrorMessage(data.message || 'Failed to update statistics')
+      }
+    } catch (error) {
+      setErrorMessage('Error updating statistics: ' + error.message)
+    } finally {
+      setIsUpdatingCases(false)
+    }
+  }
+
   return (
     <div>
       <div className='flex justify-between items-center mb-6'>
@@ -491,7 +586,7 @@ const Dashboard = () => {
             className="w-20"
             sizing="sm"
           />
-          <Button type="submit" size="sm" disabled={loading}>
+          <Button type="submit" size="sm" disabled={loading} className='cursor-pointer'>
             {loading ? <Spinner size="sm" /> : 'Go'}
           </Button>
         </form>
@@ -671,10 +766,81 @@ const Dashboard = () => {
           {renderChart(costsChartData, selectedCostChartType)}
         </div>
 
-        {/* Cases Chart Section */}
+        {/* Cases Chart Section - 更新为匹配新的 Cases.jsx */}
         <div className="p-4 bg-white rounded-lg shadow dark:bg-gray-800">
           <div className="mb-4">
             <Label className="font-semibold text-base mb-2 block">Cases Analytics</Label>
+            
+            {/* Cases Job Code 筛选器 */}
+            <div className="mb-3 p-2 bg-gray-50 rounded-lg dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Job Code Filter</Label>
+                {casesSelectedCodes.length > 0 && (
+                  <Button 
+                    size="xs" 
+                    color="light" 
+                    onClick={clearCasesSelectedCodes}
+                    className="text-xs px-2 py-1"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-1 mb-1">
+                {casesSelectedCodes.map(code => (
+                  <Badge 
+                    key={code} 
+                    color="info" 
+                    className="flex items-center gap-1 py-0.5 px-1.5 text-xs"
+                  >
+                    {code}
+                    <HiX 
+                      className="cursor-pointer text-xs hover:text-red-500 transition-colors" 
+                      onClick={() => handleCasesCodeSelection(code)} 
+                    />
+                  </Badge>
+                ))}
+                {casesSelectedCodes.length === 0 && (
+                  <span className="text-gray-500 text-xs">All codes selected</span>
+                )}
+                
+              </div>
+              
+              <div className="flex flex-wrap gap-1 mb-1">
+                {availableCodes.map(code => (
+                  <div 
+                    key={code}
+                    className={`flex items-center p-1 rounded cursor-pointer text-xs transition-colors ${
+                      casesSelectedCodes.includes(code) 
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700' 
+                        : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-500'
+                    }`}
+                    onClick={() => handleCasesCodeSelection(code)}
+                  >
+                    <div className={`w-3 h-3 flex items-center justify-center rounded-sm border mr-1 ${
+                      casesSelectedCodes.includes(code) 
+                        ? 'bg-blue-600 border-blue-600' 
+                        : 'bg-white border-gray-400 dark:bg-gray-500 dark:border-gray-400'
+                    }`}>
+                      {casesSelectedCodes.includes(code) && (
+                        <HiCheck className="w-2 h-2 text-white" />
+                      )}
+                    </div>
+                    {code}
+                  </div>
+                ))}
+              </div>
+              <Button 
+                size="sm"
+                onClick={handleUpdateCasesStats}
+                disabled={isUpdatingCases}
+                className="text-xs"
+              >
+                {isUpdatingCases ? <Spinner size="sm" /> : 'Update Stats'}
+              </Button>
+            </div>
+            
             <div className="flex flex-wrap gap-2">
               <div className="flex items-center gap-1">
                 <Label htmlFor="casesDataType" className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
