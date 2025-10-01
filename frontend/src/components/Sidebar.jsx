@@ -71,7 +71,7 @@ const DashSidebar = () => {
       {/* Mobile menu button */}
       <button
         onClick={toggleMobileSidebar}
-        className={`lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md transition-colors ${currentTheme.button}`}
+        className={`lg:hidden fixed top-3 left-4 z-50 p-2 rounded-md transition-colors ${currentTheme.button}`}
       >
         {mobileOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
       </button>

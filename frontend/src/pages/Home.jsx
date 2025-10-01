@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import Header from "../components/Header"
 import DashSidebar from "../components/Sidebar"
-import { useLocation } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"  // 添加 useNavigate
 import Transactions from "../components/Transactions"
 import Dashboard from "../components/Dashboard"
 import Users from "../components/Users"
@@ -22,23 +22,31 @@ import Products from "../components/Products"
 import Movement from "../components/Movement"
 import Materials from "../components/Materials"
 
-
 const Home = () => {
-
-  const {theme} = useThemeStore()
+  const { theme } = useThemeStore()
   const location = useLocation()
-  const [tab,setTab] = useState('')
+  const navigate = useNavigate()  // 添加 navigate
+  const [tab, setTab] = useState('')
 
-  useEffect(() =>{
+  // 添加重定向逻辑
+  useEffect(() => {
+    // 如果访问根路径 '/' 且没有 tab 参数，重定向到 Dashboard
+    if (location.pathname === '/' && !location.search.includes('tab=')) {
+      navigate('/?tab=Dashboard', { replace: true })
+      return
+    }
+  }, [location, navigate])
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(location.search)
     const tabFromURL = urlParams.get('tab')
-    if(tabFromURL){
+    if (tabFromURL) {
       setTab(tabFromURL)
     }
-  },[location.search])
+  }, [location.search])
 
   return (
-    <div className="min-h-screen"/*className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}*/>
+    <div className="min-h-screen">
       <Header/>
       <div className="flex">
         <div className="hidden lg:block">
@@ -50,24 +58,24 @@ const Home = () => {
         </div>
 
         <div className={`flex-1 p-4 lg:ml-1 ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-gray-600 text-gray-300'}`}>
-          { tab === 'Dashboard' && <Dashboard/>}
-          { tab === 'Jobs' && <Jobs/>}
-          { tab === 'Productivity' && <Productivity/>}
-          { tab === 'Planning' && <Planning/>}
-          { tab === 'Oee' && <Oee/>}
-          { tab === 'Outputs' && <Outputs/>}
-          { tab === 'Suppliers' && <Suppliers/>}
-          { tab === 'Orders' && <Orders/>}
-          { tab === 'Costs' && <Costs/>}
-          { tab === 'Items' && <Items/>}
-          { tab === 'Transactions' && <Transactions/>}
-          { tab === 'Maintenances' && <Maintenance/>}
-          { tab === 'Cases' && <Cases/>}
-          { tab === 'Products' && <Products/>}
-          { tab === 'Materials' && <Materials/>}
-          { tab === 'Movements' && <Movement/>}
-          { tab === 'Users' && <Users/>}
-          { tab === 'Logs' && <ActivityLogs/>}
+          {tab === 'Dashboard' && <Dashboard/>}
+          {tab === 'Jobs' && <Jobs/>}
+          {tab === 'Productivity' && <Productivity/>}
+          {tab === 'Planning' && <Planning/>}
+          {tab === 'Oee' && <Oee/>}
+          {tab === 'Outputs' && <Outputs/>}
+          {tab === 'Suppliers' && <Suppliers/>}
+          {tab === 'Orders' && <Orders/>}
+          {tab === 'Costs' && <Costs/>}
+          {tab === 'Items' && <Items/>}
+          {tab === 'Transactions' && <Transactions/>}
+          {tab === 'Maintenances' && <Maintenance/>}
+          {tab === 'Cases' && <Cases/>}
+          {tab === 'Products' && <Products/>}
+          {tab === 'Materials' && <Materials/>}
+          {tab === 'Movements' && <Movement/>}
+          {tab === 'Users' && <Users/>}
+          {tab === 'Logs' && <ActivityLogs/>}
         </div>
       </div>
     </div>

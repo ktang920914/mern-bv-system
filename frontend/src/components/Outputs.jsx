@@ -54,6 +54,7 @@ const Outputs = () => {
     const [selectedCodes, setSelectedCodes] = useState([])
     const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
     const [selectedDataType, setSelectedDataType] = useState('totaloutput') // 默认显示总产出数据
+    const [availableCodes, setAvailableCodes] = useState([]) // 新增
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -76,8 +77,32 @@ const Outputs = () => {
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
-    // 可用的 Job Code 选项
-    const jobCodeOptions = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']
+    // 获取可用的 Job Code 列表
+    useEffect(() => {
+        const fetchAvailableCodes = async () => {
+            try {
+                const res = await fetch('/api/analysis/getjobs');
+                const data = await res.json();
+                if (res.ok) {
+                    // 从 Job 数据中提取唯一的 code 字段
+                    const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
+                    setAvailableCodes(jobCodes);
+                }
+            } catch (error) {
+                console.error('Error fetching job codes:', error);
+                // 如果 API 不存在，使用默认列表
+                setAvailableCodes(['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']);
+            }
+        };
+        fetchAvailableCodes();
+    }, []);
+
+    // 当 selectedCodes 改变时自动获取数据
+    useEffect(() => {
+        if (showTable) {
+            fetchOutputsForYear(displayYear);
+        }
+    }, [selectedCodes]); // 添加 selectedCodes 作为依赖
 
     const monthFields = [
         { key: 'jan', name: 'Jan' },
@@ -226,7 +251,7 @@ const Outputs = () => {
                 },
                 title: {
                     display: true,
-                    text: `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}`,
+                    text: `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
                     }
@@ -469,9 +494,9 @@ const Outputs = () => {
                     )}
                 </div>
                 
-                {/* 单行显示的 Job Code 选项 */}
+                {/* 单行显示的 Job Code 选项 - 修改为使用 availableCodes */}
                 <div className="flex flex-wrap gap-1 mb-2">
-                    {jobCodeOptions.map(code => (
+                    {availableCodes.map(code => (
                         <div 
                             key={code}
                             className={`flex items-center p-1 rounded cursor-pointer text-xs ${
@@ -495,15 +520,8 @@ const Outputs = () => {
                     ))}
                 </div>
                 
+                {/* 移除了 Apply Filters 按钮 */}
                 <div className="flex items-center gap-2 mt-2">
-                    <Button 
-                        size="sm"
-                        onClick={() => fetchOutputsForYear(displayYear)}
-                        disabled={loading}
-                    >
-                        {loading ? <Spinner size="sm" /> : 'Apply Filters'}
-                    </Button>
-                    
                     {selectedCodes.length > 0 && (
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                             Showing: {selectedCodes.join(' + ')}

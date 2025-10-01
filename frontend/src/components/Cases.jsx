@@ -125,84 +125,63 @@ const Cases = () => {
         { value: 'cost', label: 'Cost Amount' }
     ]
 
-    useEffect(() => {
-        const fetchCases = async () => {
-            try {
-                setLoading(true)
-                // 构建查询参数
+    // 修改后的 handleUpdateStats 函数，支持静默更新
+    const handleUpdateStats = async (silent = false) => {
+        try {
+            if (!silent) {
+                setIsUpdating(true);
+            }
+            setErrorMessage(null);
+            setSuccessMessage(null);
+            
+            const res = await fetch('/api/case/updatecasestats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    year: displayYear
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                // 重新获取数据
                 const params = new URLSearchParams({
                     year: displayYear
                 })
                 
-                // 如果选择了特定的 Job Code，添加到查询参数
                 if (selectedCodes.length > 0) {
                     params.append('codes', selectedCodes.join(','))
                 }
                 
-                const res = await fetch(`/api/case/getcases?${params}`)
-                const data = await res.json()
-                if (res.ok) {
-                    setCases(data)
+                const res2 = await fetch(`/api/case/getcases?${params}`);
+                const data2 = await res2.json();
+                if (res2.ok) {
+                    setCases(data2);
                 }
-            } catch (error) {
-                setErrorMessage('Error fetching cases: ' + error.message)
-            } finally {
-                setLoading(false)
+            } else {
+                setErrorMessage(data.message || 'Failed to update statistics');
+            }
+        } catch (error) {
+            setErrorMessage('Error updating statistics: ' + error.message);
+        } finally {
+            if (!silent) {
+                setIsUpdating(false);
             }
         }
-        fetchCases()
-    }, [displayYear, selectedCodes]) // 添加 selectedCodes 作为依赖
+    };
+
+    // 在组件加载和依赖变化时自动更新数据
+    useEffect(() => {
+        handleUpdateStats(true); // 静默更新
+    }, [displayYear, selectedCodes]);
 
     const handleYearChange = (e) => {
         setDisplayYear(e.target.value)
         setCurrentPage(1)
     }
-
-    const handleUpdateStats = async () => {
-    try {
-        setIsUpdating(true);
-        setErrorMessage(null);
-        setSuccessMessage(null); // 清空成功消息
-        
-        const res = await fetch('/api/case/updatecasestats', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                year: displayYear
-            })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-            // 移除成功消息的显示
-            // setSuccessMessage('Case statistics updated successfully');
-            
-            // 重新获取数据
-            const params = new URLSearchParams({
-                year: displayYear
-            })
-            
-            if (selectedCodes.length > 0) {
-                params.append('codes', selectedCodes.join(','))
-            }
-            
-            const res2 = await fetch(`/api/case/getcases?${params}`);
-            const data2 = await res2.json();
-            if (res2.ok) {
-                setCases(data2);
-            }
-        } else {
-            setErrorMessage(data.message || 'Failed to update statistics');
-        }
-    } catch (error) {
-        setErrorMessage('Error updating statistics: ' + error.message);
-    } finally {
-        setIsUpdating(false);
-    }
-};
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value.toLowerCase())
@@ -419,7 +398,7 @@ const Cases = () => {
                     />
                     <Button 
                         className='cursor-pointer' 
-                        onClick={handleUpdateStats}
+                        onClick={() => handleUpdateStats(false)} // 手动更新，显示加载状态
                         disabled={isUpdating}
                     >
                         {isUpdating ? <Spinner size="sm" /> : 'Update Stats'}
