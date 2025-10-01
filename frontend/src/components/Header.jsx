@@ -17,7 +17,7 @@ const Header = () => {
       const res = await fetch('/api/auth/logout', {
         method: 'POST',
       })
-      const data = res.json()
+      const data = await res.json()
       if (data.success === false) {
         console.log(data.message)
       }
@@ -31,7 +31,7 @@ const Header = () => {
   }
 
   return (
-    <div >
+    <div>
          <Navbar fluid rounded className={`${theme === 'light' ? ' text-gray-900 border-b border-gray-900' : 'bg-gray-900 text-gray-300 border-b border-gray-50'}`}>
       <NavbarBrand href="https://www.boldvision.com.my/index.php" target="_blank" className='ml-14'>
         <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSihAmxl1XSIBFJQ3a3P8qyUwlXkvdtKI6OjQ&s" className="mr-3 h-6 sm:h-9 hidden sm:block" alt="Bold Vision Logo" />
@@ -43,17 +43,17 @@ const Header = () => {
         </Button>
         <TextInput value={currentUser.username} className='hidden sm:block' disabled/>
         <Button className='cursor-pointer' onClick={handleLogout} color='light'>LOGOUT</Button>
-        <NavbarToggle/>
+        {/*<NavbarToggle/>*/}
       </div>
-      <NavbarCollapse className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>
-        {/*<NavbarLink href="#" active>
+      {/*<NavbarCollapse className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>
+        <NavbarLink href="#" active>
           Home
         </NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>About</NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Services</NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Profile</NavbarLink>
-        <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Contact</NavbarLink>*/}
-      </NavbarCollapse>
+        <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Contact</NavbarLink>
+      </NavbarCollapse>*/}
     </Navbar>
     </div>
   )
