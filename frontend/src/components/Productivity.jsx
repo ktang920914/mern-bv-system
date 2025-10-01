@@ -391,17 +391,17 @@ const Productivity = () => {
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Color</Label>
-                            <TextInput value={formData.color} id="color" placeholder='Enter color' onChange={handleChange} onFocus={handleFocus}/>
+                            <TextInput value={formData.color || ''} id="color" placeholder='Enter color' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>MFI density</Label>
-                            <TextInput value={formData.density} id="density" type='number' min='1' placeholder='Enter MFI density' onChange={handleChange} onFocus={handleFocus}/>
+                            <TextInput value={formData.density || ''} id="density" placeholder='Enter MFI density' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Operator</Label>
-                            <TextInput value={formData.operator} id="operator" placeholder='Enter operator' onChange={handleChange} onFocus={handleFocus}/>
+                            <TextInput value={formData.operator || ''} id="operator" placeholder='Enter operator' onChange={handleChange} onFocus={handleFocus}/>
                         </div>
                             
                         <div className='mb-4 block'>

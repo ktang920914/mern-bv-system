@@ -103,7 +103,7 @@ const productivitySchema = new mongoose.Schema({
         type:String,
     },
     density:{
-        type:Number,
+        type:String,
     },
     operator:{
         type:String,
