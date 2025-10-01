@@ -46,13 +46,13 @@ const Header = () => {
         <NavbarToggle/>
       </div>
       <NavbarCollapse className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>
-        <NavbarLink href="#" active>
+        {/*<NavbarLink href="#" active>
           Home
         </NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>About</NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Services</NavbarLink>
         <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Profile</NavbarLink>
-        <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Contact</NavbarLink>
+        <NavbarLink href="#" className={`${theme === 'light' ? ' text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Contact</NavbarLink>*/}
       </NavbarCollapse>
     </Navbar>
     </div>

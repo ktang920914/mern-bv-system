@@ -76,14 +76,17 @@ const Cases = () => {
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
-    // 获取可用的 Job Code 列表
+     // 修复：获取可用的 Job Code 列表
     useEffect(() => {
         const fetchAvailableCodes = async () => {
             try {
-                const res = await fetch('/api/maintenance/getJobCodes');
+                // 使用现有的路由
+                const res = await fetch('/api/maintenance/getmaintenances');
                 const data = await res.json();
                 if (res.ok) {
-                    setAvailableCodes(data);
+                    // 从 maintenance 数据中提取唯一的 code 字段
+                    const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
+                    setAvailableCodes(jobCodes);
                 }
             } catch (error) {
                 console.error('Error fetching job codes:', error);
