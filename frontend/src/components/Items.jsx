@@ -251,7 +251,7 @@ const Items = () => {
     }
 
     return (
-        <div>
+        <div className='min-h-screen'>
             <div className='flex justify-between items-center mb-4'>
                 <h1 className='text-2xl font-semibold'>Items</h1>
                 <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>

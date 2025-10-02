@@ -200,7 +200,7 @@ const Users = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
   return (
-    <div>
+    <div className='min-h-screen'>
         <div className='flex justify-between items-center mb-4'>
             <h1 className='text-2xl font-semibold'>Users</h1>
             <div>

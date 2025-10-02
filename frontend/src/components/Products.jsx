@@ -289,7 +289,7 @@ const Products = () => {
     }
 
   return (
-    <div>
+    <div className='min-h-screen'>
         <div className='flex justify-between items-center mb-4'>
             <h1 className='text-2xl font-semibold'>Products</h1>
             <div>

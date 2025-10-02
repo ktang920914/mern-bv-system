@@ -593,7 +593,7 @@ const Outputs = () => {
             {loading ? (
                 <div className="text-center py-8">
                     <Spinner size="xl" />
-                    <p className="mt-2">Loading outputs...</p>
+                    <p className="mt-2 min-h-screen">Loading outputs...</p>
                 </div>
             ) : showTable && outputs.length > 0 ? (
                 <>

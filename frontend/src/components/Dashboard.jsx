@@ -473,13 +473,13 @@ const Dashboard = () => {
     return (
       <div className="text-center py-8">
         <Spinner size="xl" />
-        <p className="mt-2">Loading dashboard data for {displayYear}...</p>
+        <p className="mt-2 min-h-screen">Loading dashboard data for {displayYear}...</p>
       </div>
     )
   }
 
   return (
-    <div>
+    <div className='min-h-screen'>
       <div className='flex justify-between items-center mb-6'>
         <h1 className='text-2xl font-semibold'>Dashboard {displayYear}</h1>
         <form onSubmit={handleYearSubmit} className="flex items-center gap-2">

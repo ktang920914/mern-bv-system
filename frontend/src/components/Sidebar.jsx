@@ -10,8 +10,8 @@ import useUserstore from "../store";
 import useThemeStore from "../themeStore";
 
 const DashSidebar = () => {
-  const { theme } = useThemeStore(); // 修正调用方式
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme } = useThemeStore();
+  const [sidebarOpen, setSidebarOpen] = useState(false); // 统一控制侧边栏状态
   const [tab, setTab] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,7 +30,7 @@ const DashSidebar = () => {
       const res = await fetch('/api/auth/logout', {
         method: 'POST',
       });
-      const data = await res.json(); // 添加 await
+      const data = await res.json();
       if (data.success === false) {
         console.log(data.message);
       } else {
@@ -42,8 +42,8 @@ const DashSidebar = () => {
     }
   };
 
-  const toggleMobileSidebar = () => {
-    setMobileOpen(!mobileOpen);
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   // 主题样式配置
@@ -68,25 +68,26 @@ const DashSidebar = () => {
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* 菜单按钮 - 在所有屏幕尺寸都显示 */}
       <button
-        onClick={toggleMobileSidebar}
-        className={`lg:hidden fixed top-3 left-4 z-50 p-2 rounded-md transition-colors ${currentTheme.button}`}
+        onClick={toggleSidebar}
+        className={`fixed top-3 left-4 z-50 p-2 rounded-md transition-colors ${currentTheme.button}`}
       >
-        {mobileOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
+        {sidebarOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
       </button>
 
-      {/* Overlay for mobile */}
-      {mobileOpen && (
+      {/* 移动端遮罩 */}
+      {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:bg-transparent"
+          onClick={() => setSidebarOpen(false)}
         ></div>
       )}
 
-      <div className={`fixed lg:sticky top-0 left-0 h-screen z-40 transition-all duration-300 ease-in-out
+      {/* 侧边栏 */}
+      <div className={`fixed top-0 left-0 h-screen z-40 transition-all duration-300 ease-in-out
         w-64
-        ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-full'}`}
       >
         <Sidebar 
           aria-label="Sidebar with multi-level dropdown example" 
@@ -100,7 +101,7 @@ const DashSidebar = () => {
                   active={tab === 'Dashboard'} 
                   as='div'
                   className={tab === 'Dashboard' ? currentTheme.itemActive : currentTheme.item}
-                  onClick={toggleMobileSidebar}
+                  onClick={() => setSidebarOpen(false)}
                 >
                   Dashboard
                 </SidebarItem>
@@ -114,7 +115,7 @@ const DashSidebar = () => {
               >
                 <Link to='/?tab=Jobs'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Jobs'} 
                     as='div'
                     className={tab === 'Jobs' ? currentTheme.itemActive : currentTheme.item}
@@ -124,7 +125,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Productivity'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Productivity'} 
                     as='div'
                     className={tab === 'Productivity' ? currentTheme.itemActive : currentTheme.item}
@@ -134,7 +135,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Planning'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Planning'} 
                     as='div'
                     className={tab === 'Planning' ? currentTheme.itemActive : currentTheme.item}
@@ -144,7 +145,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Oee'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Oee'} 
                     as='div'
                     className={tab === 'Oee' ? currentTheme.itemActive : currentTheme.item}
@@ -154,7 +155,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Outputs'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Outputs'} 
                     as='div'
                     className={tab === 'Outputs' ? currentTheme.itemActive : currentTheme.item}
@@ -172,7 +173,7 @@ const DashSidebar = () => {
               >
                 <Link to='/?tab=Suppliers'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Suppliers'} 
                     as='div'
                     className={tab === 'Suppliers' ? currentTheme.itemActive : currentTheme.item}
@@ -182,7 +183,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Orders'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Orders'} 
                     as='div'
                     className={tab === 'Orders' ? currentTheme.itemActive : currentTheme.item}
@@ -192,7 +193,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Costs'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Costs'} 
                     as='div'
                     className={tab === 'Costs' ? currentTheme.itemActive : currentTheme.item}
@@ -210,7 +211,7 @@ const DashSidebar = () => {
               >
                 <Link to='/?tab=Items'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Items'} 
                     as='div'
                     className={tab === 'Items' ? currentTheme.itemActive : currentTheme.item}
@@ -220,7 +221,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Transactions'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Transactions'} 
                     as='div'
                     className={tab === 'Transactions' ? currentTheme.itemActive : currentTheme.item}
@@ -238,7 +239,7 @@ const DashSidebar = () => {
               >
                 <Link to='/?tab=Maintenances'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Maintenance'} 
                     as='div'
                     className={tab === 'Maintenance' ? currentTheme.itemActive : currentTheme.item}
@@ -248,7 +249,7 @@ const DashSidebar = () => {
                 </Link>
                 <Link to='/?tab=Cases'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Cases'} 
                     as='div'
                     className={tab === 'Cases' ? currentTheme.itemActive : currentTheme.item}
@@ -266,7 +267,7 @@ const DashSidebar = () => {
               >
                 <Link to='/?tab=Products'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Products'} 
                     as='div'
                     className={tab === 'Products' ? currentTheme.itemActive : currentTheme.item}
@@ -277,7 +278,7 @@ const DashSidebar = () => {
 
                 <Link to='/?tab=Materials'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Materials'} 
                     as='div'
                     className={tab === 'Materials' ? currentTheme.itemActive : currentTheme.item}
@@ -288,7 +289,7 @@ const DashSidebar = () => {
 
                 <Link to='/?tab=Movements'>
                   <SidebarItem 
-                    onClick={toggleMobileSidebar} 
+                    onClick={() => setSidebarOpen(false)} 
                     active={tab === 'Movements'} 
                     as='div'
                     className={tab === 'Movements' ? currentTheme.itemActive : currentTheme.item}
@@ -307,7 +308,7 @@ const DashSidebar = () => {
                 >
                   <Link to='/?tab=Users'>
                     <SidebarItem 
-                      onClick={toggleMobileSidebar} 
+                      onClick={() => setSidebarOpen(false)} 
                       active={tab === 'Users'} 
                       as='div'
                       className={tab === 'Users' ? currentTheme.itemActive : currentTheme.item}
@@ -317,7 +318,7 @@ const DashSidebar = () => {
                   </Link>
                   <Link to='/?tab=Logs'>
                     <SidebarItem 
-                      onClick={toggleMobileSidebar} 
+                      onClick={() => setSidebarOpen(false)} 
                       active={tab === 'Logs'} 
                       as='div'
                       className={tab === 'Logs' ? currentTheme.itemActive : currentTheme.item}
