@@ -138,6 +138,17 @@ const Oee = () => {
         saveAs(blob, `OEE_Report_${date}.xlsx`)
     }
 
+    // 获取OEE百分比显示（去掉小数点）
+    const getOeePercentage = (oeeValue) => {
+        return Math.round(oeeValue * 100);
+    }
+
+    // 根据OEE值获取颜色类名
+    const getOeeColorClass = (oeeValue) => {
+        const percentage = getOeePercentage(oeeValue);
+        return percentage >= 85 ? 'text-green-500 font-semibold' : 'text-red-600 font-semibold';
+    }
+
     const filteredJobs = jobs.filter(job => 
         job.lotno.toLowerCase().includes(searchTerm) ||
         job.totaloutput.toString().toLowerCase().includes(searchTerm) || 
@@ -291,14 +302,16 @@ const Oee = () => {
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
                                             <p className="text-xs mb-2">{`${job.availability} x ${job.performance} x ${job.quality} = ${job.oee}`}</p>
+                                            <p className="font-semibold text-sm mt-2">OEE Percentage:</p>
+                                            <p className="text-xs">{`${getOeePercentage(job.oee)}%`}</p>
                                         </div>
                                     }
                                     trigger='hover'
                                     placement="top"
                                     arrow={false}
                                 >
-                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                        {job.oee}
+                                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
+                                        {getOeePercentage(job.oee)}%
                                     </span>
                                 </Popover>
                             </TableCell>
