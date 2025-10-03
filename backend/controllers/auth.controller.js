@@ -24,7 +24,7 @@ export const login = async (req,res,next) => {
             return next(errorHandler(404, 'Login Failed'))
         }
 
-        const token = jwt.sign({id:validUser._id,username:validUser.username},process.env.JWT_SECRET)
+        const token = jwt.sign({id:validUser._id,username:validUser.username},process.env.JWT_SECRET,{expiresIn:'90d'})
         const {password:pass,...rest} = validUser._doc
 
         const currentDate = new Date().toLocaleString();
@@ -37,6 +37,7 @@ export const login = async (req,res,next) => {
 
         res.cookie('access_token',token,{
             httpOnly:true,
+            maxAge:90*24*60*60*1000
         })
         res.status(200).json(rest)
 
