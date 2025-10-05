@@ -24,6 +24,17 @@ const Jobs = () => {
     const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // 监听窗口大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -224,247 +235,337 @@ const Jobs = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
-
-  return (
-    <div className='min-h-screen'>
-        <div className='flex justify-between items-center mb-4'>
-            <h1 className='text-2xl font-semibold'>Jobs</h1>
-            <div>
-                <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
-            </div>
-                <Button className='cursor-pointer' onClick={handleCreateJob}>Create job</Button>
-        </div>
-
-        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
-            <TableHead>
-                <TableRow>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod start</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod end</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Order date</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
-                </TableRow>
-            </TableHead>
-            <TableBody>
-                {currentJobs.map((job) => (
-                    <TableRow key={job._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                        <TableCell className="align-middle">{job.code}</TableCell>
-                        <TableCell className="align-middle">{job.starttime}</TableCell>
-                        <TableCell className="align-middle">{job.endtime}</TableCell>
-                        <TableCell className="align-middle">{job.orderdate}</TableCell>
-                        <TableCell className="align-middle">
-                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                content={
-                                    <div className="p-3 max-w-xs">
-                                        <p className="font-semibold text-sm">Colour code:</p>
-                                        <p className="text-xs mb-2">{job.colourcode}</p>
-                                        <p className="font-semibold text-sm">Material:</p>
-                                        <p className="text-xs mb-2">{job.material}</p>
-                                        <p className="font-semibold text-sm">Total order:</p>
-                                        <p className="text-xs mb-2">{job.totalorder}</p>
-                                    </div>
-                                }
-                                trigger='hover'
-                                placement="top"
-                                arrow={false}
-                            >
-                                <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                    {job.lotno}
-                                </span>
-                            </Popover>
-                        </TableCell>
-                        <TableCell className="align-middle">
-                            <Button outline className='cursor-pointer py-1 px-2 text-sm h-8' onClick={() => {handleUpdate(job)}}>Edit</Button>
-                        </TableCell>
-                        <TableCell className="align-middle">
-                            <Button color='red' outline className='cursor-pointer py-1 px-2 text-sm h-8' onClick={() => {setJobIdToDelete(job._id);setOpenModalDeleteJob(!openModalDeleteJob)}}>
-                                Delete
-                            </Button>
-                        </TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-
-        <div className="flex-col justify-center text-center mt-4">
-            <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
-                Showing {showingFrom} to {showingTo} of {totalEntries} Entries
-            </p>
-            <Pagination
-                showIcons
-                currentPage={currentPage}
-                totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
-                onPageChange={handlePageChange}
-            />
-        </div>
-
-        <Modal show={openModalCreateJob} onClose={handleCreateJob} popup>
-            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
-            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
-                <div className="space-y-6">
-                    <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Create Job</h3>
-                    <form onSubmit={handleSubmit}>
-                        <div>
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
-                                <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                                    <option></option>
-                                {items.map((item) => (
-                                <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
-                                ))}
-                                </Select>
-                            </div>
-                        </div>
-                            
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod start</Label>
-                            <TextInput  type='datetime-local' id="starttime"  onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod end</Label>
-                            <TextInput  type='datetime-local' id="endtime"  onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order date</Label>
-                            <TextInput  type='date' id="orderdate"  onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-    
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
-                            <TextInput id="lotno" placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
-                            <TextInput id="colourcode" placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
-                            <TextInput id="material" placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
-                            <TextInput type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-                            
-                        <div className='mb-4 block'>
-                            <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
-                                {
-                                    loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
-                                }
-                                </Button>
-                            </div>
-                        </form>
-                        {
-                            errorMessage && (
-                                <Alert color='failure' className='mt-4 font-semibold'>
-                                    {errorMessage}
-                                </Alert>
-                            )
-                        }
+    // 移动端卡片组件
+    const JobCard = ({ job }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow ${theme === 'light' ? 'bg-white border border-gray-200' : 'bg-gray-800 border border-gray-700'}`}>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Ext</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.code}</p>
                 </div>
-            </ModalBody>
-        </Modal>
-
-        <Modal show={openModalDeleteJob} size="md" onClose={() => setOpenModalDeleteJob(!openModalDeleteJob)} popup>
-            <ModalHeader/>
-            <ModalBody>
-            <div className="text-center">
-                <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
-                <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-                Are you sure you want to delete this job?
-                </h3>
-                <div className="flex justify-center gap-4">
-                <Button color="red" onClick={handleDelete}>
-                    Yes, I'm sure
-                </Button>
-                <Button color="alternative" onClick={() => setOpenModalDeleteJob(false)}>
-                    No, cancel
-                </Button>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Prod Start</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.starttime}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Order Date</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.orderdate}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Prod End</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.endtime}</p>
                 </div>
             </div>
-            </ModalBody>
-        </Modal>
+            
+            <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Lot No</p>
+                <Popover 
+                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                    content={
+                        <div className="p-3 max-w-xs">
+                            <p className="font-semibold text-sm">Colour code:</p>
+                            <p className="text-xs mb-2">{job.colourcode}</p>
+                            <p className="font-semibold text-sm">Material:</p>
+                            <p className="text-xs mb-2">{job.material}</p>
+                            <p className="font-semibold text-sm">Total order:</p>
+                            <p className="text-xs mb-2">{job.totalorder}</p>
+                        </div>
+                    }
+                    trigger='hover'
+                    placement="top"
+                    arrow={false}
+                >
+                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                        theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                    }`}>
+                        {job.lotno}
+                    </span>
+                </Popover>
+            </div>
 
-        <Modal show={openModalUpdateJob} onClose={() => setOpenModalUpdateJob(!openModalUpdateJob)} popup>
-            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
-            <ModalBody className={`${theme === 'light' ? '' : 'text-gray-50 bg-gray-900'}`}>
-                <div className="space-y-6">
-                    <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update Job</h3>
-                    <form onSubmit={handleUpdateSubmit}>
-                        <div>
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
-                                <Select  value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
-                                    <option></option>
-                                {items.map((item) => (
-                                <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
-                                ))}
-                                </Select>
-                            </div>
-                        </div>
-                            
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod start</Label>
-                            <TextInput value={updateFormData.starttime}  type='datetime-local' id="starttime"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
+            <div className="flex gap-2">
+                <Button 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm' 
+                    onClick={() => handleUpdate(job)}
+                >
+                    Edit
+                </Button>
+                <Button 
+                    color='red' 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm' 
+                    onClick={() => {
+                        setJobIdToDelete(job._id)
+                        setOpenModalDeleteJob(!openModalDeleteJob)
+                    }}
+                >
+                    Delete
+                </Button>
+            </div>
+        </div>
+    )
 
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod end</Label>
-                            <TextInput value={updateFormData.endtime} type='datetime-local' id="endtime"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order date</Label>
-                            <TextInput value={updateFormData.orderdate}  type='date' id="orderdate"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
-    
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
-                            <TextInput value={updateFormData.lotno} id="lotno" placeholder='Enter lot no' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
-                            <TextInput value={updateFormData.colourcode} id="colourcode" placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
-                            <TextInput value={updateFormData.material} id="material" placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
-
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
-                            <TextInput value={updateFormData.totalorder} type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                        </div>
-                            
-                        <div className='mb-4 block'>
-                            <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
-                                {
-                                    loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
-                                }
-                                </Button>
-                            </div>
-                        </form>
-                        {
-                            errorMessage && (
-                                <Alert color='failure' className='mt-4 font-semibold'>
-                                    {errorMessage}
-                                </Alert>
-                            )
-                        }
+    return (
+        <div className='min-h-screen'>
+            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
+                <h1 className='text-2xl font-semibold'>Jobs</h1>
+                <div className='w-full sm:w-auto'>
+                    <TextInput 
+                        placeholder='Enter searching' 
+                        value={searchTerm} 
+                        onChange={handleSearch}
+                        className='w-full'
+                    />
                 </div>
-            </ModalBody>
-        </Modal>
-    </div>
-  )
+                <Button className='cursor-pointer w-full sm:w-auto' onClick={handleCreateJob}>
+                    Create job
+                </Button>
+            </div>
+
+            {/* 桌面端表格视图 */}
+            {!isMobile && (
+                <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
+                    <TableHead>
+                        <TableRow>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod start</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod end</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Order date</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {currentJobs.map((job) => (
+                            <TableRow key={job._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                <TableCell className="align-middle">{job.code}</TableCell>
+                                <TableCell className="align-middle">{job.starttime}</TableCell>
+                                <TableCell className="align-middle">{job.endtime}</TableCell>
+                                <TableCell className="align-middle">{job.orderdate}</TableCell>
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">Colour code:</p>
+                                                <p className="text-xs mb-2">{job.colourcode}</p>
+                                                <p className="font-semibold text-sm">Material:</p>
+                                                <p className="text-xs mb-2">{job.material}</p>
+                                                <p className="font-semibold text-sm">Total order:</p>
+                                                <p className="text-xs mb-2">{job.totalorder}</p>
+                                            </div>
+                                        }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {job.lotno}
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                    <Button outline className='cursor-pointer py-1 px-2 text-sm h-8' onClick={() => {handleUpdate(job)}}>Edit</Button>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                    <Button color='red' outline className='cursor-pointer py-1 px-2 text-sm h-8' onClick={() => {setJobIdToDelete(job._id);setOpenModalDeleteJob(!openModalDeleteJob)}}>
+                                        Delete
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            )}
+
+            {/* 移动端卡片视图 */}
+            {isMobile && (
+                <div className="space-y-4">
+                    {currentJobs.map((job) => (
+                        <JobCard key={job._id} job={job} />
+                    ))}
+                </div>
+            )}
+
+            <div className="flex-col justify-center text-center mt-4">
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+                    Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+                </p>
+                <Pagination
+                    showIcons
+                    currentPage={currentPage}
+                    totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                    onPageChange={handlePageChange}
+                />
+            </div>
+
+            {/* 模态框保持不变 */}
+            <Modal show={openModalCreateJob} onClose={handleCreateJob} popup>
+                <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+                <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
+                    <div className="space-y-6">
+                        <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Create Job</h3>
+                        <form onSubmit={handleSubmit}>
+                            <div>
+                                <div className="mb-4 block">
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
+                                    <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                                        <option></option>
+                                    {items.map((item) => (
+                                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                                    ))}
+                                    </Select>
+                                </div>
+                            </div>
+                                
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod start</Label>
+                                <TextInput  type='datetime-local' id="starttime"  onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod end</Label>
+                                <TextInput  type='datetime-local' id="endtime"  onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order date</Label>
+                                <TextInput  type='date' id="orderdate"  onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+        
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
+                                <TextInput id="lotno" placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
+                                <TextInput id="colourcode" placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
+                                <TextInput id="material" placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
+                                <TextInput type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+                                
+                            <div className='mb-4 block'>
+                                <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                    {
+                                        loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
+                                    }
+                                    </Button>
+                                </div>
+                            </form>
+                            {
+                                errorMessage && (
+                                    <Alert color='failure' className='mt-4 font-semibold'>
+                                        {errorMessage}
+                                    </Alert>
+                                )
+                            }
+                    </div>
+                </ModalBody>
+            </Modal>
+
+            <Modal show={openModalDeleteJob} size="md" onClose={() => setOpenModalDeleteJob(!openModalDeleteJob)} popup>
+                <ModalHeader/>
+                <ModalBody>
+                <div className="text-center">
+                    <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
+                    <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+                    Are you sure you want to delete this job?
+                    </h3>
+                    <div className="flex justify-center gap-4">
+                    <Button color="red" onClick={handleDelete}>
+                        Yes, I'm sure
+                    </Button>
+                    <Button color="alternative" onClick={() => setOpenModalDeleteJob(false)}>
+                        No, cancel
+                    </Button>
+                    </div>
+                </div>
+                </ModalBody>
+            </Modal>
+
+            <Modal show={openModalUpdateJob} onClose={() => setOpenModalUpdateJob(!openModalUpdateJob)} popup>
+                <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+                <ModalBody className={`${theme === 'light' ? '' : 'text-gray-50 bg-gray-900'}`}>
+                    <div className="space-y-6">
+                        <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update Job</h3>
+                        <form onSubmit={handleUpdateSubmit}>
+                            <div>
+                                <div className="mb-4 block">
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
+                                    <Select  value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                                        <option></option>
+                                    {items.map((item) => (
+                                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                                    ))}
+                                    </Select>
+                                </div>
+                            </div>
+                                
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod start</Label>
+                                <TextInput value={updateFormData.starttime}  type='datetime-local' id="starttime"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod end</Label>
+                                <TextInput value={updateFormData.endtime} type='datetime-local' id="endtime"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order date</Label>
+                                <TextInput value={updateFormData.orderdate}  type='date' id="orderdate"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+        
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
+                                <TextInput value={updateFormData.lotno} id="lotno" placeholder='Enter lot no' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
+                                <TextInput value={updateFormData.colourcode} id="colourcode" placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
+                                <TextInput value={updateFormData.material} id="material" placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
+                                <TextInput value={updateFormData.totalorder} type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+                                
+                            <div className='mb-4 block'>
+                                <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                    {
+                                        loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
+                                    }
+                                    </Button>
+                                </div>
+                            </form>
+                            {
+                                errorMessage && (
+                                    <Alert color='failure' className='mt-4 font-semibold'>
+                                        {errorMessage}
+                                    </Alert>
+                                )
+                            }
+                    </div>
+                </ModalBody>
+            </Modal>
+        </div>
+    )
 }
 
 export default Jobs

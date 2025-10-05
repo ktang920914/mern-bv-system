@@ -15,6 +15,17 @@ const Oee = () => {
     const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // 监听窗口大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -185,140 +196,286 @@ const Oee = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+    // 移动端卡片组件
+    const OeeCard = ({ job }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow ${theme === 'light' ? 'bg-white border border-gray-200' : 'bg-gray-800 border border-gray-700'}`}>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Extruder</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.code}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Lot No</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">Extruder:</p>
+                                <p className="text-xs mb-2">{job.code}</p>
+                                <p className="font-semibold text-sm">Prod start:</p>
+                                <p className="text-xs mb-2">{job.starttime}</p>
+                                <p className="font-semibold text-sm">Prod end:</p>
+                                <p className="text-xs mb-2">{job.endtime}</p>
+                                <p className="font-semibold text-sm">Order date:</p>
+                                <p className="text-xs mb-2">{job.orderdate}</p>
+                                <p className="font-semibold text-sm">Colour code:</p>
+                                <p className="text-xs mb-2">{job.colourcode}</p>
+                                <p className="font-semibold text-sm">Material:</p>
+                                <p className="text-xs mb-2">{job.material}</p>
+                                <p className="font-semibold text-sm">Total order:</p>
+                                <p className="text-xs mb-2">{job.totalorder}</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="right"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                        }`}>
+                            {job.lotno}
+                        </span>
+                    </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Availability</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">{`(Operatingtime / Plan Prodtime) = Availability`}</p>
+                                <p className="text-xs mb-2">{`(${job.operatingtime} / ${job.planprodtime}) = ${job.availability}`}</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="top"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                        }`}>
+                            {job.availability}
+                        </span>
+                    </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Performance</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) / IRR = Performance`}</p>
+                                <p className="text-xs mb-2">{`(${job.totaloutput} / ${job.operatingtime}) / ${job.irr} = ${job.performance}`}</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="top"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                        }`}>
+                            {job.performance}
+                        </span>
+                    </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Quality</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">{`(Totaloutput - Reject) / Total output = Quality`}</p>
+                                <p className="text-xs mb-2">{`(${job.totaloutput} - ${job.reject}) / ${job.totaloutput} = ${job.quality}`}</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="top"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                        }`}>
+                            {job.quality}
+                        </span>
+                    </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">OEE</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
+                                <p className="text-xs mb-2">{`${job.availability} x ${job.performance} x ${job.quality} = ${job.oee}`}</p>
+                                <p className="font-semibold text-sm mt-2">OEE Percentage:</p>
+                                <p className="text-xs">{`${getOeePercentage(job.oee)}%`}</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="top"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
+                            {getOeePercentage(job.oee)}%
+                        </span>
+                    </Popover>
+                </div>
+            </div>
+        </div>
+    )
+
     return (
         <div className='min-h-screen'>
-            <div className='flex justify-between items-center mb-4'>
+            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>OEEs</h1>
-                <div>
-                    <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
+                <div className='w-full sm:w-auto'>
+                    <TextInput 
+                        placeholder='Enter searching' 
+                        value={searchTerm} 
+                        onChange={handleSearch}
+                        className='w-full'
+                    />
                 </div>
                 <Button 
                     color='blue' 
-                    className='cursor-pointer'
+                    className='cursor-pointer w-full sm:w-auto'
                     onClick={generateExcelReport}
                 >
                     Report
                 </Button>
             </div>
 
-            <Table hoverable className="[&_td]:py-3 [&_th]:py-3">
-                <TableHead>
-                    <TableRow>
-                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
-                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
-                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Availability</TableHeadCell>
-                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Performance</TableHeadCell>
-                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quality</TableHeadCell>
-                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>OEE</TableHeadCell>
-                    </TableRow>
-                </TableHead>
-                {currentJobs.map((job) => (
-                    <TableBody key={job._id}>
-                        <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                            <TableCell>{job.code}</TableCell>
-                            <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">Extruder:</p>
-                                            <p className="text-xs mb-2">{job.code}</p>
-                                            <p className="font-semibold text-sm">Prod start:</p>
-                                            <p className="text-xs mb-2">{job.starttime}</p>
-                                            <p className="font-semibold text-sm">Prod end:</p>
-                                            <p className="text-xs mb-2">{job.endtime}</p>
-                                            <p className="font-semibold text-sm">Order date:</p>
-                                            <p className="text-xs mb-2">{job.orderdate}</p>
-                                            <p className="font-semibold text-sm">Colour code:</p>
-                                            <p className="text-xs mb-2">{job.colourcode}</p>
-                                            <p className="font-semibold text-sm">Material:</p>
-                                            <p className="text-xs mb-2">{job.material}</p>
-                                            <p className="font-semibold text-sm">Total order:</p>
-                                            <p className="text-xs mb-2">{job.totalorder}</p>
-                                        </div>
-                                    }
-                                    trigger='hover'
-                                    placement="top"
-                                    arrow={false}
-                                >
-                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                        {job.lotno}
-                                    </span>
-                                </Popover>
-                            </TableCell>
-                            <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">{`(Operatingtime / Plan Prodtime) = Availability`}</p>
-                                            <p className="text-xs mb-2">{`(${job.operatingtime} / ${job.planprodtime}) = ${job.availability}`}</p>
-                                        </div>
-                                    }
-                                    trigger='hover'
-                                    placement="top"
-                                    arrow={false}
-                                >
-                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                        {job.availability}
-                                    </span>
-                                </Popover>
-                            </TableCell>
-                            <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) / IRR = Performance`}</p>
-                                            <p className="text-xs mb-2">{`(${job.totaloutput} / ${job.operatingtime}) / ${job.irr} = ${job.performance}`}</p>
-                                        </div>
-                                    }
-                                    trigger='hover'
-                                    placement="top"
-                                    arrow={false}
-                                >
-                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                        {job.performance}
-                                    </span>
-                                </Popover>
-                            </TableCell>
-                            <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">{`(Totaloutput - Reject) / Total output = Quality`}</p>
-                                            <p className="text-xs mb-2">{`(${job.totaloutput} - ${job.reject}) / ${job.totaloutput} = ${job.quality}`}</p>
-                                        </div>
-                                    }
-                                    trigger='hover'
-                                    placement="top"
-                                    arrow={false}
-                                >
-                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                        {job.quality}
-                                    </span>
-                                </Popover>
-                            </TableCell>
-                            <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
-                                            <p className="text-xs mb-2">{`${job.availability} x ${job.performance} x ${job.quality} = ${job.oee}`}</p>
-                                            <p className="font-semibold text-sm mt-2">OEE Percentage:</p>
-                                            <p className="text-xs">{`${getOeePercentage(job.oee)}%`}</p>
-                                        </div>
-                                    }
-                                    trigger='hover'
-                                    placement="top"
-                                    arrow={false}
-                                >
-                                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
-                                        {getOeePercentage(job.oee)}%
-                                    </span>
-                                </Popover>
-                            </TableCell>
+            {/* 桌面端表格视图 */}
+            {!isMobile && (
+                <Table hoverable className="[&_td]:py-3 [&_th]:py-3">
+                    <TableHead>
+                        <TableRow>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Availability</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Performance</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quality</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>OEE</TableHeadCell>
                         </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {currentJobs.map((job) => (
+                            <TableRow key={job._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                <TableCell>{job.code}</TableCell>
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">Extruder:</p>
+                                                <p className="text-xs mb-2">{job.code}</p>
+                                                <p className="font-semibold text-sm">Prod start:</p>
+                                                <p className="text-xs mb-2">{job.starttime}</p>
+                                                <p className="font-semibold text-sm">Prod end:</p>
+                                                <p className="text-xs mb-2">{job.endtime}</p>
+                                                <p className="font-semibold text-sm">Order date:</p>
+                                                <p className="text-xs mb-2">{job.orderdate}</p>
+                                                <p className="font-semibold text-sm">Colour code:</p>
+                                                <p className="text-xs mb-2">{job.colourcode}</p>
+                                                <p className="font-semibold text-sm">Material:</p>
+                                                <p className="text-xs mb-2">{job.material}</p>
+                                                <p className="font-semibold text-sm">Total order:</p>
+                                                <p className="text-xs mb-2">{job.totalorder}</p>
+                                            </div>
+                                        }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {job.lotno}
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">{`(Operatingtime / Plan Prodtime) = Availability`}</p>
+                                                <p className="text-xs mb-2">{`(${job.operatingtime} / ${job.planprodtime}) = ${job.availability}`}</p>
+                                            </div>
+                                        }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {job.availability}
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) / IRR = Performance`}</p>
+                                                <p className="text-xs mb-2">{`(${job.totaloutput} / ${job.operatingtime}) / ${job.irr} = ${job.performance}`}</p>
+                                            </div>
+                                        }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {job.performance}
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">{`(Totaloutput - Reject) / Total output = Quality`}</p>
+                                                <p className="text-xs mb-2">{`(${job.totaloutput} - ${job.reject}) / ${job.totaloutput} = ${job.quality}`}</p>
+                                            </div>
+                                        }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {job.quality}
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
+                                                <p className="text-xs mb-2">{`${job.availability} x ${job.performance} x ${job.quality} = ${job.oee}`}</p>
+                                                <p className="font-semibold text-sm mt-2">OEE Percentage:</p>
+                                                <p className="text-xs">{`${getOeePercentage(job.oee)}%`}</p>
+                                            </div>
+                                        }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
+                                            {getOeePercentage(job.oee)}%
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                            </TableRow>
+                        ))}
                     </TableBody>
-                ))}
-            </Table>
+                </Table>
+            )}
+
+            {/* 移动端卡片视图 */}
+            {isMobile && (
+                <div className="space-y-4">
+                    {currentJobs.map((job) => (
+                        <OeeCard key={job._id} job={job} />
+                    ))}
+                </div>
+            )}
 
             <div className="flex-col justify-center text-center mt-4">
                 <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
