@@ -203,7 +203,7 @@ const Products = () => {
     }
 
     const handleSearch = (e) => {
-        setSearchTerm(e.target.value.trim())
+        setSearchTerm(e.target.value.toLowerCase())
     }
 
     const filteredProducts = products.filter(product => 

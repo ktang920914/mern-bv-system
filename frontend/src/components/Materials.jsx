@@ -202,7 +202,7 @@ const Materials = () => {
   }
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value.trim())
+    setSearchTerm(e.target.value.toLowerCase())
   }
 
   const filteredMaterials = materials.filter(material => 

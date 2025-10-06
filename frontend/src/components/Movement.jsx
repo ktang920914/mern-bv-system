@@ -243,7 +243,7 @@ const Movement = () => {
   }
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value.trim())
+    setSearchTerm(e.target.value.toLowerCase())
   }
 
   const filteredMovements = movements.filter(movement => 
