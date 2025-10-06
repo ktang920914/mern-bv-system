@@ -105,7 +105,7 @@ export const deleteUser = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete user',
-            detail: `${req.user.username} delete user from the system`
+            detail: `${req.user.username} delete user`
         })
         await newActivity.save()
         res.status(200).json('User is deleted')
@@ -140,7 +140,7 @@ export const updateUser = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update user',
-            detail: `${req.user.username} update user to the system`
+            detail: `${req.user.username} update user`
         })
         await newActivity.save()
     res.status(200).json(rest)
