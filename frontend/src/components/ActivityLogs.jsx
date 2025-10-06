@@ -16,6 +16,16 @@ const ActivityLogs = () => {
     const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // 监听窗口大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -113,68 +123,122 @@ const ActivityLogs = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
+    // 移动端卡片组件
+    const ActivityLogCard = ({ log }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' 
+                ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+                : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+        }`}>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Date</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.date}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Activity</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.activity}</p>
+                </div>
+            </div>
+            
+            <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Detail</p>
+                <p className={`text-sm ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{log.detail}</p>
+            </div>
+
+            <div className="flex justify-end">
+                <Button 
+                    color='red' 
+                    outline 
+                    className='cursor-pointer py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => {
+                        setLogIdToDelete(log._id)
+                        setOpenModalDeleteLog(!openModalDeleteLog)
+                    }}
+                >
+                    Delete
+                </Button>
+            </div>
+        </div>
+    )
+
   return (
     <div className='min-h-screen'>
-        <div className='flex justify-between items-center mb-4'>
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
             <h1 className='text-2xl font-semibold'>Activities Logs</h1>
-            <TextInput 
-                placeholder='Enter searching' 
-                value={searchTerm} 
-                onChange={handleSearch}
-            />
+            <div className='w-full sm:w-auto'>
+                <TextInput 
+                    placeholder='Enter searching' 
+                    value={searchTerm} 
+                    onChange={handleSearch}
+                    className='w-full'
+                />
+            </div>
         </div>
 
-        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
-            <TableHead>
-                <TableRow>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Activity</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Detail</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
-                </TableRow>
-            </TableHead>
-            {currentLogs.map((log) => (
-                <TableBody key={log._id}>
-                <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                    <TableCell>{log.date}</TableCell>
-                    <TableCell>{log.activity}</TableCell>
-                    <TableCell>{log.detail}</TableCell>
-                    <TableCell>
-                        <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setLogIdToDelete(log._id);setOpenModalDeleteLog(!openModalDeleteLog)}}>Delete</Button>
-                    </TableCell>
-                </TableRow>
+        {/* 桌面端表格视图 */}
+        {!isMobile && (
+            <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
+                <TableHead>
+                    <TableRow>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Activity</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Detail</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {currentLogs.map((log) => (
+                        <TableRow key={log._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                            <TableCell>{log.date}</TableCell>
+                            <TableCell>{log.activity}</TableCell>
+                            <TableCell>{log.detail}</TableCell>
+                            <TableCell>
+                                <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setLogIdToDelete(log._id);setOpenModalDeleteLog(!openModalDeleteLog)}}>Delete</Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
                 </TableBody>
-            ))}
-        </Table>
+            </Table>
+        )}
+
+        {/* 移动端卡片视图 */}
+        {isMobile && (
+            <div className="space-y-4">
+                {currentLogs.map((log) => (
+                    <ActivityLogCard key={log._id} log={log} />
+                ))}
+            </div>
+        )}
 
         <div className="flex-col justify-center text-center mt-4">
             <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                 Showing {showingFrom} to {showingTo} of {totalEntries} Entries
             </p>
-                <Pagination
-                    showIcons
-                    currentPage={currentPage}
-                    totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
-                    onPageChange={handlePageChange}
-                />
+            <Pagination
+                showIcons
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                onPageChange={handlePageChange}
+            />
         </div>
 
         <Modal show={openModalDeleteLog} size="md" onClose={() => setOpenModalDeleteLog(!openModalDeleteLog)} popup>
             <ModalHeader />
             <ModalBody>
                 <div className="text-center">
-                <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
-                <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-                    Are you sure you want to delete this log?
-                </h3>
-                <div className="flex justify-center gap-4">
-                    <Button color="red" onClick={handleDelete}>
-                    Yes, I'm sure
-                    </Button>
-                    <Button color="alternative" onClick={() => setOpenModalDeleteLog(false)}>
-                    No, cancel
-                    </Button>
-                </div>
+                    <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
+                    <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+                        Are you sure you want to delete this log?
+                    </h3>
+                    <div className="flex justify-center gap-4">
+                        <Button color="red" onClick={handleDelete}>
+                            Yes, I'm sure
+                        </Button>
+                        <Button color="alternative" onClick={() => setOpenModalDeleteLog(false)}>
+                            No, cancel
+                        </Button>
+                    </div>
                 </div>
             </ModalBody>
         </Modal>

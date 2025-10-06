@@ -4,8 +4,8 @@ import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
-import * as XLSX from 'xlsx' // 新增导入
-import { saveAs } from 'file-saver' // 新增导入
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 
 const Orders = () => {
 
@@ -26,6 +26,17 @@ const Orders = () => {
     const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // 监听窗口大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -229,7 +240,87 @@ const Orders = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
 
-     // 生成Excel报告的函数 - 新增
+    // 移动端卡片组件
+    const OrderCard = ({ order }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' 
+                ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+                : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+        }`}>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Date</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{order.date}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Status</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{order.status}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Quantity</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{order.quantity}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Amount</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{order.amount}</p>
+                </div>
+            </div>
+            
+            <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Supplier</p>
+                <Popover 
+                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                    content={
+                        <div className="p-3 max-w-xs">
+                            <p className="font-semibold text-sm">Doc no:</p>
+                            <p className="text-xs mb-2">{order.docno}</p>
+                            <p className="font-semibold text-sm">Doc:</p>
+                            <p className="text-xs mb-2">{order.doc}</p>
+                            <p className="font-semibold text-sm">Cost category:</p>
+                            <p className="text-xs mb-2">{order.costcategory}</p>
+                        </div>
+                    }
+                    trigger='hover'
+                    placement="top"
+                    arrow={false}
+                >
+                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                        theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+                    }`}>
+                        {order.supplier}
+                    </span>
+                </Popover>
+            </div>
+
+            <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Item</p>
+                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{order.item}</p>
+            </div>
+
+            <div className="flex gap-2">
+                <Button 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => handleUpdate(order)}
+                >
+                    Edit
+                </Button>
+                <Button 
+                    color='red' 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => {
+                        setOrderIdToDelete(order._id)
+                        setOpenModalDeleteOrder(!openModalDeleteOrder)
+                    }}
+                >
+                    Delete
+                </Button>
+            </div>
+        </div>
+    )
+
+     // 生成Excel报告的函数
     const generateExcelReport = () => {
         // 准备Excel数据 - 包含所有订单字段
         const excelData = orders.map(order => ({
@@ -282,67 +373,88 @@ const Orders = () => {
 
   return (
     <div className='min-h-screen'>
-        <div className='flex justify-between items-center mb-4'>
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
             <h1 className='text-2xl font-semibold'>Orders</h1>
-            <div>
-                <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
+            <div className='w-full sm:w-auto'>
+                <TextInput 
+                    placeholder='Enter searching' 
+                    value={searchTerm} 
+                    onChange={handleSearch}
+                    className='w-full'
+                />
             </div>
-            <div className='flex gap-2'>
-                <Button className='cursor-pointer' onClick={handleCreateOrder}>Create Order</Button>
-                <Button className='cursor-pointer' color='green' onClick={generateExcelReport}>Report</Button>
+            <div className='flex gap-2 w-full sm:w-auto'>
+                <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateOrder}>
+                    Create Order
+                </Button>
+                <Button className='cursor-pointer flex-1 sm:flex-none' color='green' onClick={generateExcelReport}>
+                    Report
+                </Button>
             </div>
         </div>
 
-        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
-            <TableHead>
-                <TableRow>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Item</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Amount</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
-                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
-                </TableRow>
-            </TableHead>
-            {currentOrders.map((order) => (
-                <TableBody key={order._id}>
-                    <TableRow className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                    <TableCell>{order.date}</TableCell>
-                    <TableCell className='align-middle'>
-                        <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                            content={
-                                <div className="p-3 max-w-xs">
-                                    <p className="font-semibold text-sm">Doc no:</p>
-                                    <p className="text-xs mb-2">{order.docno}</p>
-                                    <p className="font-semibold text-sm">Doc:</p>
-                                    <p className="text-xs mb-2">{order.doc}</p>
-                                    <p className="font-semibold text-sm">Cost category:</p>
-                                    <p className="text-xs">{order.costcategory}</p>
-                                </div>
-                            }
-                            trigger="hover"
-                            placement="top"
-                            arrow={false}
-                        >
-                            <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                {order.supplier}
-                            </span>
-                        </Popover>
-                    </TableCell>
-                    <TableCell>{order.item}</TableCell>
-                    <TableCell>{order.quantity}</TableCell>
-                    <TableCell>{order.amount}</TableCell>
-                    <TableCell>{order.status}</TableCell>
-                    <TableCell>
-                        <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(order)}}>Edit</Button>
-                    </TableCell>
-                    <TableCell><Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setOrderIdToDelete(order._id);setOpenModalDeleteOrder(!openModalDeleteOrder)}}>Delete</Button></TableCell>
+        {/* 桌面端表格视图 */}
+        {!isMobile && (
+            <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
+                <TableHead>
+                    <TableRow>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Supplier</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Item</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Amount</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                     </TableRow>
+                </TableHead>
+                <TableBody>
+                    {currentOrders.map((order) => (
+                        <TableRow key={order._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                        <TableCell>{order.date}</TableCell>
+                        <TableCell className='align-middle'>
+                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                content={
+                                    <div className="p-3 max-w-xs">
+                                        <p className="font-semibold text-sm">Doc no:</p>
+                                        <p className="text-xs mb-2">{order.docno}</p>
+                                        <p className="font-semibold text-sm">Doc:</p>
+                                        <p className="text-xs mb-2">{order.doc}</p>
+                                        <p className="font-semibold text-sm">Cost category:</p>
+                                        <p className="text-xs">{order.costcategory}</p>
+                                    </div>
+                                }
+                                trigger="hover"
+                                placement="top"
+                                arrow={false}
+                            >
+                                <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                    {order.supplier}
+                                </span>
+                            </Popover>
+                        </TableCell>
+                        <TableCell>{order.item}</TableCell>
+                        <TableCell>{order.quantity}</TableCell>
+                        <TableCell>{order.amount}</TableCell>
+                        <TableCell>{order.status}</TableCell>
+                        <TableCell>
+                            <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(order)}}>Edit</Button>
+                        </TableCell>
+                        <TableCell><Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setOrderIdToDelete(order._id);setOpenModalDeleteOrder(!openModalDeleteOrder)}}>Delete</Button></TableCell>
+                        </TableRow>
+                    ))}
                 </TableBody>
-            ))}
-        </Table>
+            </Table>
+        )}
+
+        {/* 移动端卡片视图 */}
+        {isMobile && (
+            <div className="space-y-4">
+                {currentOrders.map((order) => (
+                    <OrderCard key={order._id} order={order} />
+                ))}
+            </div>
+        )}
 
         <div className="flex-col justify-center text-center mt-4">
                 <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
@@ -356,6 +468,7 @@ const Orders = () => {
                 />
               </div>
 
+        {/* 模态框保持不变 */}
         <Modal show={openModalCreateOrder} onClose={handleCreateOrder} popup>
             <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
             <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>

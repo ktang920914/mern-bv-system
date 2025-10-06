@@ -5,8 +5,8 @@ import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import * as XLSX from 'xlsx' // 新增导入
-import { saveAs } from 'file-saver' // 新增导入
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 
 const Products = () => {
 
@@ -26,6 +26,16 @@ const Products = () => {
     const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // 监听窗口大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -239,7 +249,82 @@ const Products = () => {
         }, null, 2);
     };
 
-    // 生成Excel报告的函数 - 新增
+    // 移动端卡片组件
+    const ProductCard = ({ product }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' 
+                ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+                : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+        }`}>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Colour Code</p>
+                <Popover 
+                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                    content={
+                        <div className="p-4 text-center">
+                            <h3 className="font-semibold mb-2">QR Code - {product.colourcode}</h3>
+                            <QRCodeCanvas value={generateQRContent(product)} size={150} level="M" includeMargin={true}/>
+                            <p className="text-xs dark:text-gray-300 text-gray-500 mt-2">Scan to view product details</p>
+                        </div>
+                    }
+                    trigger="hover"
+                    placement="top"
+                    arrow={false}
+                >
+                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                        theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+                    }`}>
+                        {product.colourcode}
+                    </span>
+                </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Quantity</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{product.quantity}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Status</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{product.status}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">User</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{product.user}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Lot No</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{product.lotno}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Location</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{product.location}</p>
+                </div>
+            </div>
+
+            <div className="flex gap-2">
+                <Button 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => handleUpdate(product)}
+                >
+                    Edit
+                </Button>
+                <Button 
+                    color='red' 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => {
+                        setProductIdToDelete(product._id)
+                        setOpenModalDeleteProduct(!openModalDeleteProduct)
+                    }}
+                >
+                    Delete
+                </Button>
+            </div>
+        </div>
+    )
+
+    // 生成Excel报告的函数
     const generateExcelReport = () => {
         // 准备Excel数据 - 包含所有产品字段
         const excelData = products.map(product => ({
@@ -290,86 +375,105 @@ const Products = () => {
 
   return (
     <div className='min-h-screen'>
-        <div className='flex justify-between items-center mb-4'>
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
             <h1 className='text-2xl font-semibold'>Products</h1>
-            <div>
-                <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch}/>
+            <div className='w-full sm:w-auto'>
+                <TextInput 
+                    placeholder='Enter searching' 
+                    value={searchTerm} 
+                    onChange={handleSearch}
+                    className='w-full'
+                />
             </div>
-            <div>
-            <div className='flex gap-2'>
-            <Button className='cursor-pointer' onClick={handleCreateProduct}>Create Product</Button>
-            <Button className='cursor-pointer' color='green' onClick={generateExcelReport}>Report</Button>
-            </div>
+            <div className='flex gap-2 w-full sm:w-auto'>
+                <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateProduct}>
+                    Create Product
+                </Button>
+                <Button className='cursor-pointer flex-1 sm:flex-none' color='green' onClick={generateExcelReport}>
+                    Report
+                </Button>
             </div>
         </div>
 
-        <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
-            <TableHead>
-                <TableRow>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Colour code</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Location</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
-                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
-                </TableRow>
-            </TableHead>
-            <TableBody>
-                {currentProducts.map((p) => (
-                    <TableRow key={p._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                        <TableCell className="align-middle">
-                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                content={
-                                    <div className="p-4 text-center">
-                                        <h3 className="font-semibold mb-2">QR Code - {p.colourcode}</h3>
-                                        <QRCodeCanvas value={generateQRContent(p)} size={150} level="M" includeMargin={true}/>
-                                        <p className="text-xs dark:text-gray-300 text-gray-500 mt-2">Scan to view product details</p>
-                                    </div>
-                                }
-                                trigger="hover"
-                                placement="right"
-                                arrow={false}
-                            >
-                                <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed border-blue-300">
-                                    {p.colourcode}
-                                </span>
-                            </Popover>
-                        </TableCell>
-                        <TableCell className="align-middle">{p.lotno}</TableCell>
-                        <TableCell className="align-middle">{p.quantity}</TableCell>
-                        <TableCell className="align-middle">
-                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                content={
-                                    <div className="p-3 max-w-xs">
-                                        <p className="font-semibold text-sm">Pallet no:</p>
-                                        <p className="text-xs">{p.palletno}</p>
-                                    </div>
-                                }
-                                trigger='hover'
-                                placement="right"
-                                arrow={false}
-                            >
-                                <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                    {p.location}
-                                </span>
-                            </Popover>
-                        </TableCell>
-                        <TableCell className="align-middle">{p.user}</TableCell>
-                        <TableCell className="align-middle">{p.status}</TableCell>
-                        <TableCell className="align-middle">
-                            <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(p)}}>Edit</Button>
-                        </TableCell>
-                        <TableCell className="align-middle">
-                            <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setProductIdToDelete(p._id);setOpenModalDeleteProduct(!openModalDeleteProduct)}}>
-                                Delete
-                            </Button>
-                        </TableCell>
+        {/* 桌面端表格视图 */}
+        {!isMobile && (
+            <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
+                <TableHead>
+                    <TableRow>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Colour code</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Location</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
                     </TableRow>
+                </TableHead>
+                <TableBody>
+                    {currentProducts.map((p) => (
+                        <TableRow key={p._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                            <TableCell className="align-middle">
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                    content={
+                                        <div className="p-4 text-center">
+                                            <h3 className="font-semibold mb-2">QR Code - {p.colourcode}</h3>
+                                            <QRCodeCanvas value={generateQRContent(p)} size={150} level="M" includeMargin={true}/>
+                                            <p className="text-xs dark:text-gray-300 text-gray-500 mt-2">Scan to view product details</p>
+                                        </div>
+                                    }
+                                    trigger="hover"
+                                    placement="right"
+                                    arrow={false}
+                                >
+                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed border-blue-300">
+                                        {p.colourcode}
+                                    </span>
+                                </Popover>
+                            </TableCell>
+                            <TableCell className="align-middle">{p.lotno}</TableCell>
+                            <TableCell className="align-middle">{p.quantity}</TableCell>
+                            <TableCell className="align-middle">
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                    content={
+                                        <div className="p-3 max-w-xs">
+                                            <p className="font-semibold text-sm">Pallet no:</p>
+                                            <p className="text-xs">{p.palletno}</p>
+                                        </div>
+                                    }
+                                    trigger='hover'
+                                    placement="right"
+                                    arrow={false}
+                                >
+                                    <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                        {p.location}
+                                    </span>
+                                </Popover>
+                            </TableCell>
+                            <TableCell className="align-middle">{p.user}</TableCell>
+                            <TableCell className="align-middle">{p.status}</TableCell>
+                            <TableCell className="align-middle">
+                                <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(p)}}>Edit</Button>
+                            </TableCell>
+                            <TableCell className="align-middle">
+                                <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {setProductIdToDelete(p._id);setOpenModalDeleteProduct(!openModalDeleteProduct)}}>
+                                    Delete
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )}
+
+        {/* 移动端卡片视图 */}
+        {isMobile && (
+            <div className="space-y-4">
+                {currentProducts.map((product) => (
+                    <ProductCard key={product._id} product={product} />
                 ))}
-            </TableBody>
-        </Table>
+            </div>
+        )}
 
         <div className="flex-col justify-center text-center mt-4">
             <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
@@ -383,6 +487,7 @@ const Products = () => {
             />
         </div>
 
+        {/* 模态框保持不变 */}
         <Modal show={openModalCreateProduct} onClose={handleCreateProduct} popup>
             <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
             <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
