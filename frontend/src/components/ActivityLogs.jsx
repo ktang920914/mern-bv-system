@@ -135,10 +135,11 @@ const ActivityLogs = () => {
                     <p className="text-sm font-semibold text-gray-500">Date</p>
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.date}</p>
                 </div>
-                <div>
-                    <p className="text-sm font-semibold text-gray-500">Activity</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.activity}</p>
-                </div>
+            </div>
+
+            <div className='mb-3'>
+                <p className="text-sm font-semibold text-gray-500">Activity</p>
+                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.activity}</p>
             </div>
             
             <div className="mb-3">
@@ -150,7 +151,7 @@ const ActivityLogs = () => {
                 <Button 
                     color='red' 
                     outline 
-                    className='cursor-pointer py-2 text-sm transition-all hover:scale-105' 
+                    className='cursor-pointer flex-1 py-2 text-sm'
                     onClick={() => {
                         setLogIdToDelete(log._id)
                         setOpenModalDeleteLog(!openModalDeleteLog)
