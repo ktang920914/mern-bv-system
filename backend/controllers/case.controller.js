@@ -203,7 +203,7 @@ export const updateCaseStats = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update case',
-            detail: `${req.user.username} updated case for year ${year}`
+            detail: `${req.user.username} updated for ${year}`
         });
         await newActivity.save();
         

@@ -7,7 +7,7 @@ export const getCosts = async (req, res, next) => {
                 const newActivity = new Activity({
                     date: currentDate,
                     activity: 'View cost',
-                    detail: `${req.user.username} view cost from the system`
+                    detail: `${req.user.username} view cost`
                 })
                 await newActivity.save()
         const costs = await Cost.find().sort({updatedAt:-1});
