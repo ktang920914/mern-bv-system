@@ -518,7 +518,7 @@ const Orders = () => {
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Amount</Label>
-                            <TextInput id="amount" type='number' min='0' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required/>
+                            <TextInput id="amount" type='number' min='0' placeholder='Enter amount' onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
@@ -633,7 +633,7 @@ const Orders = () => {
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Amount</Label>
-                            <TextInput value={updateFormData.amount || ''} id="amount" type='number' min='0' placeholder='Enter quantity' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            <TextInput value={updateFormData.amount || ''} id="amount" type='number' min='0' placeholder='Enter amount' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
