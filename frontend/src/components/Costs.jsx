@@ -363,64 +363,64 @@ const Costs = () => {
                             {/* 第一行: Jan, Feb, Mar */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.jan)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.jan)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.feb)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.feb)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.mar)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.mar)}</div>
                                 </div>
                             </div>
                             
                             {/* 第二行: Apr, May, Jun */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.apr)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.apr)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.may)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.may)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.jun)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.jun)}</div>
                                 </div>
                             </div>
                             
                             {/* 第三行: Jul, Aug, Sep */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.jul)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.jul)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.aug)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.aug)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.sep)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.sep)}</div>
                                 </div>
                             </div>
                             
                             {/* 第四行: Oct, Nov, Dec */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.oct)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.oct)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.nov)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.nov)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm">{formatNumber(cost.dec)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.dec)}</div>
                                 </div>
                             </div>
                         </div>
@@ -442,8 +442,8 @@ const Costs = () => {
 
     return (
         <div>
-            <div className='flex justify-between items-center mb-4'>
-                <h1 className='text-2xl font-semibold'>Costs {displayYear}</h1>
+            <div className='flex justify-between items-center mb-4 gap-1'>
+                <h1 className='text-2xl font-semibold hidden sm:block'>Costs {displayYear}</h1>
                 <div>
                     <TextInput placeholder='Search cost category...' onChange={handleSearch}/>
                 </div>

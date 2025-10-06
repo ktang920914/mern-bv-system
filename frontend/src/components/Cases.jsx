@@ -413,65 +413,65 @@ const Cases = () => {
                         <div className="space-y-3">
                             {/* 第一行: Jan, Feb, Mar */}
                             <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Jan)}</div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Jan)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Feb)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Feb)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Mar)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Mar)}</div>
                                 </div>
                             </div>
                             
                             {/* 第二行: Apr, May, Jun */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Apr)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Apr)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.May)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.May)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Jun)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Jun)}</div>
                                 </div>
                             </div>
                             
                             {/* 第三行: Jul, Aug, Sep */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Jul)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Jul)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Aug)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Aug)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Sep)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Sep)}</div>
                                 </div>
                             </div>
                             
                             {/* 第四行: Oct, Nov, Dec */}
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Oct)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Oct)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Nov)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Nov)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm">{formatNumber(item.Dec)}</div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Dec)}</div>
                                 </div>
                             </div>
                         </div>
@@ -494,37 +494,39 @@ const Cases = () => {
     return (
         <div>
             <div className='flex justify-between items-center mb-4'>
-                <h1 className='text-2xl font-semibold'>
+                <h1 className='text-2xl font-semibold hidden sm:inline'>
                     {dataType === 'cost' ? 'Costs' : 'Cases'} {displayYear}
                 </h1>
-                <div>
+                <div className='flex items-center gap-1'>
                     <TextInput 
                         placeholder='Search case' 
                         onChange={handleSearch}
                     />
-                </div>
                 <div className='flex items-center gap-2'>
-                    <TextInput
-                        type="number"
-                        value={displayYear}
-                        onChange={handleYearChange}
-                        className="w-18"
-                    />
-                    <Button 
-                        className='cursor-pointer hidden sm:block' 
-                        onClick={() => handleUpdateStats(false)} // 手动更新，显示加载状态
-                        disabled={isUpdating}
-                    >
-                        {isUpdating ? <Spinner size="sm" /> : 'Update Stat'}
-                    </Button>
-                    <Button 
-                        className='cursor-pointer' 
-                        onClick={generateExcelReport} 
-                        color='green'
-                        disabled={tableData.length === 0}
-                    >
-                        Report
-                    </Button>
+                    <div>
+                            <TextInput
+                                type="number"
+                                value={displayYear}
+                                onChange={handleYearChange}
+                                className="w-18"
+                            />
+                        </div>
+                        <Button 
+                            className='cursor-pointer hidden sm:block' 
+                            onClick={() => handleUpdateStats(false)} // 手动更新，显示加载状态
+                            disabled={isUpdating}
+                        >
+                            {isUpdating ? <Spinner size="sm" /> : 'Update Stat'}
+                        </Button>
+                        <Button 
+                            className='cursor-pointer' 
+                            onClick={generateExcelReport} 
+                            color='green'
+                            disabled={tableData.length === 0}
+                        >
+                            Report
+                        </Button>
+                    </div>
                 </div>
             </div>
 
