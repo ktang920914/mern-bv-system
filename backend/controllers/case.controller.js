@@ -202,8 +202,8 @@ export const updateCaseStats = async (req, res, next) => {
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({
             date: currentDate,
-            activity: 'Update case statistics',
-            detail: `${req.user.username} updated case statistics for year ${year}`
+            activity: 'Update case',
+            detail: `${req.user.username} updated case for year ${year}`
         });
         await newActivity.save();
         

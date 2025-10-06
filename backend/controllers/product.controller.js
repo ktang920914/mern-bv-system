@@ -124,7 +124,7 @@ export const deleteProduct = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete product',
-            detail: `${req.user.username} delete product ${itemCode} and all related movements from the system`
+            detail: `${req.user.username} delete product from the system`
         });
         await newActivity.save();
         

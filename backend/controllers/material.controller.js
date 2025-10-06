@@ -122,7 +122,7 @@ export const deleteMaterial = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete material',
-            detail: `${req.user.username} delete material ${itemCode} and all related movements from the system`
+            detail: `${req.user.username} delete material from the system`
         });
         await newActivity.save();
         
