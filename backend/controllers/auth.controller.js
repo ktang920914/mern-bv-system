@@ -31,7 +31,7 @@ export const login = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Login',
-            detail: `${username} login to the system`
+            detail: `${username} login`
         })
         await newActivity.save()
 
@@ -79,7 +79,7 @@ export const logout = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Logout',
-            detail: `${req.user.username} logout from the system`
+            detail: `${req.user.username} logout`
         })
         await newActivity.save()
         res.clearCookie('access_token')
