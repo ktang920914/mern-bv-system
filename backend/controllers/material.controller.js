@@ -78,7 +78,7 @@ export const material = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create material',
-            detail: `${req.user.username} created material in the system`
+            detail: `${req.user.username} created material`
         })
         await newActivity.save()
 
@@ -122,7 +122,7 @@ export const deleteMaterial = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete material',
-            detail: `${req.user.username} delete material from the system`
+            detail: `${req.user.username} delete material`
         });
         await newActivity.save();
         
@@ -162,7 +162,7 @@ export const updateMaterial = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update material',
-            detail: `${req.user.username} update material to the system`
+            detail: `${req.user.username} update material`
         })
         await newActivity.save()
         res.status(200).json(updatedMaterial)

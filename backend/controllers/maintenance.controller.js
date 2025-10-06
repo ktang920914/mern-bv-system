@@ -21,7 +21,7 @@ export const maintenance = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create maintenance',
-            detail: `${req.user.username} create maintenance to the system`
+            detail: `${req.user.username} create maintenance`
         })
         await newActivity.save()
 
@@ -48,7 +48,7 @@ export const deleteMaintenance = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete maintenance',
-            detail: `${req.user.username} delete maintenance from the system`
+            detail: `${req.user.username} delete maintenance`
         })
         await newActivity.save()
         res.status(200).json('Maintenance is deleted')
@@ -77,7 +77,7 @@ export const updateMaintenance = async (req,res,next) => {
     const newActivity = new Activity({
         date: currentDate,
         activity: 'Update maintenance',
-        detail: `${req.user.username} update maintenance to the system`
+        detail: `${req.user.username} update maintenance`
     })
     await newActivity.save()
     res.status(200).json(updatedMaintenance)

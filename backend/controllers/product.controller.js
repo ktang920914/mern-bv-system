@@ -81,7 +81,7 @@ export const product = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create product',
-            detail: `${req.user.username} created product in the system`
+            detail: `${req.user.username} created product`
         })
         await newActivity.save()
         await newProduct.save()
@@ -124,7 +124,7 @@ export const deleteProduct = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete product',
-            detail: `${req.user.username} delete product from the system`
+            detail: `${req.user.username} delete product`
         });
         await newActivity.save();
         
@@ -165,7 +165,7 @@ export const updateProduct = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update product',
-            detail: `${req.user.username} update product to the system`
+            detail: `${req.user.username} update product`
         })
         await newActivity.save()
         res.status(200).json(updatedProduct)

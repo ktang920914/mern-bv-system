@@ -9,7 +9,7 @@ export const getProductivities = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'View productivity',
-            detail: `${req.user.username} view productivity from the system`
+            detail: `${req.user.username} view productivity`
         })
         await newActivity.save()
         const productivities = await Productivity.find().sort({updatedAt:-1});
@@ -218,7 +218,7 @@ export const updateProductivity = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update productivity',
-            detail: `${req.user.username} update productivity to the system`
+            detail: `${req.user.username} update productivity`
         });
         await newActivity.save();
         

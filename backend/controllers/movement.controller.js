@@ -63,7 +63,7 @@ export const movement = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create movement',
-            detail: `${req.user.username} created movement for ${itemName}`
+            detail: `${req.user.username} created movement`
         })
         await newActivity.save()
         
@@ -144,7 +144,7 @@ export const deleteMovement = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete movement',
-            detail: `${req.user.username} delete movement from the system`
+            detail: `${req.user.username} delete movement`
         });
         await newActivity.save();
         
@@ -255,7 +255,7 @@ export const updateMovement = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update movement',
-            detail: `${req.user.username} update movement to the system`
+            detail: `${req.user.username} update movement`
         });
         await newActivity.save();
         

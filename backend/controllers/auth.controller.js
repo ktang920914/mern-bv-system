@@ -54,6 +54,10 @@ export const register = async (req,res,next) => {
             return next(errorHandler(404, 'Username is exists'))
         }
 
+        if (!username || username.length < 3 || username.length > 8) {
+            return next(errorHandler(400, 'Failed'));
+        }
+
         const hashedPassword = await bcryptjs.hash(password,10)
 
         const newUser = new User({
