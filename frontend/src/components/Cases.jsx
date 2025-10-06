@@ -1,4 +1,4 @@
-import { Button, Label, TextInput, Spinner, Alert, Table, TableHead, TableRow, TableHeadCell, TableBody, TableCell, Pagination, Badge } from 'flowbite-react'
+import { Button, Label, TextInput, Spinner, Alert, Table, TableHead, TableRow, TableHeadCell, TableBody, TableCell, Pagination, Badge, Card } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import * as XLSX from 'xlsx'
@@ -54,6 +54,17 @@ const Cases = () => {
     const [dataType, setDataType] = useState('count') // 'count' or 'cost'
     const [selectedCodes, setSelectedCodes] = useState([]) // 新增：选中的 Job Codes
     const [availableCodes, setAvailableCodes] = useState([]) // 可用的 Job Code 列表
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
+
+    // 检测屏幕大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -370,12 +381,115 @@ const Cases = () => {
         }
     }
 
+    // 格式化数字显示
+    const formatNumber = (value) => {
+        if (value === undefined || value === null) return '0';
+        if (dataType === 'cost') {
+            return typeof value === 'number' ? value.toFixed(2) : parseFloat(value || 0).toFixed(2);
+        }
+        return typeof value === 'number' ? value.toString() : value || '0';
+    }
+
     const chartData = prepareChartData()
     const currentItems = filteredTableData.slice(
         (currentPage - 1) * itemsPage, 
         currentPage * itemsPage
     )
     const totalPages = Math.ceil(filteredTableData.length / itemsPage)
+
+    // 移动端卡片渲染函数
+    const renderMobileCards = () => {
+        return (
+            <div className="space-y-4">
+                {currentItems.map((item, index) => (
+                    <Card key={index} className="p-4">
+                        <div className="mb-3">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {item.type}
+                            </h3>
+                        </div>
+                        
+                        {/* 月份数据网格 - 4行 x 3列 */}
+                        <div className="space-y-3">
+                            {/* 第一行: Jan, Feb, Mar */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jan</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Jan)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Feb</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Feb)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mar</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Mar)}</div>
+                                </div>
+                            </div>
+                            
+                            {/* 第二行: Apr, May, Jun */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Apr</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Apr)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">May</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.May)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jun</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Jun)}</div>
+                                </div>
+                            </div>
+                            
+                            {/* 第三行: Jul, Aug, Sep */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jul</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Jul)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Aug</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Aug)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Sep</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Sep)}</div>
+                                </div>
+                            </div>
+                            
+                            {/* 第四行: Oct, Nov, Dec */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Oct</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Oct)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Nov</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Nov)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Dec</div>
+                                    <div className="font-medium text-sm">{formatNumber(item.Dec)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* 总计 */}
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
+                                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    {formatNumber(item.total)}
+                                </span>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        )
+    }
 
     return (
         <div>
@@ -385,7 +499,7 @@ const Cases = () => {
                 </h1>
                 <div>
                     <TextInput 
-                        placeholder='Search case type...' 
+                        placeholder='Search case' 
                         onChange={handleSearch}
                     />
                 </div>
@@ -394,14 +508,14 @@ const Cases = () => {
                         type="number"
                         value={displayYear}
                         onChange={handleYearChange}
-                        className="w-24"
+                        className="w-18"
                     />
                     <Button 
-                        className='cursor-pointer' 
+                        className='cursor-pointer hidden sm:block' 
                         onClick={() => handleUpdateStats(false)} // 手动更新，显示加载状态
                         disabled={isUpdating}
                     >
-                        {isUpdating ? <Spinner size="sm" /> : 'Update Stats'}
+                        {isUpdating ? <Spinner size="sm" /> : 'Update Stat'}
                     </Button>
                     <Button 
                         className='cursor-pointer' 
@@ -568,40 +682,47 @@ const Cases = () => {
                     <Spinner size="xl" />
                 </div>
             ) : (
-                <Table hoverable className='mb-6'>
-                    <TableHead>
-                        <TableRow>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Case Type</TableHeadCell>
-                            {monthFields.map(month => (
-                                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`} key={month.key}>{month.name}</TableHeadCell>
-                            ))}
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {currentItems.map((item, index) => ( 
-                            <TableRow key={index}> 
-                                <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                    {item.type} 
-                                </TableCell>
-                                {monthFields.map(month => (
-                                    <TableCell className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
-                                        {dataType === 'cost' ? 
-                                            `${item[month.key] ? item[month.key].toFixed(2) : '0.00'}` : 
-                                            item[month.key] || 0
-                                        }
-                                    </TableCell>
+                <>
+                    {/* 移动端显示卡片，桌面端显示表格 */}
+                    {isMobile ? (
+                        renderMobileCards()
+                    ) : (
+                        <Table hoverable className='mb-6'>
+                            <TableHead>
+                                <TableRow>
+                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Case Type</TableHeadCell>
+                                    {monthFields.map(month => (
+                                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`} key={month.key}>{month.name}</TableHeadCell>
+                                    ))}
+                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {currentItems.map((item, index) => ( 
+                                    <TableRow key={index}> 
+                                        <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                            {item.type} 
+                                        </TableCell>
+                                        {monthFields.map(month => (
+                                            <TableCell className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
+                                                {dataType === 'cost' ? 
+                                                    `${item[month.key] ? item[month.key].toFixed(2) : '0.00'}` : 
+                                                    item[month.key] || 0
+                                                }
+                                            </TableCell>
+                                        ))}
+                                        <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                            {dataType === 'cost' ? 
+                                                `${item.total ? item.total.toFixed(2) : '0.00'}` : 
+                                                item.total || 0
+                                            }
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                                <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                    {dataType === 'cost' ? 
-                                        `${item.total ? item.total.toFixed(2) : '0.00'}` : 
-                                        item.total || 0
-                                    }
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                            </TableBody>
+                        </Table>
+                    )}
+                </>
             )}
 
             {filteredTableData.length > 0 && (

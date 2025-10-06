@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge} from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge, Card } from 'flowbite-react'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import useUserstore from '../store'
@@ -55,6 +55,17 @@ const Outputs = () => {
     const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
     const [selectedDataType, setSelectedDataType] = useState('totaloutput') // 默认显示总产出数据
     const [availableCodes, setAvailableCodes] = useState([]) // 新增
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
+
+    // 检测屏幕大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
@@ -442,9 +453,103 @@ const Outputs = () => {
     // 获取图表数据
     const chartData = prepareChartData();
 
+    // 移动端卡片渲染函数
+    const renderMobileCards = () => {
+        return (
+            <div className="space-y-4">
+                {currentOutputs.map((output, index) => (
+                    <Card key={output._id || index} className="p-4">
+                        <div className="mb-3">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {output.dataTypeLabel || 'Unknown'}
+                            </h3>
+                        </div>
+                        
+                        {/* 月份数据网格 - 4行 x 3列 */}
+                        <div className="space-y-3">
+                            {/* 第一行: Jan, Feb, Mar */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jan</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.jan)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Feb</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.feb)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mar</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.mar)}</div>
+                                </div>
+                            </div>
+                            
+                            {/* 第二行: Apr, May, Jun */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Apr</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.apr)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">May</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.may)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jun</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.jun)}</div>
+                                </div>
+                            </div>
+                            
+                            {/* 第三行: Jul, Aug, Sep */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Jul</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.jul)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Aug</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.aug)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Sep</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.sep)}</div>
+                                </div>
+                            </div>
+                            
+                            {/* 第四行: Oct, Nov, Dec */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Oct</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.oct)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Nov</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.nov)}</div>
+                                </div>
+                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Dec</div>
+                                    <div className="font-medium text-sm">{formatNumber(output.dec)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* 总计 */}
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
+                                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    {formatNumber(output.total)}
+                                </span>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        )
+    }
+
     return (
         <div>
-            <div className='flex justify-between items-center mb-4'>
+            <div className='flex justify-between items-center mb-4 text-sm'>
                 <h1 className='text-2xl font-semibold'>Outputs {displayYear}</h1>
                 <div>
                     <TextInput 
@@ -468,7 +573,7 @@ const Outputs = () => {
                 </div>
             </div>
 
-            {/* Job Code 筛选器 - 单行显示 */}
+            {/* Job Code 筛选器 - 移动端优化显示 */}
             <div className="mb-3 p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
                 <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold">Filter by Job Code</Label>
@@ -494,7 +599,7 @@ const Outputs = () => {
                     )}
                 </div>
                 
-                {/* 单行显示的 Job Code 选项 - 修改为使用 availableCodes */}
+                {/* Job Code 选项 - 移动端优化 */}
                 <div className="flex flex-wrap gap-1 mb-2">
                     {availableCodes.map(code => (
                         <div 
@@ -520,7 +625,6 @@ const Outputs = () => {
                     ))}
                 </div>
                 
-                {/* 移除了 Apply Filters 按钮 */}
                 <div className="flex items-center gap-2 mt-2">
                     {selectedCodes.length > 0 && (
                         <div className="text-xs text-gray-600 dark:text-gray-400">
@@ -597,34 +701,39 @@ const Outputs = () => {
                 </div>
             ) : showTable && outputs.length > 0 ? (
                 <>
-                    <Table hoverable className='mb-6'>
-                        <TableHead>
-                            <TableRow >
-                                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Data Type</TableHeadCell>
-                                {monthFields.map(month => (
-                                    <TableHeadCell key={month.key} className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>{month.name}</TableHeadCell>
-                                ))}
-                                <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {currentOutputs.map((output, index) => ( 
-                                <TableRow key={output._id || index}> 
-                                    <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                        {output.dataTypeLabel || 'Unknown'} 
-                                    </TableCell>
+                    {/* 移动端显示卡片，桌面端显示表格 */}
+                    {isMobile ? (
+                        renderMobileCards()
+                    ) : (
+                        <Table hoverable className='mb-6'>
+                            <TableHead>
+                                <TableRow >
+                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Data Type</TableHeadCell>
                                     {monthFields.map(month => (
-                                        <TableCell key={month.key} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {formatNumber(output[month.key])}
-                                        </TableCell>
+                                        <TableHeadCell key={month.key} className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>{month.name}</TableHeadCell>
                                     ))}
-                                    <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                        {formatNumber(output.total)}
-                                    </TableCell>
+                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHead>
+                            <TableBody>
+                                {currentOutputs.map((output, index) => ( 
+                                    <TableRow key={output._id || index}> 
+                                        <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                            {output.dataTypeLabel || 'Unknown'} 
+                                        </TableCell>
+                                        {monthFields.map(month => (
+                                            <TableCell key={month.key} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                                {formatNumber(output[month.key])}
+                                            </TableCell>
+                                        ))}
+                                        <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                            {formatNumber(output.total)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
 
                     <div className="flex-col justify-center text-center mt-4">
                         <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
