@@ -67,6 +67,10 @@ const planningSchema = new mongoose.Schema({
         type:Number,
         default:0
     },
+    qcinspect:{
+        type:Number,
+        default:0
+    },
     whiteoil:{
         type:Number,
         default:0

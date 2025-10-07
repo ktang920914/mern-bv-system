@@ -94,7 +94,7 @@ const Productivity = () => {
             processcomplication:productivities.processcomplication, qctime: productivities.qctime, washup: productivities.washup, vent:productivities.vent,
             unevenpallet:productivities.unevenpallet, whiteoil:productivities.whiteoil, stranddrop:productivities.stranddrop, trialrun:productivities.trialrun,
             meterstart:productivities.meterstart,meterend:productivities.meterend, reason:productivities.reason, washresin:productivities.washresin,
-            color:productivities.color,density:productivities.density,operator:productivities.operator
+            color:productivities.color,density:productivities.density,operator:productivities.operator,qcinspect:productivities.qcinspect
         })
         setOpenModalUpdateProductivity(!openModalUpdateProductivity)
         setErrorMessage(null)
@@ -479,7 +479,7 @@ const Productivity = () => {
  
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Total output</Label>
-                                <TextInput value={formData.totaloutput}  type='number' min='0' id="totaloutput" placeholder='Enter total output'  onChange={handleChange} onFocus={handleFocus} />
+                                <TextInput value={formData.totaloutput}  type='number' min='0' step='0.01' id="totaloutput" placeholder='Enter total output'  onChange={handleChange} onFocus={handleFocus} />
                             </div>
 
                             <div className="mb-4 block">
@@ -545,6 +545,11 @@ const Productivity = () => {
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Trial run</Label>
                                 <TextInput value={formData.trialrun} type='number' id="trialrun" min='0' placeholder='Enter trial run' onChange={handleChange} onFocus={handleFocus}/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>QC inspection</Label>
+                                <TextInput value={formData.qcinspect} type='number' id="trialrun" min='0' placeholder='Enter QC inspection' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
 
                             <div className="mb-4 block">

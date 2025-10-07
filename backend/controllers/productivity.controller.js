@@ -35,6 +35,7 @@ export const updateProductivity = async (req, res, next) => {
         const unevenpallet = Number(req.body.unevenpallet) || 0;
         const whiteoil = Number(req.body.whiteoil) || 0;
         const stranddrop = Number(req.body.stranddrop) || 0;
+        const qcinspect = Number(req.body.qcinspect) || 0;
         const trialrun = Number(req.body.trialrun) || 0;
         const meterstart = Number(req.body.meterstart) || 0;
         const meterend = Number(req.body.meterend) || 0;
@@ -112,6 +113,7 @@ export const updateProductivity = async (req, res, next) => {
                 washresin: req.body.washresin,
                 washup: washup,
                 stranddrop: stranddrop,
+                qcinspect:qcinspect,
                 whiteoil: whiteoil,
                 vent: vent,
                 unevenpallet: unevenpallet,
@@ -153,6 +155,7 @@ export const updateProductivity = async (req, res, next) => {
                             downtime: downtime,
                             washup: washup,
                             stranddrop: stranddrop,
+                            qcinspect:qcinspect,
                             whiteoil: whiteoil,
                             vent: vent,
                             unevenpallet: unevenpallet,
@@ -192,6 +195,7 @@ export const updateProductivity = async (req, res, next) => {
                             downtime: downtime,
                             washup: washup,
                             stranddrop: stranddrop,
+                            qcinspect:qcinspect,
                             whiteoil: whiteoil,
                             vent: vent,
                             unevenpallet: unevenpallet,
