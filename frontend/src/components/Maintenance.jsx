@@ -610,7 +610,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cost</Label>
-                <TextInput id="cost" type='number' min='0' placeholder='Enter cost' onChange={handleChange} onFocus={handleFocus} required/>
+                <TextInput id="cost" type='number' min='0' placeholder='Enter cost' step='0.01' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -727,7 +727,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cost</Label>
-                <TextInput value={updateFormData.cost} id="cost" type='number' min='0' placeholder='Enter cost' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <TextInput value={updateFormData.cost} id="cost" type='number' min='0' step='0.01' placeholder='Enter cost' onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
