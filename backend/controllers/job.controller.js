@@ -254,7 +254,7 @@ export const updateJob = async (req,res,next) => {
         // 重新计算 wastage
         const totalorder = Number(req.body.totalorder) || Number(oldJob.totalorder) || 0;
         const totaloutput = productivity ? Number(productivity.totaloutput) || 0 : 0;
-        const wastage = totaloutput - totalorder;
+        const wastage = Number((totaloutput - totalorder).toFixed(2));
 
         // 重新计算 planprodtime (如果totalorder、irr、ipqc或setup有变化)
         const irr = productivity ? Number(productivity.irr) || 0 : 

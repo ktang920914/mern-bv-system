@@ -43,7 +43,7 @@ export const updateProductivity = async (req, res, next) => {
         
         const totalmeter = meterend - meterstart
         const downtime = screwout + startup + processcomplication + qctime
-        const wastage = totaloutput - totalorder
+        const wastage = Number((totaloutput - totalorder).toFixed(2));
         
         // 计算operatingtime的算法
         const calculateOperatingTime = (start, end, downtime) => {

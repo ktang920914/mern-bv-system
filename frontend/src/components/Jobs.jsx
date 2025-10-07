@@ -543,7 +543,7 @@ const Jobs = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Total order</Label>
-                                <TextInput value={updateFormData.totalorder} type='number' min='0' id="totalorder" placeholder='Enter total order' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                <TextInput value={updateFormData.totalorder} type='number' min='0' step='0.01' id="totalorder" placeholder='Enter total order' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                             </div>
                                 
                             <div className='mb-4 block'>
