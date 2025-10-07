@@ -195,7 +195,7 @@ const Planning = () => {
                             </div>
                         }
                         trigger='hover'
-                        placement="right"
+                        placement="top"
                         arrow={false}
                     >
                         <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
