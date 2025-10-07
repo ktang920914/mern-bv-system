@@ -5,14 +5,6 @@ import Productivity from "../models/productivity.model.js";
 
 export const getPlannings = async (req, res, next) => {
     try {
-        const currentDate = new Date().toLocaleString();
-        const newActivity = new Activity({
-            date: currentDate,
-            activity: 'View productivity',
-            detail: `${req.user.username} view planning`
-        });
-        await newActivity.save();
-        
         const plannings = await Planning.find().sort({updatedAt:-1});
         res.status(200).json(plannings);
     } catch (error) {

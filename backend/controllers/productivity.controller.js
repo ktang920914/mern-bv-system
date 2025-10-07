@@ -5,13 +5,6 @@ import Job from "../models/job.model.js";
 
 export const getProductivities = async (req, res, next) => {
     try {
-        const currentDate = new Date().toLocaleString();
-        const newActivity = new Activity({
-            date: currentDate,
-            activity: 'View productivity',
-            detail: `${req.user.username} view productivity`
-        })
-        await newActivity.save()
         const productivities = await Productivity.find().sort({updatedAt:-1});
         res.status(200).json(productivities);
     } catch (error) {
