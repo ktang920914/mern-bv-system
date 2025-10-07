@@ -198,14 +198,14 @@ export const updateCaseStats = async (req, res, next) => {
             await Case.insertMany(caseData);
         }
         
-        // 记录活动
+        /* 记录活动
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update case',
-            detail: `${req.user.username} updated case ${year}`
+            detail: `${req.user.username} updated case`
         });
-        await newActivity.save();
+        await newActivity.save();*/
         
         res.status(200).json({ 
             message: 'Case statistics updated successfully', 
