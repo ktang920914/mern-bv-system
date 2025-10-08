@@ -215,7 +215,7 @@ export const updateProductivity = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update productivity',
-            detail: `${req.user.username} update productivity`
+            detail: `${req.user.username}`
         });
         await newActivity.save();
         

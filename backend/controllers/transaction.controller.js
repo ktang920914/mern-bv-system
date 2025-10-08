@@ -88,7 +88,7 @@ export const record = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create transaction',
-            detail: `${req.user.username} create transaction`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(201).json(newTransaction)
@@ -155,7 +155,7 @@ export const deleteRecord = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete transaction',
-            detail: `${req.user.username} delete transaction`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(200).json('Record is deleted')
@@ -254,7 +254,7 @@ export const updateRecord = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update transaction',
-            detail: `${req.user.username} update transaction`
+            detail: `${req.user.username}`
         });
         await newActivity.save();
         

@@ -140,7 +140,7 @@ export const job = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create Job',
-            detail: `${req.user.username} create job`
+            detail: `${req.user.username}`
         });
         
         await newActivity.save();
@@ -175,7 +175,7 @@ export const deleteJob = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete job',
-            detail: `${req.user.username} delete job`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(200).json('Job is deleted')
@@ -387,7 +387,7 @@ export const updateJob = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update job',
-            detail: `${req.user.username} update job`
+            detail: `${req.user.username}`
         });
         await newActivity.save();
         

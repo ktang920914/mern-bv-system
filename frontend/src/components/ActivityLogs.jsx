@@ -130,7 +130,7 @@ const ActivityLogs = () => {
                 ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
                 : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
         }`}>
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="mb-3">
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Date</p>
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.date}</p>

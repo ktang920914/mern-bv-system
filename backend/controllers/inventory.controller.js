@@ -79,7 +79,7 @@ export const item = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create item',
-            detail: `${req.user.username} created item`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         await newItem.save()
@@ -119,7 +119,7 @@ export const deleteItem = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete item',
-            detail: `${req.user.username} deleted item`
+            detail: `${req.user.username}`
         });
         await newActivity.save();
         
@@ -159,7 +159,7 @@ export const updateItem = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update item',
-            detail: `${req.user.username} updated item`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(200).json(updatedItem)

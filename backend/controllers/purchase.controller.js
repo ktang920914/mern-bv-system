@@ -24,7 +24,7 @@ export const supplier = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create supplier',
-            detail: `${req.user.username} create supplier`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
 
@@ -51,7 +51,7 @@ export const deleteSupplier = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete supplier',
-            detail: `${req.user.username} delete supplier`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(200).json('Supplier is deleted')
@@ -85,7 +85,7 @@ export const updateSupplier = async (req,res,next) => {
     const newActivity = new Activity({
         date: currentDate,
         activity: 'Update supplier',
-        detail: `${req.user.username} update supplier`
+        detail: `${req.user.username}`
     })
     await newActivity.save()
     res.status(200).json(updatedSupplier)

@@ -31,7 +31,7 @@ export const login = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Login',
-            detail: `${username} login`
+            detail: `${username}`
         })
         await newActivity.save()
 
@@ -79,7 +79,7 @@ export const logout = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Logout',
-            detail: `${req.user.username} logout`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.clearCookie('access_token')
@@ -105,7 +105,7 @@ export const deleteUser = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete user',
-            detail: `${req.user.username} delete user`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(200).json('User is deleted')
@@ -140,7 +140,7 @@ export const updateUser = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update user',
-            detail: `${req.user.username} update user`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
     res.status(200).json(rest)

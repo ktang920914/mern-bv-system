@@ -26,7 +26,7 @@ export const order = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create order',
-            detail: `${req.user.username} create order`
+            detail: `${req.user.username}`
         })
         
         await newActivity.save()
@@ -115,7 +115,7 @@ export const deleteOrder = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete order',
-            detail: `${req.user.username} delete order`
+            detail: `${req.user.username}`
         });
         
         await newActivity.save();
@@ -205,7 +205,7 @@ export const updateOrder = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update order',
-            detail: `${req.user.username} update order`
+            detail: `${req.user.username}`
         });
         
         await newActivity.save();
