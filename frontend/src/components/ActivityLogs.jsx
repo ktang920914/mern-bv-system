@@ -125,14 +125,10 @@ const ActivityLogs = () => {
 
     // 移动端卡片组件
     const ActivityLogCard = ({ log }) => (
-        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
-            theme === 'light' 
-                ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
-                : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
-        }`}>
+        <div className={`p-4 mb-4 rounded-lg shadow ${theme === 'light' ? 'bg-white border border-gray-200' : 'bg-gray-800 border border-gray-700'}`}>
             <div className="grid grid-cols-2 gap-2">
                 <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-500">Detail</p>
+                <p className="text-sm font-semibold text-gray-500">Date</p>
                 <p className={`text-sm ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{log.date}</p>
                 </div>
 
