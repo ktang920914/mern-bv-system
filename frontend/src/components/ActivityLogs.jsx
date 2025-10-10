@@ -133,12 +133,12 @@ const ActivityLogs = () => {
                 </div>
 
                 <div className='mb-3'>
-                <p className="text-sm font-semibold text-gray-500">Activity</p>
+                <p className="text-sm font-semibold text-gray-500">Detail</p>
                 <p className={`text-sm ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.detail}</p>
                 </div>
 
                 <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-500">Detail</p>
+                <p className="text-sm font-semibold text-gray-500">Activity</p>
                 <p className={`text-sm ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{log.activity}</p>
                 </div>
             </div>
