@@ -131,15 +131,13 @@ const ActivityLogs = () => {
                 : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
         }`}>
             <div className="mb-3">
-                <div>
-                    <p className="text-sm font-semibold text-gray-500">Date</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.date}</p>
-                </div>
+                <p className="text-sm font-semibold text-gray-500">Date</p>
+                <p className={`text-sm ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.date}</p>
             </div>
 
             <div className='mb-3'>
                 <p className="text-sm font-semibold text-gray-500">Activity</p>
-                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.activity}</p>
+                <p className={`text-sm ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.activity}</p>
             </div>
             
             <div className="mb-3">
