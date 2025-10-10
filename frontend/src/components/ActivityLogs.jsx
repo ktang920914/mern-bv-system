@@ -130,20 +130,23 @@ const ActivityLogs = () => {
                 ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
                 : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
         }`}>
-            <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-500">Date</p>
-                <p className={`text-sm ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.date}</p>
-            </div>
+            <div className="grid grid-cols-2 gap-2">
+                <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Detail</p>
+                <p className={`text-sm ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{log.date}</p>
+                </div>
 
-            <div className='mb-3'>
+                <div className='mb-3'>
                 <p className="text-sm font-semibold text-gray-500">Activity</p>
                 <p className={`text-sm ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{log.activity}</p>
-            </div>
-            
-            <div className="mb-3">
+                </div>
+
+                <div className="mb-3">
                 <p className="text-sm font-semibold text-gray-500">Detail</p>
                 <p className={`text-sm ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{log.detail}</p>
+                </div>
             </div>
+
 
             <div className="flex justify-end">
                 <Button 
