@@ -222,80 +222,105 @@ const Suppliers = () => {
     const totalEntries = filteredSuppliers.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+    // 移动端简洁分页组件 - 只显示 Previous/Next
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="flex items-center"
+            >
+                <span>‹</span>
+                <span className="ml-1">Previous</span>
+            </Button>
+
+            <Button
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="flex items-center"
+            >
+                <span className="mr-1">Next</span>
+                <span>›</span>
+            </Button>
+        </div>
+    )
 
     // 移动端卡片组件
-    // 移动端卡片组件 - 修复 hover 效果
-const SupplierCard = ({ supplier }) => (
-    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
-        theme === 'light' 
-            ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
-            : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
-    }`}>
-        <div className="grid grid-cols-2 gap-2 mb-3">
-            <div>
-                <p className="text-sm font-semibold text-gray-500">Supplier</p>
-            <Popover 
-                className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-                content={
-                    <div className="p-3 max-w-xs">
-                        <p className="font-semibold text-sm">Description:</p>
-                        <p className="text-xs mb-2">{supplier.description}</p>
-                        <p className="font-semibold text-sm">Address:</p>
-                        <p className="text-xs mb-2">{supplier.address}</p>
-                    </div>
-                }
-                trigger='hover'
-                placement="top"
-                arrow={false}
-            >
-                <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-                    theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-                }`}>
-                    {supplier.supplier}
-                </span>
-            </Popover>
+    const SupplierCard = ({ supplier }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' 
+                ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+                : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+        }`}>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Supplier</p>
+                <Popover 
+                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                    content={
+                        <div className="p-3 max-w-xs">
+                            <p className="font-semibold text-sm">Description:</p>
+                            <p className="text-xs mb-2">{supplier.description}</p>
+                            <p className="font-semibold text-sm">Address:</p>
+                            <p className="text-xs mb-2">{supplier.address}</p>
+                        </div>
+                    }
+                    trigger='hover'
+                    placement="top"
+                    arrow={false}
+                >
+                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                        theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+                    }`}>
+                        {supplier.supplier}
+                    </span>
+                </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Contact</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.contact}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">PIC</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.pic}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Status</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.status}</p>
+                </div>
             </div>
-            <div>
-                <p className="text-sm font-semibold text-gray-500">Contact</p>
-                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.contact}</p>
+            
+            <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Email</p>
+                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.email}</p>
             </div>
-            <div>
-                <p className="text-sm font-semibold text-gray-500">PIC</p>
-                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.pic}</p>
-            </div>
-            <div>
-                <p className="text-sm font-semibold text-gray-500">Status</p>
-                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.status}</p>
-            </div>
-        </div>
-        
-        <div className="mb-3">
-            <p className="text-sm font-semibold text-gray-500">Email</p>
-            <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{supplier.email}</p>
-        </div>
 
-        <div className="flex gap-2">
-            <Button 
-                outline 
-                className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-                onClick={() => handleUpdate(supplier)}
-            >
-                Edit
-            </Button>
-            <Button 
-                color='red' 
-                outline 
-                className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-                onClick={() => {
-                    setSupplierIdToDelete(supplier._id)
-                    setOpenModalDeleteSupplier(!openModalDeleteSupplier)
-                }}
-            >
-                Delete
-            </Button>
+            <div className="flex gap-2">
+                <Button 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => handleUpdate(supplier)}
+                >
+                    Edit
+                </Button>
+                <Button 
+                    color='red' 
+                    outline 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+                    onClick={() => {
+                        setSupplierIdToDelete(supplier._id)
+                        setOpenModalDeleteSupplier(!openModalDeleteSupplier)
+                    }}
+                >
+                    Delete
+                </Button>
+            </div>
         </div>
-    </div>
-)
+    )
 
     // 生成Excel报告的函数
     const generateExcelReport = () => {
@@ -429,170 +454,178 @@ const SupplierCard = ({ supplier }) => (
             </div>
         )}
 
-      <div className="flex-col justify-center text-center mt-4">
-        <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
-            Showing {showingFrom} to {showingTo} of {totalEntries} Entries
-        </p>
-        <Pagination
-            showIcons
-            currentPage={currentPage}
-            totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
-            onPageChange={handlePageChange}
-        />
-      </div>
-
-      {/* 模态框保持不变 */}
-      <Modal show={openModalCreateSupplier} onClose={handleCreateSupplier} popup>
-        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`} />
-        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`}>
-            <div className="space-y-6">
-                <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Supplier</h3>
-                <form onSubmit={handleSubmit}>
-                    <div>
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
-                            <TextInput id="supplier" placeholder="Enter supplier" onChange={handleChange} onFocus={handleFocus} required/>
-                        </div>
-                    </div>
-                        
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Contact</Label>
-                        <TextInput id="contact" placeholder='Enter contact' onChange={handleChange} onFocus={handleFocus} required/>
-                    </div>
-                        
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
-                        <TextInput id="description" className='mb-4' placeholder='Enter description' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                    </div>
-
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
-                        <TextInput id="address" className='mb-4' placeholder='Enter address' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                    </div>
-
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>PIC</Label>
-                        <TextInput id="pic" className='mb-4' placeholder='Enter PIC' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                    </div>
-
-                    <div className="mb-4 block">
-                        <Label htmlFor='email' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Email</Label>
-                        <TextInput id="email" type='email' className='mb-4' placeholder='Enter email' onChange={handleChange} onFocus={handleFocus} required></TextInput>
-                    </div>
-
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
-                        <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                            <option></option>
-                            <option>Active</option>
-                            <option>Inactive</option>
-                        </Select>
-                    </div>
-                        
-                    <div className='mb-4 block'>
-                        <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
-                            {
-                                loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
-                            }
-                        </Button>
-                    </div>
-                </form>
-                {
-                    errorMessage && (
-                        <Alert color='failure' className='mt-4 font-semibold'>
-                            {errorMessage}
-                        </Alert>
-                    )
-                }
-            </div>
-        </ModalBody>
-      </Modal>
-
-      <Modal show={openModalDeleteSupplier} size="md" onClose={() => setOpenModalDeleteSupplier(!openModalDeleteSupplier)} popup>
-        <ModalHeader />
-        <ModalBody>
-        <div className="text-center">
-            <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
-            <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-            Are you sure you want to delete this supplier?
-            </h3>
-            <div className="flex justify-center gap-4">
-            <Button color="red" onClick={handleDelete}>
-                Yes, I'm sure
-            </Button>
-            <Button color="alternative" onClick={() => setOpenModalDeleteSupplier(false)}>
-                No, cancel
-            </Button>
-            </div>
+        <div className="flex-col justify-center text-center mt-4">
+            <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+                Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+            </p>
+            
+            {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
+            {isMobile ? (
+                <div className="mt-4">
+                    <MobileSimplePagination />
+                </div>
+            ) : (
+                <Pagination
+                    showIcons
+                    currentPage={currentPage}
+                    totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                    onPageChange={handlePageChange}
+                />
+            )}
         </div>
-        </ModalBody>
-      </Modal>
 
-      <Modal show={openModalUpdateSupplier} onClose={() => setOpenModalUpdateSupplier(!openModalUpdateSupplier)} popup>
-        <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
-        <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-            <div className="space-y-6">
-                <h3 className={`text-xl font-medium`}>Update User</h3>
-                <form onSubmit={handleUpdateSubmit}>
-                    <div>
-                        <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
-                            <TextInput value={updateFormData.supplier || ''} id="supplier" placeholder="Enter supplier" onChange={handleUpdateChange} onFocus={handleFocus} required/>
+        {/* 模态框保持不变 */}
+        <Modal show={openModalCreateSupplier} onClose={handleCreateSupplier} popup>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`}>
+                <div className="space-y-6">
+                    <h3 className={`font-medium text-xl ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Create Supplier</h3>
+                    <form onSubmit={handleSubmit}>
+                        <div>
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
+                                <TextInput id="supplier" placeholder="Enter supplier" onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
                         </div>
-                    </div>
-                        
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Contact</Label>
-                        <TextInput value={updateFormData.contact || ''} id="contact" placeholder='Enter contact' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                    </div>
-                        
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
-                        <TextInput value={updateFormData.description || ''} id="description" className='mb-4' placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                    </div>
+                            
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Contact</Label>
+                            <TextInput id="contact" placeholder='Enter contact' onChange={handleChange} onFocus={handleFocus} required/>
+                        </div>
+                            
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
+                            <TextInput id="description" className='mb-4' placeholder='Enter description' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                        </div>
 
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
-                        <TextInput value={updateFormData.address} id="address" className='mb-4' placeholder='Enter address' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                    </div>
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
+                            <TextInput id="address" className='mb-4' placeholder='Enter address' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                        </div>
 
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>PIC</Label>
-                        <TextInput value={updateFormData.pic} id="pic" className='mb-4' placeholder='Enter PIC' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                    </div>
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>PIC</Label>
+                            <TextInput id="pic" className='mb-4' placeholder='Enter PIC' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                        </div>
 
-                    <div className="mb-4 block">
-                        <Label htmlFor='email' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Email</Label>
-                        <TextInput value={updateFormData.email} id="email" type='email' className='mb-4' placeholder='Enter email' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
-                    </div>
+                        <div className="mb-4 block">
+                            <Label htmlFor='email' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Email</Label>
+                            <TextInput id="email" type='email' className='mb-4' placeholder='Enter email' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                        </div>
 
-                    <div className="mb-4 block">
-                        <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
-                        <Select value={updateFormData.status} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
-                            <option></option>
-                            <option>Active</option>
-                            <option>Inactive</option>
-                        </Select>
-                    </div>
-                        
-                    <div className='mb-4 block'>
-                        <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
-                            {
-                                loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
-                            }
-                        </Button>
-                    </div>
-                </form>
-                {
-                    errorMessage && (
-                        <Alert color='failure' className='mt-4 font-semibold'>
-                            {errorMessage}
-                        </Alert>
-                    )
-                }
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
+                            <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                                <option></option>
+                                <option>Active</option>
+                                <option>Inactive</option>
+                            </Select>
+                        </div>
+                            
+                        <div className='mb-4 block'>
+                            <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                {
+                                    loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
+                                }
+                            </Button>
+                        </div>
+                    </form>
+                    {
+                        errorMessage && (
+                            <Alert color='failure' className='mt-4 font-semibold'>
+                                {errorMessage}
+                            </Alert>
+                        )
+                    }
+                </div>
+            </ModalBody>
+        </Modal>
+
+        <Modal show={openModalDeleteSupplier} size="md" onClose={() => setOpenModalDeleteSupplier(!openModalDeleteSupplier)} popup>
+            <ModalHeader />
+            <ModalBody>
+            <div className="text-center">
+                <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
+                <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+                Are you sure you want to delete this supplier?
+                </h3>
+                <div className="flex justify-center gap-4">
+                <Button color="red" onClick={handleDelete}>
+                    Yes, I'm sure
+                </Button>
+                <Button color="alternative" onClick={() => setOpenModalDeleteSupplier(false)}>
+                    No, cancel
+                </Button>
+                </div>
             </div>
-        </ModalBody>
-      </Modal>
+            </ModalBody>
+        </Modal>
+
+        <Modal show={openModalUpdateSupplier} onClose={() => setOpenModalUpdateSupplier(!openModalUpdateSupplier)} popup>
+            <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
+            <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                <div className="space-y-6">
+                    <h3 className={`text-xl font-medium`}>Update User</h3>
+                    <form onSubmit={handleUpdateSubmit}>
+                        <div>
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
+                                <TextInput value={updateFormData.supplier || ''} id="supplier" placeholder="Enter supplier" onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+                        </div>
+                            
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Contact</Label>
+                            <TextInput value={updateFormData.contact || ''} id="contact" placeholder='Enter contact' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                        </div>
+                            
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
+                            <TextInput value={updateFormData.description || ''} id="description" className='mb-4' placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                        </div>
+
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
+                            <TextInput value={updateFormData.address} id="address" className='mb-4' placeholder='Enter address' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                        </div>
+
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>PIC</Label>
+                            <TextInput value={updateFormData.pic} id="pic" className='mb-4' placeholder='Enter PIC' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                        </div>
+
+                        <div className="mb-4 block">
+                            <Label htmlFor='email' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Email</Label>
+                            <TextInput value={updateFormData.email} id="email" type='email' className='mb-4' placeholder='Enter email' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                        </div>
+
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
+                            <Select value={updateFormData.status} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                                <option></option>
+                                <option>Active</option>
+                                <option>Inactive</option>
+                            </Select>
+                        </div>
+                            
+                        <div className='mb-4 block'>
+                            <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                {
+                                    loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
+                                }
+                            </Button>
+                        </div>
+                    </form>
+                    {
+                        errorMessage && (
+                            <Alert color='failure' className='mt-4 font-semibold'>
+                                {errorMessage}
+                            </Alert>
+                        )
+                    }
+                </div>
+            </ModalBody>
+        </Modal>
     </div>
   )
 }

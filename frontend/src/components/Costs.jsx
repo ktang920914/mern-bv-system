@@ -267,6 +267,7 @@ const Costs = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const indexOfLastItem = currentPage * itemsPage
@@ -275,6 +276,32 @@ const Costs = () => {
     const totalEntries = filteredCosts.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+    // 移动端简洁分页组件 - 只显示 Previous/Next
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="flex items-center"
+            >
+                <span>‹</span>
+                <span className="ml-1">Previous</span>
+            </Button>
+
+            <Button
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="flex items-center"
+            >
+                <span className="mr-1">Next</span>
+                <span>›</span>
+            </Button>
+        </div>
+    )
 
     // 格式化数字显示（保留2位小数）
     const formatNumber = (value) => {
@@ -442,16 +469,21 @@ const Costs = () => {
 
     return (
         <div>
-            <div className='flex justify-between items-center mb-4 gap-1'>
-                <h1 className='text-2xl font-semibold hidden sm:block'>Costs {displayYear}</h1>
-                <div>
-                    <TextInput placeholder='Search cost category...' onChange={handleSearch}/>
+            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
+                <h1 className='text-2xl font-semibold'>Costs {displayYear}</h1>
+                <div className='w-full sm:w-auto'>
+                    <TextInput 
+                        placeholder='Search cost category...' 
+                        value={searchTerm}
+                        onChange={handleSearch}
+                        className='w-full'
+                    />
                 </div>
-                <div className='flex items-center gap-2'>
-                    <Button className='cursor-pointer' onClick={handleCreateCost}>
+                <div className='flex gap-2 w-full sm:w-auto'>
+                    <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateCost}>
                         Change Year
                     </Button>
-                    <Button className='cursor-pointer' color='green' onClick={generateExcelReport} disabled={costs.length === 0}>
+                    <Button className='cursor-pointer flex-1 sm:flex-none' color='green' onClick={generateExcelReport} disabled={costs.length === 0}>
                         Report
                     </Button>
                 </div>
@@ -557,12 +589,20 @@ const Costs = () => {
                         <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                             Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                         </p>
-                        <Pagination
-                            showIcons
-                            currentPage={currentPage}
-                            totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
-                            onPageChange={handlePageChange}
-                        />
+                        
+                        {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
+                        {isMobile ? (
+                            <div className="mt-4">
+                                <MobileSimplePagination />
+                            </div>
+                        ) : (
+                            <Pagination
+                                showIcons
+                                currentPage={currentPage}
+                                totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                                onPageChange={handlePageChange}
+                            />
+                        )}
                     </div>
                 </>
             ) : showTable ? (

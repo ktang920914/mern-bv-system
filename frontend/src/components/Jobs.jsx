@@ -234,10 +234,40 @@ const Jobs = () => {
     const totalEntries = filteredJobs.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+    // 移动端简洁分页组件 - 只显示 Previous/Next
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="flex items-center"
+            >
+                <span>‹</span>
+                <span className="ml-1">Previous</span>
+            </Button>
+
+            <Button
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="flex items-center"
+            >
+                <span className="mr-1">Next</span>
+                <span>›</span>
+            </Button>
+        </div>
+    )
 
     // 移动端卡片组件
     const JobCard = ({ job }) => (
-        <div className={`p-4 mb-4 rounded-lg shadow ${theme === 'light' ? 'bg-white border border-gray-200' : 'bg-gray-800 border border-gray-700'}`}>
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' 
+                ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+                : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+        }`}>
             <div className="grid grid-cols-2 gap-2 mb-3">
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Ext</p>
@@ -276,7 +306,7 @@ const Jobs = () => {
                     arrow={false}
                 >
                     <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-                        theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                        theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
                     }`}>
                         {job.lotno}
                     </span>
@@ -286,7 +316,7 @@ const Jobs = () => {
             <div className="flex gap-2">
                 <Button 
                     outline 
-                    className='cursor-pointer flex-1 py-2 text-sm' 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
                     onClick={() => handleUpdate(job)}
                 >
                     Edit
@@ -294,7 +324,7 @@ const Jobs = () => {
                 <Button 
                     color='red' 
                     outline 
-                    className='cursor-pointer flex-1 py-2 text-sm' 
+                    className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
                     onClick={() => {
                         setJobIdToDelete(job._id)
                         setOpenModalDeleteJob(!openModalDeleteJob)
@@ -392,12 +422,20 @@ const Jobs = () => {
                 <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                     Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                 </p>
-                <Pagination
-                    showIcons
-                    currentPage={currentPage}
-                    totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
-                    onPageChange={handlePageChange}
-                />
+                
+                {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
+                {isMobile ? (
+                    <div className="mt-4">
+                        <MobileSimplePagination />
+                    </div>
+                ) : (
+                    <Pagination
+                        showIcons
+                        currentPage={currentPage}
+                        totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                        onPageChange={handlePageChange}
+                    />
+                )}
             </div>
 
             {/* 模态框保持不变 */}

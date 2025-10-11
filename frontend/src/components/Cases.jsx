@@ -397,6 +397,31 @@ const Cases = () => {
     )
     const totalPages = Math.ceil(filteredTableData.length / itemsPage)
 
+    // 移动端简洁分页组件 - 只显示 Previous/Next
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+                className="flex items-center"
+            >
+                <span>‹</span>
+                <span className="ml-1">Previous</span>
+            </Button>
+
+            <Button
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+                className="flex items-center"
+            >
+                <span className="mr-1">Next</span>
+                <span>›</span>
+            </Button>
+        </div>
+    )
+
     // 移动端卡片渲染函数
     const renderMobileCards = () => {
         return (
@@ -732,12 +757,20 @@ const Cases = () => {
                     <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
                         Showing {Math.min(filteredTableData.length, (currentPage - 1) * itemsPage + 1)} to {Math.min(currentPage * itemsPage, filteredTableData.length)} of {filteredTableData.length} Entries
                     </p>
-                    <Pagination
-                        showIcons
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                    />
+                    
+                    {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
+                    {isMobile ? (
+                        <div className="mt-4">
+                            <MobileSimplePagination />
+                        </div>
+                    ) : (
+                        <Pagination
+                            showIcons
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                        />
+                    )}
                 </div>
             )}
         </div>

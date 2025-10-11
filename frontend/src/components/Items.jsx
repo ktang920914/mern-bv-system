@@ -187,11 +187,37 @@ const Items = () => {
     const totalEntries = filteredItems.length;
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1;
     const showingTo = Math.min(indexOfLastItem, totalEntries);
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage));
     
     const handlePageChange = (page) => {
         setCurrentPage(page)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
+
+    // 移动端简洁分页组件 - 只显示 Previous/Next
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="flex items-center"
+            >
+                <span>‹</span>
+                <span className="ml-1">Previous</span>
+            </Button>
+
+            <Button
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="flex items-center"
+            >
+                <span className="mr-1">Next</span>
+                <span>›</span>
+            </Button>
+        </div>
+    )
 
     // 修改 QR 码生成函数，确保使用最新的数据
     const generateQRContent = (item) => {
@@ -421,9 +447,24 @@ const Items = () => {
                 </div>
             )}
 
-            <div className="flex flex-col items-center mt-4">
-                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>Showing {showingFrom} to {showingTo} of {totalEntries} entries</p>
-                <Pagination showIcons currentPage={currentPage} totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))} onPageChange={handlePageChange} />
+            <div className="flex-col justify-center text-center mt-4">
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+                    Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+                </p>
+                
+                {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
+                {isMobile ? (
+                    <div className="mt-4">
+                        <MobileSimplePagination />
+                    </div>
+                ) : (
+                    <Pagination
+                        showIcons
+                        currentPage={currentPage}
+                        totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                        onPageChange={handlePageChange}
+                    />
+                )}
             </div>
 
             {/* 模态框保持不变 */}
