@@ -346,7 +346,9 @@ const Oee = () => {
                         placement="top"
                         arrow={false}
                     >
-                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            getOeeColorClass(job.oee)
+                        }`}>
                             {getOeePercentage(job.oee)}%
                         </span>
                     </Popover>
@@ -368,7 +370,7 @@ const Oee = () => {
                     />
                 </div>
                 <Button 
-                    color='blue' 
+                    color='green' 
                     className='cursor-pointer w-full sm:w-auto'
                     onClick={generateExcelReport}
                 >

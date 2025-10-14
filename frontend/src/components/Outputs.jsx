@@ -592,7 +592,7 @@ const Outputs = () => {
                         Change Year
                     </Button>
                     <Button 
-                        color='blue' 
+                        color='green' 
                         className='cursor-pointer flex-1 sm:flex-none'
                         onClick={generateExcelReport}
                         disabled={outputs.length === 0}
