@@ -109,15 +109,11 @@ export const updateCaseStats = async (req, res, next) => {
             return res.status(400).json({ message: 'Year is required' });
         }
         
-        console.log(`Updating case statistics for year: ${year}`);
-        
         // 删除该年的所有现有案例数据
         await Case.deleteMany({ year });
-        console.log('Deleted existing case data for year:', year);
         
         // 获取所有维护记录
         const maintenances = await Maintenance.find();
-        console.log(`Found ${maintenances.length} maintenance records`);
         
         // 月份名称映射
         const monthNames = {
@@ -189,8 +185,6 @@ export const updateCaseStats = async (req, res, next) => {
             
             processedCount++;
         });
-        
-        console.log(`Processed ${processedCount} maintenance records for statistics`);
         
         // 保存到数据库
         const caseData = Object.values(caseStats);
