@@ -275,7 +275,7 @@ const Jobs = () => {
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Prod Start</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.starttime}</p>
+                    <p className='text-green-500 font-semibold'>{job.starttime}</p>
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Order Date</p>
@@ -283,7 +283,7 @@ const Jobs = () => {
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Prod End</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{job.endtime}</p>
+                    <p className='text-red-600 font-semibold'>{job.endtime}</p>
                 </div>
             </div>
             
@@ -371,8 +371,8 @@ const Jobs = () => {
                         {currentJobs.map((job) => (
                             <TableRow key={job._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                 <TableCell className="align-middle">{job.code}</TableCell>
-                                <TableCell className="align-middle">{job.starttime}</TableCell>
-                                <TableCell className="align-middle">{job.endtime}</TableCell>
+                                <TableCell className="align-middle text-green-500 font-semibold">{job.starttime}</TableCell>
+                                <TableCell className="align-middle text-red-600 font-semibold">{job.endtime}</TableCell>
                                 <TableCell className="align-middle">{job.orderdate}</TableCell>
                                 <TableCell className="align-middle">
                                     <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
