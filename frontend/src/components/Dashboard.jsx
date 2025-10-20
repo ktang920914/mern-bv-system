@@ -102,15 +102,20 @@ const Dashboard = () => {
     { key: 'oct', name: 'Oct' }, { key: 'nov', name: 'Nov' }, { key: 'dec', name: 'Dec' }
   ]
 
+  // 辅助函数：处理浮点数精度
+  const formatNumber = (value) => {
+    if (value === null || value === undefined) return 0;
+    const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+    return parseFloat(num.toFixed(2));
+  }
+
   // 获取 Outputs 可用的 Job Code 列表
   useEffect(() => {
     const fetchOutputAvailableCodes = async () => {
       try {
-        // 使用 Job 的路由而不是 Maintenance 的路由
         const res = await fetch('/api/analysis/getjobs');
         const data = await res.json();
         if (res.ok) {
-          // 从 Job 数据中提取唯一的 code 字段
           const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
           setOutputAvailableCodes(jobCodes);
         }
@@ -126,11 +131,9 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchCasesAvailableCodes = async () => {
       try {
-        // 使用 Maintenance 的路由
         const res = await fetch('/api/maintenance/getmaintenances');
         const data = await res.json();
         if (res.ok) {
-          // 从 Maintenance 数据中提取唯一的 code 字段
           const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
           setCasesAvailableCodes(jobCodes);
         }
@@ -180,11 +183,20 @@ const Dashboard = () => {
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data)) {
-            const dataWithType = data.map(item => ({
-              ...item,
-              dataType: dataType.value,
-              dataTypeLabel: dataType.label
-            }))
+            const dataWithType = data.map(item => {
+              // 清理数据中的浮点数精度问题
+              const cleanedItem = { ...item };
+              monthFields.forEach(month => {
+                if (cleanedItem[month.key] !== undefined) {
+                  cleanedItem[month.key] = formatNumber(cleanedItem[month.key]);
+                }
+              });
+              return {
+                ...cleanedItem,
+                dataType: dataType.value,
+                dataTypeLabel: dataType.label
+              };
+            })
             allOutputs.push(...dataWithType)
           }
         }
@@ -201,7 +213,17 @@ const Dashboard = () => {
       if (res.ok) {
         const allCosts = await res.json()
         const filteredCosts = allCosts.filter(cost => cost.year === displayYear)
-        setCostsData(filteredCosts)
+        // 清理成本数据中的浮点数精度问题
+        const cleanedCosts = filteredCosts.map(cost => {
+          const cleanedCost = { ...cost };
+          monthFields.forEach(month => {
+            if (cleanedCost[month.key] !== undefined) {
+              cleanedCost[month.key] = formatNumber(cleanedCost[month.key]);
+            }
+          });
+          return cleanedCost;
+        });
+        setCostsData(cleanedCosts)
       }
     } catch (error) {
       setErrorMessage('Error fetching costs data: ' + error.message)
@@ -221,7 +243,13 @@ const Dashboard = () => {
       const res = await fetch(`/api/case/getcases?${params}`)
       if (res.ok) {
         const casesData = await res.json()
-        setCasesData(casesData)
+        // 清理案例数据中的浮点数精度问题
+        const cleanedCasesData = casesData.map(caseItem => ({
+          ...caseItem,
+          totalCost: formatNumber(caseItem.totalCost),
+          count: formatNumber(caseItem.count)
+        }));
+        setCasesData(cleanedCasesData)
       }
     } catch (error) {
       console.error('Error fetching cases data:', error)
@@ -310,7 +338,7 @@ const Dashboard = () => {
 
   const clearCasesSelectedCodes = () => setCasesSelectedCodes([])
 
-  // 图表数据准备函数
+  // 修复后的图表数据准备函数
   const prepareOutputsChartData = () => {
     if (outputsData.length === 0) return null
     const selectedData = outputsData.find(output => output.dataType === selectedOutputDataType)
@@ -319,22 +347,72 @@ const Dashboard = () => {
     const labels = monthFields.map(month => month.name)
     const data = monthFields.map(month => {
       const value = selectedData[month.key]
-      return typeof value === 'number' ? value : parseFloat(value) || 0
+      return formatNumber(value)
     })
+
+    // 修复后的饼图插件配置
+    const piePlugins = {
+      legend: { 
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 11
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            // 修复：处理浮点数精度
+            const roundedValue = formatNumber(value);
+            const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+            return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
+          }
+        }
+      }
+    }
+
+    const plugins = selectedOutputChartType === 'pie' ? [piePlugins] : [];
 
     return {
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top' },
+          legend: { 
+            position: 'top',
+            labels: {
+              usePointStyle: selectedOutputChartType === 'pie',
+              padding: selectedOutputChartType === 'pie' ? 15 : 10,
+              font: {
+                size: selectedOutputChartType === 'pie' ? 11 : 12
+              }
+            }
+          },
           title: {
             display: true,
             text: `${outputDataTypes.find(dt => dt.value === selectedOutputDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
             font: { size: 14 }
           },
+          ...(selectedOutputChartType === 'pie' && {
+            tooltip: piePlugins.tooltip
+          })
         },
-        scales: selectedOutputChartType !== 'pie' ? { y: { beginAtZero: true } } : undefined
+        scales: selectedOutputChartType !== 'pie' ? { 
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return formatNumber(value);
+              }
+            }
+          } 
+        } : undefined
       },
       data: {
         labels,
@@ -343,14 +421,15 @@ const Dashboard = () => {
           data,
           backgroundColor: selectedOutputChartType === 'pie' ? [
             '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-            '#FF6384', '#C9CBCF', '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+            '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#84CC16'
           ] : 'rgba(54, 162, 235, 0.5)',
           borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 2,
+          borderWidth: 1,
           fill: selectedOutputChartType === 'line',
           tension: selectedOutputChartType === 'line' ? 0.1 : undefined
         }]
-      }
+      },
+      plugins: plugins
     }
   }
 
@@ -362,22 +441,72 @@ const Dashboard = () => {
     const labels = monthFields.map(month => month.name)
     const data = monthFields.map(month => {
       const value = selectedData[month.key]
-      return typeof value === 'number' ? value : parseFloat(value) || 0
+      return formatNumber(value)
     })
+
+    // 修复后的饼图插件配置
+    const piePlugins = {
+      legend: { 
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 11
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            // 修复：处理浮点数精度
+            const roundedValue = formatNumber(value);
+            const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+            return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
+          }
+        }
+      }
+    }
+
+    const plugins = selectedCostChartType === 'pie' ? [piePlugins] : [];
 
     return {
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top' },
+          legend: { 
+            position: 'top',
+            labels: {
+              usePointStyle: selectedCostChartType === 'pie',
+              padding: selectedCostChartType === 'pie' ? 15 : 10,
+              font: {
+                size: selectedCostChartType === 'pie' ? 11 : 12
+              }
+            }
+          },
           title: {
             display: true,
             text: `${selectedCostCategory} Costs - ${displayYear}`,
             font: { size: 14 }
           },
+          ...(selectedCostChartType === 'pie' && {
+            tooltip: piePlugins.tooltip
+          })
         },
-        scales: selectedCostChartType !== 'pie' ? { y: { beginAtZero: true } } : undefined
+        scales: selectedCostChartType !== 'pie' ? { 
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return formatNumber(value);
+              }
+            }
+          } 
+        } : undefined
       },
       data: {
         labels,
@@ -386,14 +515,15 @@ const Dashboard = () => {
           data,
           backgroundColor: selectedCostChartType === 'pie' ? [
             '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-            '#FF6384', '#C9CBCF', '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+            '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#84CC16'
           ] : 'rgba(255, 99, 132, 0.5)',
           borderColor: 'rgba(255, 99, 132, 1)',
-          borderWidth: 2,
+          borderWidth: 1,
           fill: selectedCostChartType === 'line',
           tension: selectedCostChartType === 'line' ? 0.1 : undefined
         }]
-      }
+      },
+      plugins: plugins
     }
   }
 
@@ -405,22 +535,73 @@ const Dashboard = () => {
     const labels = monthFields.map(month => month.name)
     const data = monthFields.map(month => {
       const monthData = selectedData.find(d => d.month === month.name)
-      return monthData ? (casesDataType === 'cost' ? monthData.totalCost : monthData.count) : 0
+      const value = monthData ? (casesDataType === 'cost' ? monthData.totalCost : monthData.count) : 0
+      return formatNumber(value)
     })
+
+    // 修复后的饼图插件配置
+    const piePlugins = {
+      legend: { 
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 11
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            // 修复：处理浮点数精度
+            const roundedValue = formatNumber(value);
+            const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+            return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
+          }
+        }
+      }
+    }
+
+    const plugins = selectedCaseChartType === 'pie' ? [piePlugins] : [];
 
     return {
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top' },
+          legend: { 
+            position: 'top',
+            labels: {
+              usePointStyle: selectedCaseChartType === 'pie',
+              padding: selectedCaseChartType === 'pie' ? 15 : 10,
+              font: {
+                size: selectedCaseChartType === 'pie' ? 11 : 12
+              }
+            }
+          },
           title: {
             display: true,
             text: `${selectedCaseType} ${casesDataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}${casesSelectedCodes.length > 0 ? ` (${casesSelectedCodes.join(', ')})` : ''}`,
             font: { size: 14 }
           },
+          ...(selectedCaseChartType === 'pie' && {
+            tooltip: piePlugins.tooltip
+          })
         },
-        scales: selectedCaseChartType !== 'pie' ? { y: { beginAtZero: true } } : undefined
+        scales: selectedCaseChartType !== 'pie' ? { 
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return formatNumber(value);
+              }
+            }
+          } 
+        } : undefined
       },
       data: {
         labels,
@@ -429,14 +610,15 @@ const Dashboard = () => {
           data,
           backgroundColor: selectedCaseChartType === 'pie' ? [
             '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-            '#FF6384', '#C9CBCF', '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+            '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#84CC16'
           ] : casesDataType === 'cost' ? 'rgba(75, 192, 192, 0.5)' : 'rgba(54, 162, 235, 0.5)',
           borderColor: casesDataType === 'cost' ? 'rgba(75, 192, 192, 1)' : 'rgba(54, 162, 235, 1)',
-          borderWidth: 2,
+          borderWidth: 1,
           fill: selectedCaseChartType === 'line',
           tension: selectedCaseChartType === 'line' ? 0.1 : undefined
         }]
-      }
+      },
+      plugins: plugins
     }
   }
 
@@ -456,7 +638,7 @@ const Dashboard = () => {
       <div className="h-48">
         {chartType === 'bar' && <Bar options={chartData.options} data={chartData.data} />}
         {chartType === 'line' && <Line options={chartData.options} data={chartData.data} />}
-        {chartType === 'pie' && <Pie options={chartData.options} data={chartData.data} />}
+        {chartType === 'pie' && <Pie options={chartData.options} data={chartData.data} plugins={chartData.plugins} />}
       </div>
     )
   }
@@ -640,12 +822,6 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
-              
-              {/*<div className="mt-2">
-                <Button size="xs" onClick={() => handleUpdateCasesStats(false)} disabled={isUpdatingCases} className="text-xs px-2 py-1">
-                  {isUpdatingCases ? <Spinner size="sm" /> : 'Update Stats'}
-                </Button>
-              </div>*/}
             </div>
             
             <div className="flex flex-wrap gap-2">

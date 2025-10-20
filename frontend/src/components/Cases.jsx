@@ -56,6 +56,13 @@ const Cases = () => {
     const [availableCodes, setAvailableCodes] = useState([]) // 可用的 Job Code 列表
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
 
+    // 辅助函数：处理浮点数精度
+    const formatNumber = (value) => {
+        if (value === undefined || value === null) return 0;
+        const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+        return parseFloat(num.toFixed(2));
+    }
+
     // 检测屏幕大小变化
     useEffect(() => {
         const handleResize = () => {
@@ -170,7 +177,13 @@ const Cases = () => {
                 const res2 = await fetch(`/api/case/getcases?${params}`);
                 const data2 = await res2.json();
                 if (res2.ok) {
-                    setCases(data2);
+                    // 清理数据精度
+                    const cleanedCases = data2.map(caseItem => ({
+                        ...caseItem,
+                        totalCost: formatNumber(caseItem.totalCost),
+                        count: formatNumber(caseItem.count)
+                    }));
+                    setCases(cleanedCases);
                 }
             } else {
                 setErrorMessage(data.message || 'Failed to update statistics');
@@ -223,11 +236,11 @@ const Cases = () => {
             monthFields.forEach(month => {
                 const caseData = cases.find(c => c.type === type && c.month === month.name)
                 const value = caseData ? (dataType === 'cost' ? caseData.totalCost : caseData.count) : 0
-                row[month.key] = value
+                row[month.key] = formatNumber(value)
                 total += value
             })
             
-            row.total = total
+            row.total = formatNumber(total)
             tableData.push(row)
         })
         
@@ -253,8 +266,38 @@ const Cases = () => {
         
         const data = monthFields.map(month => {
             const monthData = selectedData.find(d => d.month === month.name)
-            return monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0
+            const value = monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0
+            return formatNumber(value)
         })
+
+        // 修复后的饼图插件配置
+        const piePlugins = {
+            legend: { 
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: {
+                        size: 11
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        // 修复：处理浮点数精度
+                        const roundedValue = formatNumber(value);
+                        const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+                        return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
+                    }
+                }
+            }
+        }
+
+        const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
         const options = {
             responsive: true,
@@ -270,6 +313,9 @@ const Cases = () => {
                         size: 16
                     }
                 },
+                ...(selectedChartType === 'pie' && {
+                    tooltip: piePlugins.tooltip
+                })
             },
             scales: selectedChartType !== 'pie' ? {
                 y: {
@@ -277,6 +323,11 @@ const Cases = () => {
                     title: {
                         display: true,
                         text: dataType === 'cost' ? 'Cost Amount' : 'Number of Cases'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
                     }
                 },
                 x: {
@@ -309,7 +360,7 @@ const Cases = () => {
             ],
         }
 
-        return { options, data: chartData }
+        return { options, data: chartData, plugins }
     }
 
     const generateExcelReport = () => {
@@ -340,11 +391,11 @@ const Cases = () => {
                 
                 monthFields.forEach(month => {
                     const value = row[month.key] || 0
-                    rowData.push(dataType === 'cost' ? `$${value.toFixed(2)}` : value)
+                    rowData.push(dataType === 'cost' ? `$${formatDisplayNumber(value)}` : formatDisplayNumber(value))
                 })
                 
                 const totalValue = row.total || 0
-                rowData.push(dataType === 'cost' ? `$${totalValue.toFixed(2)}` : totalValue)
+                rowData.push(dataType === 'cost' ? `$${formatDisplayNumber(totalValue)}` : formatDisplayNumber(totalValue))
                 worksheetData.push(rowData)
             })
             
@@ -381,13 +432,11 @@ const Cases = () => {
         }
     }
 
-    // 格式化数字显示
-    const formatNumber = (value) => {
-        if (value === undefined || value === null) return '0';
-        if (dataType === 'cost') {
-            return typeof value === 'number' ? value.toFixed(2) : parseFloat(value || 0).toFixed(2);
-        }
-        return typeof value === 'number' ? value.toString() : value || '0';
+    // 格式化数字显示（保留2位小数）- 用于显示
+    const formatDisplayNumber = (value) => {
+        if (value === undefined || value === null) return '0.00';
+        const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+        return num.toFixed(2);
     }
 
     const chartData = prepareChartData()
@@ -440,15 +489,15 @@ const Cases = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Jan)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Jan)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Feb)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Feb)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Mar)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Mar)}</div>
                                 </div>
                             </div>
                             
@@ -456,15 +505,15 @@ const Cases = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Apr)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Apr)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.May)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.May)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Jun)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Jun)}</div>
                                 </div>
                             </div>
                             
@@ -472,15 +521,15 @@ const Cases = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Jul)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Jul)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Aug)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Aug)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Sep)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Sep)}</div>
                                 </div>
                             </div>
                             
@@ -488,15 +537,15 @@ const Cases = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Oct)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Oct)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Nov)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Nov)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(item.Dec)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Dec)}</div>
                                 </div>
                             </div>
                         </div>
@@ -506,7 +555,7 @@ const Cases = () => {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
                                 <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                    {formatNumber(item.total)}
+                                    {formatDisplayNumber(item.total)}
                                 </span>
                             </div>
                         </div>
@@ -693,7 +742,7 @@ const Cases = () => {
                                 <Line options={chartData.options} data={chartData.data} />
                             )}
                             {selectedChartType === 'pie' && (
-                                <Pie options={chartData.options} data={chartData.data} />
+                                <Pie options={chartData.options} data={chartData.data} plugins={chartData.plugins} />
                             )}
                         </div>
                     ) : (
@@ -733,15 +782,15 @@ const Cases = () => {
                                         {monthFields.map(month => (
                                             <TableCell className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
                                                 {dataType === 'cost' ? 
-                                                    `${item[month.key] ? item[month.key].toFixed(2) : '0.00'}` : 
-                                                    item[month.key] || 0
+                                                    `${formatDisplayNumber(item[month.key])}` : 
+                                                    formatDisplayNumber(item[month.key])
                                                 }
                                             </TableCell>
                                         ))}
                                         <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                             {dataType === 'cost' ? 
-                                                `${item.total ? item.total.toFixed(2) : '0.00'}` : 
-                                                item.total || 0
+                                                `${formatDisplayNumber(item.total)}` : 
+                                                formatDisplayNumber(item.total)
                                             }
                                         </TableCell>
                                     </TableRow>

@@ -53,6 +53,13 @@ const Costs = () => {
     const [selectedCategory, setSelectedCategory] = useState('Spareparts') // 默认显示第一个类别
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
 
+    // 辅助函数：处理浮点数精度
+    const formatNumber = (value) => {
+        if (value === undefined || value === null) return 0;
+        const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+        return parseFloat(num.toFixed(2));
+    }
+
     // 检测屏幕大小变化
     useEffect(() => {
         const handleResize = () => {
@@ -124,7 +131,20 @@ const Costs = () => {
                 if (res.ok) {
                     const currentYear = new Date().getFullYear().toString()
                     const filteredCosts = data.filter(cost => cost.year === currentYear)
-                    setCosts(filteredCosts)
+                    // 清理数据精度
+                    const cleanedCosts = filteredCosts.map(cost => {
+                        const cleanedCost = { ...cost };
+                        monthFields.forEach(month => {
+                            if (cleanedCost[month.key] !== undefined) {
+                                cleanedCost[month.key] = formatNumber(cleanedCost[month.key]);
+                            }
+                        });
+                        if (cleanedCost.total !== undefined) {
+                            cleanedCost.total = formatNumber(cleanedCost.total);
+                        }
+                        return cleanedCost;
+                    });
+                    setCosts(cleanedCosts)
                     setDisplayYear(currentYear) 
                     setShowTable(true)
                 }
@@ -158,7 +178,20 @@ const Costs = () => {
             }
             if (res.ok) {
                 const filteredCosts = data.filter(cost => cost.year === formData.year)
-                setCosts(filteredCosts)
+                // 清理数据精度
+                const cleanedCosts = filteredCosts.map(cost => {
+                    const cleanedCost = { ...cost };
+                    monthFields.forEach(month => {
+                        if (cleanedCost[month.key] !== undefined) {
+                            cleanedCost[month.key] = formatNumber(cleanedCost[month.key]);
+                        }
+                    });
+                    if (cleanedCost.total !== undefined) {
+                        cleanedCost.total = formatNumber(cleanedCost.total);
+                    }
+                    return cleanedCost;
+                });
+                setCosts(cleanedCosts)
                 setShowTable(true)
                 setOpenModalCreateCost(false)
                 setDisplayYear(formData.year)
@@ -190,13 +223,40 @@ const Costs = () => {
         // 月份标签
         const labels = monthFields.map(month => month.name);
         
-        // 数据值
+        // 数据值 - 使用 formatNumber 确保精度
         const data = monthFields.map(month => {
             const value = selectedData[month.key];
-            // 确保返回数字类型
-            const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
-            return numericValue;
+            return formatNumber(value);
         });
+
+        // 修复后的饼图插件配置
+        const piePlugins = {
+            legend: { 
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: {
+                        size: 11
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        // 修复：处理浮点数精度
+                        const roundedValue = formatNumber(value);
+                        const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+                        return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
+                    }
+                }
+            }
+        }
+
+        const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
         // 图表配置
         const options = {
@@ -213,6 +273,9 @@ const Costs = () => {
                         size: 16
                     }
                 },
+                ...(selectedChartType === 'pie' && {
+                    tooltip: piePlugins.tooltip
+                })
             },
             scales: selectedChartType !== 'pie' ? {
                 y: {
@@ -220,6 +283,11 @@ const Costs = () => {
                     title: {
                         display: true,
                         text: 'Cost Value'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
                     }
                 },
                 x: {
@@ -253,7 +321,7 @@ const Costs = () => {
             ],
         };
 
-        return { options, data: chartData };
+        return { options, data: chartData, plugins };
     };
 
     const handleSearch = (e) => {
@@ -303,10 +371,11 @@ const Costs = () => {
         </div>
     )
 
-    // 格式化数字显示（保留2位小数）
-    const formatNumber = (value) => {
-        if (value === undefined || value === null) return '0';
-        return typeof value === 'number' ? value.toFixed(2) : value;
+    // 格式化数字显示（保留2位小数）- 用于显示
+    const formatDisplayNumber = (value) => {
+        if (value === undefined || value === null) return '0.00';
+        const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+        return num.toFixed(2);
     }
 
     const generateExcelReport = () => {
@@ -333,11 +402,11 @@ const Costs = () => {
             
             monthFields.forEach(month => {
                 const value = costData ? costData[month.key] || 0 : 0
-                rowData.push(typeof value === 'number' ? value.toFixed(2) : value)
+                rowData.push(formatDisplayNumber(value))
             })
             
             const total = costData ? costData.total || 0 : 0
-            rowData.push(typeof total === 'number' ? total.toFixed(2) : total)
+            rowData.push(formatDisplayNumber(total))
             
             worksheetData.push(rowData)
         })
@@ -391,15 +460,15 @@ const Costs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.jan)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.jan)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.feb)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.feb)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.mar)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.mar)}</div>
                                 </div>
                             </div>
                             
@@ -407,15 +476,15 @@ const Costs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.apr)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.apr)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.may)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.may)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.jun)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.jun)}</div>
                                 </div>
                             </div>
                             
@@ -423,15 +492,15 @@ const Costs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.jul)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.jul)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.aug)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.aug)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.sep)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.sep)}</div>
                                 </div>
                             </div>
                             
@@ -439,15 +508,15 @@ const Costs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.oct)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.oct)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.nov)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.nov)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(cost.dec)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(cost.dec)}</div>
                                 </div>
                             </div>
                         </div>
@@ -457,7 +526,7 @@ const Costs = () => {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
                                 <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                    {formatNumber(cost.total)}
+                                    {formatDisplayNumber(cost.total)}
                                 </span>
                             </div>
                         </div>
@@ -538,7 +607,7 @@ const Costs = () => {
                                 <Line options={chartData.options} data={chartData.data} />
                             )}
                             {selectedChartType === 'pie' && (
-                                <Pie options={chartData.options} data={chartData.data} />
+                                <Pie options={chartData.options} data={chartData.data} plugins={chartData.plugins} />
                             )}
                         </div>
                     ) : (
@@ -573,11 +642,11 @@ const Costs = () => {
                                         </TableCell>
                                         {monthFields.map(month => (
                                             <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
-                                                {formatNumber(cost[month.key])} 
+                                                {formatDisplayNumber(cost[month.key])} 
                                             </TableCell>
                                         ))}
                                         <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {formatNumber(cost.total)}
+                                            {formatDisplayNumber(cost.total)}
                                         </TableCell>
                                     </TableRow>
                                 ))}

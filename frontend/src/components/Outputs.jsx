@@ -57,6 +57,13 @@ const Outputs = () => {
     const [availableCodes, setAvailableCodes] = useState([]) // 新增
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
 
+    // 辅助函数：处理浮点数精度
+    const formatNumber = (value) => {
+        if (value === undefined || value === null) return 0;
+        const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+        return parseFloat(num.toFixed(2));
+    }
+
     // 检测屏幕大小变化
     useEffect(() => {
         const handleResize = () => {
@@ -184,17 +191,39 @@ const Outputs = () => {
                     const data = await res.json()
                     // 确保数据格式正确
                     if (Array.isArray(data)) {
-                        // 为每个数据项添加标识符
-                        const dataWithType = data.map(item => ({
-                            ...item,
-                            dataType: dataType.value,
-                            dataTypeLabel: dataType.label
-                        }))
+                        // 为每个数据项添加标识符并清理数据精度
+                        const dataWithType = data.map(item => {
+                            const cleanedItem = { ...item };
+                            // 清理月份数据中的浮点数精度
+                            monthFields.forEach(month => {
+                                if (cleanedItem[month.key] !== undefined) {
+                                    cleanedItem[month.key] = formatNumber(cleanedItem[month.key]);
+                                }
+                            });
+                            // 清理总计数据
+                            if (cleanedItem.total !== undefined) {
+                                cleanedItem.total = formatNumber(cleanedItem.total);
+                            }
+                            return {
+                                ...cleanedItem,
+                                dataType: dataType.value,
+                                dataTypeLabel: dataType.label
+                            }
+                        })
                         allOutputs.push(...dataWithType)
                     } else if (typeof data === 'object') {
-                        // 为单个数据对象添加标识符
+                        // 为单个数据对象添加标识符并清理精度
+                        const cleanedData = { ...data };
+                        monthFields.forEach(month => {
+                            if (cleanedData[month.key] !== undefined) {
+                                cleanedData[month.key] = formatNumber(cleanedData[month.key]);
+                            }
+                        });
+                        if (cleanedData.total !== undefined) {
+                            cleanedData.total = formatNumber(cleanedData.total);
+                        }
                         allOutputs.push({
-                            ...data,
+                            ...cleanedData,
                             dataType: dataType.value,
                             dataTypeLabel: dataType.label
                         })
@@ -241,16 +270,42 @@ const Outputs = () => {
         // 月份标签
         const labels = monthFields.map(month => month.name);
         
-        // 数据值
+        // 数据值 - 使用 formatNumber 确保精度
         const data = monthFields.map(month => {
             const value = selectedData[month.key];
-            // 确保返回数字类型
-            const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
-            console.log(`Month ${month.key}:`, value, '->', numericValue);
-            return numericValue;
+            return formatNumber(value);
         });
 
         console.log('Chart data values:', data);
+
+        // 修复后的饼图插件配置
+        const piePlugins = {
+            legend: { 
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: {
+                        size: 11
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        // 修复：处理浮点数精度
+                        const roundedValue = formatNumber(value);
+                        const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+                        return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
+                    }
+                }
+            }
+        }
+
+        const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
         // 图表配置
         const options = {
@@ -267,6 +322,9 @@ const Outputs = () => {
                         size: 16
                     }
                 },
+                ...(selectedChartType === 'pie' && {
+                    tooltip: piePlugins.tooltip
+                })
             },
             scales: selectedChartType !== 'pie' ? {
                 y: {
@@ -274,6 +332,11 @@ const Outputs = () => {
                     title: {
                         display: true,
                         text: 'Value'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
                     }
                 },
                 x: {
@@ -307,7 +370,7 @@ const Outputs = () => {
             ],
         };
 
-        return { options, data: chartData };
+        return { options, data: chartData, plugins };
     };
 
     const generateExcelReport = () => {
@@ -343,11 +406,11 @@ const Outputs = () => {
                 
                 monthFields.forEach(month => {
                     const value = output[month.key] || 0
-                    rowData.push(typeof value === 'number' ? value.toFixed(2) : value)
+                    rowData.push(formatNumber(value))
                 })
                 
                 const total = output.total || 0
-                rowData.push(typeof total === 'number' ? total.toFixed(2) : total)
+                rowData.push(formatNumber(total))
                 
                 worksheetData.push(rowData)
             })
@@ -471,10 +534,11 @@ const Outputs = () => {
         </div>
     )
 
-    // 格式化数字显示（保留2位小数）
-    const formatNumber = (value) => {
-        if (value === undefined || value === null) return '0';
-        return typeof value === 'number' ? value.toFixed(2) : value;
+    // 格式化数字显示（保留2位小数）- 用于显示
+    const formatDisplayNumber = (value) => {
+        if (value === undefined || value === null) return '0.00';
+        const num = typeof value === 'number' ? value : parseFloat(value) || 0;
+        return num.toFixed(2);
     }
 
     // 获取图表数据
@@ -498,15 +562,15 @@ const Outputs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.jan)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.jan)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.feb)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.feb)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.mar)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.mar)}</div>
                                 </div>
                             </div>
                             
@@ -514,15 +578,15 @@ const Outputs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.apr)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.apr)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.may)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.may)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.jun)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.jun)}</div>
                                 </div>
                             </div>
                             
@@ -530,15 +594,15 @@ const Outputs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.jul)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.jul)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.aug)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.aug)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.sep)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.sep)}</div>
                                 </div>
                             </div>
                             
@@ -546,15 +610,15 @@ const Outputs = () => {
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.oct)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.oct)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.nov)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.nov)}</div>
                                 </div>
                                 <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                                     <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatNumber(output.dec)}</div>
+                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.dec)}</div>
                                 </div>
                             </div>
                         </div>
@@ -564,7 +628,7 @@ const Outputs = () => {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
                                 <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                    {formatNumber(output.total)}
+                                    {formatDisplayNumber(output.total)}
                                 </span>
                             </div>
                         </div>
@@ -712,7 +776,7 @@ const Outputs = () => {
                                 <Line options={chartData.options} data={chartData.data}/>
                             )}
                             {selectedChartType === 'pie' && (
-                                <Pie options={chartData.options} data={chartData.data}/>
+                                <Pie options={chartData.options} data={chartData.data} plugins={chartData.plugins}/>
                             )}
                         </div>
                     ) : (
@@ -752,11 +816,11 @@ const Outputs = () => {
                                         </TableCell>
                                         {monthFields.map(month => (
                                             <TableCell key={month.key} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                                {formatNumber(output[month.key])}
+                                                {formatDisplayNumber(output[month.key])}
                                             </TableCell>
                                         ))}
                                         <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {formatNumber(output.total)}
+                                            {formatDisplayNumber(output.total)}
                                         </TableCell>
                                     </TableRow>
                                 ))}
