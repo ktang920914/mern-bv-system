@@ -209,6 +209,16 @@ const DashSidebar = () => {
                 className={currentTheme.collapse}
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
+                <Link to='/?tab=Extruders'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Extruders'} 
+                    as='div'
+                    className={tab === 'Extruders' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Extruders
+                  </SidebarItem>
+                </Link>
                 <Link to='/?tab=Items'>
                   <SidebarItem 
                     onClick={() => setSidebarOpen(false)} 

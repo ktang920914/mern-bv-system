@@ -21,6 +21,7 @@ import Cases from "../components/Cases"
 import Products from "../components/Products"
 import Movement from "../components/Movement"
 import Materials from "../components/Materials"
+import Extruders from "../components/Extruders"
 
 const Home = () => {
   const { theme } = useThemeStore()
@@ -67,6 +68,7 @@ const Home = () => {
           {tab === 'Suppliers' && <Suppliers/>}
           {tab === 'Orders' && <Orders/>}
           {tab === 'Costs' && <Costs/>}
+          {tab === 'Extruders' && <Extruders/>}
           {tab === 'Items' && <Items/>}
           {tab === 'Transactions' && <Transactions/>}
           {tab === 'Maintenances' && <Maintenance/>}

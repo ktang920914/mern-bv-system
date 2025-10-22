@@ -17,6 +17,7 @@ const Transactions = () => {
   const [errorMessage,setErrorMessage] = useState(null)
   const [loading,setLoading] = useState(false)
   const [items,setItems] = useState([])
+  const [extruders,setExtruders] = useState([])
   const [records,setRecords] = useState([])
   const [openModalDeleteRecord,setOpenModalDeleteRecord] = useState(false)
   const [openModalUpdateRecord,setOpenModalUpdateRecord] = useState(false)
@@ -74,6 +75,24 @@ const Transactions = () => {
       }
     }
     fetchItems()
+  },[currentUser._id])
+
+  useEffect(() => {
+    const fetchExtruders = async () => {
+      try {
+        const res = await fetch('/api/machine/getExtruders')
+        const data = await res.json()
+        if(data.success === false){
+          console.log(data.message)
+        }
+        if(res.ok){
+          setExtruders(data)
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+    }
+    fetchExtruders()
   },[currentUser._id])
 
   useEffect(() => {
@@ -498,6 +517,9 @@ const Transactions = () => {
                   <option></option>
                   {items.map((item) => (
                     <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                  ))}
+                  {extruders.map((extruder) => (
+                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                   ))}
                 </Select>
               </div>

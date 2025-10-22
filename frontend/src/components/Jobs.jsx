@@ -17,7 +17,7 @@ const Jobs = () => {
     const [updateFormData,setUpdateFormData] = useState({})
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
-    const [items,setItems] = useState([])
+    const [extruders,setExtruders] = useState([])
     const [jobs,setJobs] = useState([])
     const [jobIdToDelete,setJobIdToDelete] = useState('')
     const [jobIdToUpdate,setJobIdToUpdate] = useState('')
@@ -58,21 +58,21 @@ const Jobs = () => {
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
     useEffect(() => {
-        const fetchItems = async () => {
+        const fetchExtruders = async () => {
             try {
-                const res = await fetch('/api/inventory/getitems')
+                const res = await fetch('/api/machine/getExtruders')
                 const data = await res.json()
                 if(data.success === false){
                     console.log(data.message)
                 }
                 if(res.ok){
-                    setItems(data)
+                    setExtruders(data)
                 }
             } catch (error) {
                 console.log(error.message)
             }
         }
-        fetchItems()
+        fetchExtruders()
     },[currentUser._id])
 
     useEffect(() => {
@@ -450,8 +450,8 @@ const Jobs = () => {
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
                                     <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                         <option></option>
-                                    {items.map((item) => (
-                                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                                    {extruders.map((extruder) => (
+                                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                                     ))}
                                     </Select>
                                 </div>
@@ -542,8 +542,8 @@ const Jobs = () => {
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
                                     <Select  value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                         <option></option>
-                                    {items.map((item) => (
-                                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                                    {extruders.map((extruder) => (
+                                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                                     ))}
                                     </Select>
                                 </div>
