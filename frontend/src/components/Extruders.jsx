@@ -307,7 +307,7 @@ const Extruders = () => {
                         outline 
                         className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
                         onClick={() => {
-                            setItemIdToDelete(extruder._id)
+                            setExtruderIdToDelete(extruder._id)
                             setOpenModalDeleteExtruder(true)
                         }}
                     >
