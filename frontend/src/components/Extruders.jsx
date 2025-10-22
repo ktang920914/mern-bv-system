@@ -139,7 +139,7 @@ const Extruders = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch(`/api/machine/extruder/${extruderIdToUpdate}`, {
+            const res = await fetch(`/api/machine/update/${extruderIdToUpdate}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updateFormData)
