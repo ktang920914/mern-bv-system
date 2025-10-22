@@ -95,7 +95,7 @@ const Extruders = () => {
 
     // Open/close modals
     const handleCreateExtruder = () => { setOpenModalCreateExtruder(!openModalCreateExtruder); setErrorMessage(null); setLoading(false); };
-    const handleUpdate = (item) => {
+    const handleUpdate = (extruder) => {
         setErrorMessage(null); setLoading(false);
         setOpenModalUpdateExtruder(true);
         setExtruderIdToUpdate(extruder._id);

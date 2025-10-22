@@ -1,10 +1,45 @@
 import Transaction from "../models/transaction.model.js"
 import Inventory from "../models/inventory.model.js"
+import Extruder from "../models/extruder.model.js"
 import { errorHandler } from "../utils/error.js"
 import Activity from "../models/activity.model.js"
 
-// 通用的 QR 码更新函数 - 只修改日期格式
-const updateQRCode = async (inventory) => {
+// 检查记录属于哪种类型（inventory 或 extruder）
+const checkItemType = async (code) => {
+    const inventoryItem = await Inventory.findOne({ code });
+    if (inventoryItem) return 'inventory';
+    
+    const extruderItem = await Extruder.findOne({ code });
+    if (extruderItem) return 'extruder';
+    
+    return null;
+};
+
+// 根据类型获取对应的 item 和 QR 更新函数
+const getItemAndQRFunction = async (code) => {
+    const inventoryItem = await Inventory.findOne({ code });
+    if (inventoryItem) {
+        return {
+            item: inventoryItem,
+            updateQRFunction: updateInventoryQRCode,
+            type: 'inventory'
+        };
+    }
+    
+    const extruderItem = await Extruder.findOne({ code });
+    if (extruderItem) {
+        return {
+            item: extruderItem,
+            updateQRFunction: updateExtruderQRCode,
+            type: 'extruder'
+        };
+    }
+    
+    return null;
+};
+
+// 通用的 QR 码更新函数 - 用于 Inventory
+const updateInventoryQRCode = async (inventory) => {
     const formatDate = (date) => {
         return new Date(date).toLocaleString('zh-CN', {
             year: 'numeric',
@@ -31,14 +66,44 @@ const updateQRCode = async (inventory) => {
     return await inventory.save();
 };
 
+// 通用的 QR 码更新函数 - 用于 Extruder
+const updateExtruderQRCode = async (extruder) => {
+    const formatDate = (date) => {
+        return new Date(date).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
+    const qrCodeContent = JSON.stringify({
+        code: extruder.code,
+        type: extruder.type,
+        location: extruder.location,
+        supplier: extruder.supplier,
+        balance: extruder.balance,
+        status: extruder.status,
+        createdAt: formatDate(extruder.createdAt),
+        lastUpdated: formatDate(new Date())
+    });
+    
+    extruder.qrCode = qrCodeContent;
+    return await extruder.save();
+};
+
 export const record = async (req,res,next) => {
     const {date,code,transaction,quantity,user,status} = req.body
     try {
-        let inventory = await Inventory.findOne({code})
-
-        if(!inventory){
-            // 如果item不存在，创建默认的item
-            inventory = new Inventory({
+        // 检查 code 属于 inventory 还是 extruder
+        let itemData = await getItemAndQRFunction(code);
+        
+        if (!itemData) {
+            // 如果item不存在，自动判断创建哪种类型的默认item
+            // 这里可以根据code的格式或其他规则来判断，或者默认创建inventory
+            const defaultData = {
                 code,
                 balance: 0,
                 type: 'Unknown',
@@ -46,27 +111,38 @@ export const record = async (req,res,next) => {
                 supplier: 'Unknown',
                 status: 'Active',
                 createdAt: new Date().toISOString()
-            })
+            };
+
+            // 默认创建为 inventory，或者你可以根据业务规则调整
+            const newInventory = new Inventory(defaultData);
+            await newInventory.save();
+            
+            itemData = {
+                item: newInventory,
+                updateQRFunction: updateInventoryQRCode,
+                type: 'inventory'
+            };
         }
 
+        const { item, updateQRFunction } = itemData;
         const qty = Number(quantity)
-        let newBalance = inventory.balance; // 默认保持不变
+        let newBalance = item.balance; // 默认保持不变
 
         // 只有状态为 Active 时才进行库存计算
         if(status === 'Active'){
             if(transaction === 'In'){
-                newBalance = inventory.balance + qty
+                newBalance = item.balance + qty
             }else if(transaction === 'Out'){
-                if(inventory.balance < quantity){
+                if(item.balance < qty){
                     return next(errorHandler(404, 'Insufficient Stock'))
                 }
-                newBalance = inventory.balance - qty
+                newBalance = item.balance - qty
             }
             
-            // 更新inventory的balance（仅当Active时）
-            inventory.balance = newBalance
+            // 更新item的balance（仅当Active时）
+            item.balance = newBalance
             // 更新QR码内容（仅当Active时）
-            await updateQRCode(inventory);
+            await updateQRFunction(item);
         }
 
         const newTransaction = new Transaction({
@@ -81,7 +157,7 @@ export const record = async (req,res,next) => {
 
         await Promise.all([
             newTransaction.save(),
-            inventory.save()
+            item.save()
         ])
 
         const currentDate = new Date().toLocaleString();
@@ -122,32 +198,35 @@ export const deleteRecord = async (req,res,next) => {
             return next(errorHandler(400, 'Delete Failed: Can only delete the latest transaction. Please delete from the most recent one first.'))
         }
 
-        const inventory = await Inventory.findOne({ code: recordToDelete.code });
-        if(!inventory){
-            return next(errorHandler(404, 'Inventory item not found'))
+        // 根据 code 获取对应的 item
+        const itemData = await getItemAndQRFunction(recordToDelete.code);
+        if(!itemData){
+            return next(errorHandler(404, 'Item not found'))
         }
+
+        const { item, updateQRFunction } = itemData;
 
         // 只有原记录状态为 Active 时才进行库存回滚
         if(recordToDelete.status === 'Active'){
             let newBalance;
             if(recordToDelete.transaction === 'In'){
-                if(inventory.balance < recordToDelete.quantity){
+                if(item.balance < recordToDelete.quantity){
                     return next(errorHandler(400, 'Delete Failed: Insufficient stock'))
                 }
-                newBalance = inventory.balance - recordToDelete.quantity
+                newBalance = item.balance - recordToDelete.quantity
             }else if (recordToDelete.transaction === 'Out') {
-                newBalance = inventory.balance + recordToDelete.quantity
+                newBalance = item.balance + recordToDelete.quantity
             }
 
-            // 更新inventory的balance
-            inventory.balance = newBalance
+            // 更新item的balance
+            item.balance = newBalance
             
             // 更新QR码内容
-            await updateQRCode(inventory);
+            await updateQRFunction(item);
         }
 
         await Promise.all([
-            inventory.save(),
+            item.save(),
             Transaction.findByIdAndDelete(req.params.recordId)
         ]);
 
@@ -171,10 +250,13 @@ export const updateRecord = async (req, res, next) => {
             return next(errorHandler(404, 'Record not found'));
         }
 
-        const inventory = await Inventory.findOne({ code: record.code });
-        if (!inventory) {
-            return next(errorHandler(404, 'Inventory item not found'));
+        // 根据 code 获取对应的 item
+        const itemData = await getItemAndQRFunction(record.code);
+        if(!itemData){
+            return next(errorHandler(404, 'Item not found'));
         }
+
+        const { item, updateQRFunction } = itemData;
 
         // 获取新的状态和数量
         const newStatus = req.body.status || record.status;
@@ -216,8 +298,7 @@ export const updateRecord = async (req, res, next) => {
                 }
             }
 
-            // 更新记录的余额 - 使用recordBalance而不是runningBalance
-            // 对于当前记录，需要特殊处理
+            // 更新记录的余额
             if (rec._id.toString() === record._id.toString()) {
                 // 当前更新记录使用计算后的余额
                 updatePromises.push(
@@ -245,10 +326,10 @@ export const updateRecord = async (req, res, next) => {
         // 2. 获取更新后的当前记录
         const updatedRecord = await Transaction.findById(req.params.recordId);
 
-        // 3. 更新inventory的余额为最终计算的结果
-        inventory.balance = runningBalance;
-        await updateQRCode(inventory);
-        await inventory.save();
+        // 3. 更新item的余额为最终计算的结果
+        item.balance = runningBalance;
+        await updateQRFunction(item);
+        await item.save();
 
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({
