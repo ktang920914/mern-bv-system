@@ -42,6 +42,7 @@ const Cases = () => {
     const [errorMessage, setErrorMessage] = useState(null)
     const [successMessage, setSuccessMessage] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [loadingChart, setLoadingChart] = useState(false)
     const [cases, setCases] = useState([]) 
     const [displayYear, setDisplayYear] = useState(new Date().getFullYear().toString())
     const [searchParams, setSearchParams] = useSearchParams()
@@ -52,9 +53,10 @@ const Cases = () => {
     const [selectedCaseType, setSelectedCaseType] = useState('Breakdown')
     const [isUpdating, setIsUpdating] = useState(false)
     const [dataType, setDataType] = useState('count') // 'count' or 'cost'
-    const [selectedCodes, setSelectedCodes] = useState([]) // 新增：选中的 Job Codes
-    const [availableCodes, setAvailableCodes] = useState([]) // 可用的 Job Code 列表
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
+    const [selectedCodes, setSelectedCodes] = useState([])
+    const [availableCodes, setAvailableCodes] = useState([])
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [comparisonMode, setComparisonMode] = useState(false)
 
     // 辅助函数：处理浮点数精度
     const formatNumber = (value) => {
@@ -77,14 +79,12 @@ const Cases = () => {
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
         
-        // 处理页码参数
         if (currentPage === 1) {
             params.delete('page')
         } else {
             params.set('page', currentPage.toString())
         }
         
-        // 处理搜索参数
         if (searchTerm === '') {
             params.delete('search')
         } else {
@@ -94,26 +94,28 @@ const Cases = () => {
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
-     // 修复：获取可用的 Job Code 列表
+    // 获取可用的 Job Code 列表
     useEffect(() => {
         const fetchAvailableCodes = async () => {
             try {
-                // 使用现有的路由
                 const res = await fetch('/api/maintenance/getmaintenances');
                 const data = await res.json();
                 if (res.ok) {
-                    // 从 maintenance 数据中提取唯一的 code 字段
                     const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
                     setAvailableCodes(jobCodes);
                 }
             } catch (error) {
                 console.error('Error fetching job codes:', error);
-                // 如果 API 不存在，使用默认列表
                 setAvailableCodes(['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']);
             }
         };
         fetchAvailableCodes();
     }, []);
+
+    // 当 selectedCodes 或 comparisonMode 改变时自动更新数据
+    useEffect(() => {
+        handleUpdateStats(true); // 静默更新
+    }, [displayYear, selectedCodes, comparisonMode, dataType]);
 
     const caseTypes = ["Breakdown", "Kaizen", "Inspect", "Maintenance"]
 
@@ -143,64 +145,124 @@ const Cases = () => {
         { value: 'cost', label: 'Cost Amount' }
     ]
 
-    // 修改后的 handleUpdateStats 函数，支持静默更新
+    // 生成更多颜色用于图表
+    const generateColors = (count) => {
+        const baseColors = [
+            { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
+            { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
+            { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
+            { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
+            { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
+            { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
+            { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
+            { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
+            { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
+            { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' },
+            { bg: 'rgba(241, 196, 15, 0.5)', border: 'rgba(241, 196, 15, 1)' },
+            { bg: 'rgba(230, 126, 34, 0.5)', border: 'rgba(230, 126, 34, 1)' },
+            { bg: 'rgba(231, 76, 60, 0.5)', border: 'rgba(231, 76, 60, 1)' },
+            { bg: 'rgba(52, 152, 219, 0.5)', border: 'rgba(52, 152, 219, 1)' },
+            { bg: 'rgba(142, 68, 173, 0.5)', border: 'rgba(142, 68, 173, 1)' }
+        ];
+
+        if (count <= baseColors.length) {
+            return baseColors.slice(0, count);
+        }
+
+        const colors = [...baseColors];
+        for (let i = baseColors.length; i < count; i++) {
+            const hue = (i * 137.5) % 360;
+            colors.push({
+                bg: `hsla(${hue}, 70%, 65%, 0.5)`,
+                border: `hsl(${hue}, 70%, 50%)`
+            });
+        }
+        return colors;
+    };
+
+    // 数据获取函数 - 支持比较模式
     const handleUpdateStats = async (silent = false) => {
         try {
             if (!silent) {
                 setIsUpdating(true);
+                setLoading(true);
             }
+            setLoadingChart(true);
             setErrorMessage(null);
             setSuccessMessage(null);
-            
-            const res = await fetch('/api/case/updatecasestats', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    year: displayYear
-                })
-            });
-            
-            const data = await res.json();
-            
-            if (res.ok) {
-                // 重新获取数据
+
+            let allCases = [];
+
+            if (comparisonMode && selectedCodes.length > 0) {
+                // 比较模式：为每个选中的 Job Code 单独获取数据
+                console.log('Comparison mode: Fetching data for codes:', selectedCodes);
+                
+                const fetchPromises = selectedCodes.map(async (code) => {
+                    try {
+                        const params = new URLSearchParams({
+                            year: displayYear,
+                            code: code // 使用 code 参数
+                        });
+                        
+                        console.log(`Fetching data for ${code} with params:`, params.toString());
+                        
+                        const res = await fetch(`/api/case/getcases?${params}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log(`Data for ${code}:`, data);
+                            
+                            // 处理数据并添加 code 标识
+                            return data.map(caseItem => ({
+                                ...caseItem,
+                                totalCost: formatNumber(caseItem.totalCost),
+                                count: formatNumber(caseItem.count),
+                                code: code // 确保 code 字段正确设置
+                            }));
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching data for ${code}:`, error);
+                    }
+                    return [];
+                });
+                
+                const batchResults = await Promise.all(fetchPromises);
+                allCases = batchResults.flat();
+                console.log('All cases in comparison mode:', allCases);
+            } else {
+                // 普通模式：获取汇总数据
                 const params = new URLSearchParams({
                     year: displayYear
-                })
+                });
                 
                 if (selectedCodes.length > 0) {
-                    params.append('codes', selectedCodes.join(','))
+                    params.append('codes', selectedCodes.join(','));
                 }
                 
-                const res2 = await fetch(`/api/case/getcases?${params}`);
-                const data2 = await res2.json();
-                if (res2.ok) {
+                const res = await fetch(`/api/case/getcases?${params}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('Normal mode data:', data);
                     // 清理数据精度
-                    const cleanedCases = data2.map(caseItem => ({
+                    allCases = data.map(caseItem => ({
                         ...caseItem,
                         totalCost: formatNumber(caseItem.totalCost),
                         count: formatNumber(caseItem.count)
                     }));
-                    setCases(cleanedCases);
                 }
-            } else {
-                setErrorMessage(data.message || 'Failed to update statistics');
             }
+
+            setCases(allCases);
+            
         } catch (error) {
             setErrorMessage('Error updating statistics: ' + error.message);
         } finally {
             if (!silent) {
                 setIsUpdating(false);
+                setLoading(false);
             }
+            setLoadingChart(false);
         }
     };
-
-    // 在组件加载和依赖变化时自动更新数据
-    useEffect(() => {
-        handleUpdateStats(true); // 静默更新
-    }, [displayYear, selectedCodes]);
 
     const handleYearChange = (e) => {
         setDisplayYear(e.target.value)
@@ -225,7 +287,7 @@ const Cases = () => {
         setSelectedCodes([])
     }
 
-    // 准备表格数据
+    // 表格数据准备函数 - 支持比较模式
     const prepareTableData = () => {
         const tableData = []
         
@@ -234,17 +296,48 @@ const Cases = () => {
             let total = 0
             
             monthFields.forEach(month => {
-                const caseData = cases.find(c => c.type === type && c.month === month.name)
-                const value = caseData ? (dataType === 'cost' ? caseData.totalCost : caseData.count) : 0
-                row[month.key] = formatNumber(value)
-                total += value
+                let value = 0;
+                
+                if (comparisonMode && selectedCodes.length > 0) {
+                    // 比较模式：计算所有选中 codes 的总和
+                    const monthCases = cases.filter(c => 
+                        c.type === type && 
+                        c.month === month.name && 
+                        selectedCodes.includes(c.code)
+                    );
+                    const sum = monthCases.reduce((acc, curr) => {
+                        const currValue = dataType === 'cost' ? curr.totalCost : curr.count;
+                        return acc + (currValue || 0);
+                    }, 0);
+                    value = sum;
+                } else {
+                    // 普通模式
+                    const monthCases = cases.filter(c => 
+                        c.type === type && 
+                        c.month === month.name
+                    );
+                    
+                    if (monthCases.length > 0) {
+                        const sum = monthCases.reduce((acc, curr) => {
+                            const currValue = dataType === 'cost' ? curr.totalCost : curr.count;
+                            return acc + (currValue || 0);
+                        }, 0);
+                        value = sum;
+                    }
+                }
+                
+                // 确保值是数字
+                const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                row[month.key] = formatNumber(numericValue);
+                total += numericValue;
             })
             
-            row.total = formatNumber(total)
-            tableData.push(row)
+            // 确保 total 是有效数字
+            row.total = formatNumber(total);
+            tableData.push(row);
         })
         
-        return tableData
+        return tableData;
     }
 
     const tableData = prepareTableData()
@@ -252,25 +345,98 @@ const Cases = () => {
         item.type.toLowerCase().includes(searchTerm)
     )
 
-    // 准备图表数据
+    // 图表数据准备函数 - 支持比较模式
     const prepareChartData = () => {
         if (cases.length === 0) return null
 
-        const selectedData = cases.filter(caseItem => 
-            caseItem.type === selectedCaseType
-        )
+        let selectedData;
+        
+        if (comparisonMode && selectedCodes.length > 0) {
+            // 比较模式：过滤出当前 case type 和所有选中 codes 的数据
+            selectedData = cases.filter(caseItem => 
+                caseItem.type === selectedCaseType && 
+                selectedCodes.includes(caseItem.code)
+            );
+        } else {
+            // 普通模式：获取当前 case type 的汇总数据
+            selectedData = cases.filter(caseItem => 
+                caseItem.type === selectedCaseType
+            );
+        }
 
-        if (selectedData.length === 0) return null
+        if (!selectedData || selectedData.length === 0) return null
 
         const labels = monthFields.map(month => month.name)
         
-        const data = monthFields.map(month => {
-            const monthData = selectedData.find(d => d.month === month.name)
-            const value = monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0
-            return formatNumber(value)
-        })
+        // 图表数据
+        let chartData;
+        
+        if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
+            // 比较模式：多个数据集
+            const colors = generateColors(selectedCodes.length);
+            
+            const datasets = selectedCodes.map((code, index) => {
+                const codeData = selectedData.filter(item => item.code === code);
+                const data = monthFields.map(month => {
+                    const monthData = codeData.find(d => d.month === month.name);
+                    const value = monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0;
+                    return formatNumber(value);
+                });
 
-        // 修复后的饼图插件配置
+                const color = colors[index];
+
+                return {
+                    label: `${code} - ${selectedCaseType}`,
+                    data,
+                    backgroundColor: selectedChartType === 'pie' 
+                        ? [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+                          ]
+                        : color.bg,
+                    borderColor: color.border,
+                    borderWidth: 2,
+                    fill: selectedChartType === 'line',
+                    tension: selectedChartType === 'line' ? 0.1 : undefined
+                };
+            });
+
+            chartData = {
+                labels,
+                datasets
+            };
+        } else {
+            // 普通模式：单个数据集
+            const data = monthFields.map(month => {
+                const monthData = selectedData.find(d => d.month === month.name);
+                const value = monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0;
+                return formatNumber(value);
+            });
+
+            chartData = {
+                labels,
+                datasets: [
+                    {
+                        label: dataType === 'cost' ? `${selectedCaseType} Cost` : selectedCaseType,
+                        data,
+                        backgroundColor: selectedChartType === 'pie' 
+                            ? [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                                '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+                              ]
+                            : dataType === 'cost' ? 'rgba(75, 192, 192, 0.5)' : 'rgba(54, 162, 235, 0.5)',
+                        borderColor: dataType === 'cost' ? 'rgba(75, 192, 192, 1)' : 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        fill: selectedChartType === 'line',
+                        tension: selectedChartType === 'line' ? 0.1 : undefined
+                    },
+                ],
+            };
+        }
+
+        // 饼图插件配置
         const piePlugins = {
             legend: { 
                 position: 'top',
@@ -288,7 +454,6 @@ const Cases = () => {
                         const label = context.label || '';
                         const value = context.raw || 0;
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        // 修复：处理浮点数精度
                         const roundedValue = formatNumber(value);
                         const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
                         return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
@@ -305,10 +470,19 @@ const Cases = () => {
             plugins: {
                 legend: {
                     position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 10,
+                        font: {
+                            size: comparisonMode && selectedCodes.length > 8 ? 10 : 12
+                        }
+                    }
                 },
                 title: {
                     display: true,
-                    text: `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
+                    text: comparisonMode 
+                        ? `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} Comparison - ${displayYear} (${selectedCodes.length} Job Codes)`
+                        : `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
                     }
@@ -339,27 +513,6 @@ const Cases = () => {
             } : undefined
         }
 
-        const chartData = {
-            labels,
-            datasets: [
-                {
-                    label: dataType === 'cost' ? `${selectedCaseType} Cost` : selectedCaseType,
-                    data,
-                    backgroundColor: selectedChartType === 'pie' 
-                        ? [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                          ]
-                        : dataType === 'cost' ? 'rgba(75, 192, 192, 0.5)' : 'rgba(54, 162, 235, 0.5)',
-                    borderColor: dataType === 'cost' ? 'rgba(75, 192, 192, 1)' : 'rgba(54, 162, 235, 1)',
-                    borderWidth: 2,
-                    fill: selectedChartType === 'line',
-                    tension: selectedChartType === 'line' ? 0.1 : undefined
-                },
-            ],
-        }
-
         return { options, data: chartData, plugins }
     }
 
@@ -374,13 +527,13 @@ const Cases = () => {
             
             worksheetData.push([`${dataType === 'cost' ? 'Cost' : 'Cases'} Report - ${displayYear}`])
             
-            // 添加筛选的 Job Code 信息
             if (selectedCodes.length > 0) {
                 worksheetData.push([`Filtered Job Codes: ${selectedCodes.join(', ')}`])
             } else {
                 worksheetData.push(['Filtered Job Codes: All codes selected'])
             }
             
+            worksheetData.push([`Comparison Mode: ${comparisonMode ? 'Enabled' : 'Disabled'}`])
             worksheetData.push([])
             
             const headers = ['Case Type', ...monthFields.map(month => month.name), 'Total']
@@ -391,11 +544,11 @@ const Cases = () => {
                 
                 monthFields.forEach(month => {
                     const value = row[month.key] || 0
-                    rowData.push(dataType === 'cost' ? `$${formatDisplayNumber(value)}` : formatDisplayNumber(value))
+                    rowData.push(formatDisplayNumber(value))
                 })
                 
                 const totalValue = row.total || 0
-                rowData.push(dataType === 'cost' ? `$${formatDisplayNumber(totalValue)}` : formatDisplayNumber(totalValue))
+                rowData.push(formatDisplayNumber(totalValue))
                 worksheetData.push(rowData)
             })
             
@@ -409,20 +562,24 @@ const Cases = () => {
             ]
             worksheet['!cols'] = colWidths
             
-            // 合并标题单元格
             if (!worksheet['!merges']) worksheet['!merges'] = [];
-            worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }); // 合并标题行
-            worksheet['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }); // 合并筛选信息行
+            worksheet['!merges'].push(
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }
+            );
             
             XLSX.utils.book_append_sheet(workbook, worksheet, `${dataType === 'cost' ? 'Cost' : 'Cases'}_${displayYear}`)
             
             const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
             const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             
-            // 生成文件名，包含筛选的 Job Code
             let fileName = `${dataType === 'cost' ? 'Cost' : 'Cases'}_Report_${displayYear}`
             if (selectedCodes.length > 0) {
                 fileName += `_${selectedCodes.join('_')}`
+            }
+            if (comparisonMode) {
+                fileName += '_comparison'
             }
             
             saveAs(data, `${fileName}.xlsx`)
@@ -432,7 +589,7 @@ const Cases = () => {
         }
     }
 
-    // 格式化数字显示（保留2位小数）- 用于显示
+    // 格式化数字显示
     const formatDisplayNumber = (value) => {
         if (value === undefined || value === null) return '0.00';
         const num = typeof value === 'number' ? value : parseFloat(value) || 0;
@@ -446,7 +603,7 @@ const Cases = () => {
     )
     const totalPages = Math.ceil(filteredTableData.length / itemsPage)
 
-    // 移动端简洁分页组件 - 只显示 Previous/Next
+    // 移动端简洁分页组件
     const MobileSimplePagination = () => (
         <div className="flex items-center justify-center space-x-4">
             <Button
@@ -483,74 +640,21 @@ const Cases = () => {
                             </h3>
                         </div>
                         
-                        {/* 月份数据网格 - 4行 x 3列 */}
                         <div className="space-y-3">
-                            {/* 第一行: Jan, Feb, Mar */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Jan)}</div>
+                            {[0, 3, 6, 9].map((startIndex) => (
+                                <div key={startIndex} className="grid grid-cols-3 gap-2">
+                                    {monthFields.slice(startIndex, startIndex + 3).map(month => (
+                                        <div key={month.key} className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                            <div className="text-xs text-gray-900 dark:text-gray-400">{month.name}</div>
+                                            <div className="font-medium text-sm text-gray-900">
+                                                {formatDisplayNumber(item[month.key])}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Feb)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Mar)}</div>
-                                </div>
-                            </div>
-                            
-                            {/* 第二行: Apr, May, Jun */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Apr)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.May)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Jun)}</div>
-                                </div>
-                            </div>
-                            
-                            {/* 第三行: Jul, Aug, Sep */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Jul)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Aug)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Sep)}</div>
-                                </div>
-                            </div>
-                            
-                            {/* 第四行: Oct, Nov, Dec */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Oct)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Nov)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(item.Dec)}</div>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                         
-                        {/* 总计 */}
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
@@ -587,7 +691,7 @@ const Cases = () => {
                         </div>
                         <Button 
                             className='cursor-pointer hidden sm:block' 
-                            onClick={() => handleUpdateStats(false)} // 手动更新，显示加载状态
+                            onClick={() => handleUpdateStats(false)}
                             disabled={isUpdating}
                         >
                             {isUpdating ? <Spinner size="sm" /> : 'Update Stat'}
@@ -604,7 +708,7 @@ const Cases = () => {
                 </div>
             </div>
 
-            {/* Job Code 筛选器 - 单行显示 */}
+            {/* Job Code 筛选器 */}
             <div className="mb-3 p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
                 <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold">Filter by Job Code</Label>
@@ -630,7 +734,6 @@ const Cases = () => {
                     )}
                 </div>
                 
-                {/* 单行显示的 Job Code 选项 */}
                 <div className="flex flex-wrap gap-1 mb-2">
                     {availableCodes.map(code => (
                         <div 
@@ -659,8 +762,32 @@ const Cases = () => {
                 <div className="flex items-center gap-2 mt-2">
                     {selectedCodes.length > 0 && (
                         <div className="text-xs text-gray-600 dark:text-gray-400">
-                            Showing: {selectedCodes.join(' + ')}
+                            {comparisonMode ? `Comparing ${selectedCodes.length} Job Codes: ${selectedCodes.join(' + ')}` : `Showing: ${selectedCodes.join(' + ')}`}
                         </div>
+                    )}
+                </div>
+
+                {/* 比较模式开关 */}
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="comparisonMode" className="text-sm font-medium">
+                            Comparison Mode
+                        </Label>
+                        <input
+                            id="comparisonMode"
+                            type="checkbox"
+                            checked={comparisonMode}
+                            onChange={(e) => setComparisonMode(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <Label htmlFor="comparisonMode" className="text-xs text-gray-500">
+                            Compare selected Job Codes in chart
+                        </Label>
+                    </div>
+                    {comparisonMode && selectedCodes.length < 2 && (
+                        <p className="text-xs text-yellow-600 mt-1">
+                            Select at least 2 Job Codes for comparison
+                        </p>
                     )}
                 </div>
             </div>
@@ -733,7 +860,12 @@ const Cases = () => {
                     </div>
 
                     {/* 图表显示区域 */}
-                    {chartData ? (
+                    {loadingChart ? (
+                        <div className="h-80 flex items-center justify-center">
+                            <Spinner size="xl" />
+                            <p className="ml-2">Loading chart data...</p>
+                        </div>
+                    ) : chartData ? (
                         <div className="h-80 dark:bg-white">
                             {selectedChartType === 'bar' && (
                                 <Bar options={chartData.options} data={chartData.data} />
@@ -759,7 +891,6 @@ const Cases = () => {
                 </div>
             ) : (
                 <>
-                    {/* 移动端显示卡片，桌面端显示表格 */}
                     {isMobile ? (
                         renderMobileCards()
                     ) : (
@@ -781,17 +912,11 @@ const Cases = () => {
                                         </TableCell>
                                         {monthFields.map(month => (
                                             <TableCell className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
-                                                {dataType === 'cost' ? 
-                                                    `${formatDisplayNumber(item[month.key])}` : 
-                                                    formatDisplayNumber(item[month.key])
-                                                }
+                                                {formatDisplayNumber(item[month.key])}
                                             </TableCell>
                                         ))}
                                         <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {dataType === 'cost' ? 
-                                                `${formatDisplayNumber(item.total)}` : 
-                                                formatDisplayNumber(item.total)
-                                            }
+                                            {formatDisplayNumber(item.total)}
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -807,7 +932,6 @@ const Cases = () => {
                         Showing {Math.min(filteredTableData.length, (currentPage - 1) * itemsPage + 1)} to {Math.min(currentPage * itemsPage, filteredTableData.length)} of {filteredTableData.length} Entries
                     </p>
                     
-                    {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
                     {isMobile ? (
                         <div className="mt-4">
                             <MobileSimplePagination />

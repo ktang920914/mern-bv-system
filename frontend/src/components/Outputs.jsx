@@ -42,6 +42,7 @@ const Outputs = () => {
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
+    const [loadingChart, setLoadingChart] = useState(false)
     const [openModal,setOpenModal] = useState(false)
     const [outputs,setOutputs] = useState([])
     const [showTable, setShowTable] = useState(false)
@@ -52,16 +53,29 @@ const Outputs = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(7)
     const [selectedCodes, setSelectedCodes] = useState([])
-    const [selectedChartType, setSelectedChartType] = useState('bar') // 默认显示柱状图
-    const [selectedDataType, setSelectedDataType] = useState('totaloutput') // 默认显示总产出数据
-    const [availableCodes, setAvailableCodes] = useState([]) // 新增
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // 新增移动端检测
+    const [selectedChartType, setSelectedChartType] = useState('bar')
+    const [selectedDataType, setSelectedDataType] = useState('totaloutput')
+    const [availableCodes, setAvailableCodes] = useState([])
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [comparisonMode, setComparisonMode] = useState(false)
+    const [debouncedSelectedCodes, setDebouncedSelectedCodes] = useState([])
+    const [dataCache, setDataCache] = useState({})
+
+    // 常量定义
+    const API_BATCH_SIZE = 3
+    const DEBOUNCE_DELAY = 500
 
     // 辅助函数：处理浮点数精度
     const formatNumber = (value) => {
         if (value === undefined || value === null) return 0;
         const num = typeof value === 'number' ? value : parseFloat(value) || 0;
         return parseFloat(num.toFixed(2));
+    }
+
+    // 生成缓存键
+    const getCacheKey = (year, dataType, codes, comparisonMode) => {
+        const codeKey = Array.isArray(codes) ? codes.sort().join(',') : codes;
+        return `${year}-${dataType}-${codeKey}-${comparisonMode}`;
     }
 
     // 检测屏幕大小变化
@@ -74,18 +88,25 @@ const Outputs = () => {
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
+    // 防抖优化 - 延迟处理选中的 Job Codes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSelectedCodes(selectedCodes)
+        }, DEBOUNCE_DELAY)
+        
+        return () => clearTimeout(timer)
+    }, [selectedCodes])
+
     // 当页码或搜索词变化时更新 URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
         
-        // 处理页码参数
         if (currentPage === 1) {
             params.delete('page')
         } else {
             params.set('page', currentPage.toString())
         }
         
-        // 处理搜索参数
         if (searchTerm === '') {
             params.delete('search')
         } else {
@@ -102,25 +123,23 @@ const Outputs = () => {
                 const res = await fetch('/api/analysis/getjobs');
                 const data = await res.json();
                 if (res.ok) {
-                    // 从 Job 数据中提取唯一的 code 字段
                     const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
                     setAvailableCodes(jobCodes);
                 }
             } catch (error) {
                 console.error('Error fetching job codes:', error);
-                // 如果 API 不存在，使用默认列表
                 setAvailableCodes(['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']);
             }
         };
         fetchAvailableCodes();
     }, []);
 
-    // 当 selectedCodes 改变时自动获取数据
+    // 当 selectedCodes 或 comparisonMode 改变时自动获取数据
     useEffect(() => {
-        if (showTable) {
+        if (showTable && debouncedSelectedCodes.length >= 0) {
             fetchOutputsForYear(displayYear);
         }
-    }, [selectedCodes]); // 添加 selectedCodes 作为依赖
+    }, [debouncedSelectedCodes, comparisonMode]);
 
     const monthFields = [
         { key: 'jan', name: 'Jan' },
@@ -154,131 +173,290 @@ const Outputs = () => {
         { value: 'oee', label: 'OEE' }
     ]
 
-    // 图表类型选项
     const chartTypes = [
         { value: 'bar', label: 'Bar' },
         { value: 'line', label: 'Line' },
         { value: 'pie', label: 'Pie' }
     ]
 
+    // 生成更多颜色用于图表
+    const generateColors = (count) => {
+        const baseColors = [
+            { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
+            { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
+            { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
+            { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
+            { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
+            { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
+            { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
+            { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
+            { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
+            { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' },
+            { bg: 'rgba(241, 196, 15, 0.5)', border: 'rgba(241, 196, 15, 1)' },
+            { bg: 'rgba(230, 126, 34, 0.5)', border: 'rgba(230, 126, 34, 1)' },
+            { bg: 'rgba(231, 76, 60, 0.5)', border: 'rgba(231, 76, 60, 1)' },
+            { bg: 'rgba(52, 152, 219, 0.5)', border: 'rgba(52, 152, 219, 1)' },
+            { bg: 'rgba(142, 68, 173, 0.5)', border: 'rgba(142, 68, 173, 1)' }
+        ];
+
+        // 如果需要的颜色比基础颜色多，动态生成更多颜色
+        if (count <= baseColors.length) {
+            return baseColors.slice(0, count);
+        }
+
+        const colors = [...baseColors];
+        for (let i = baseColors.length; i < count; i++) {
+            const hue = (i * 137.5) % 360; // 使用黄金角度分布颜色
+            colors.push({
+                bg: `hsla(${hue}, 70%, 65%, 0.5)`,
+                border: `hsl(${hue}, 70%, 50%)`
+            });
+        }
+        return colors;
+    };
+
     useEffect(() => {
-        // 组件加载时自动获取当前年份的所有数据
         fetchOutputsForYear(new Date().getFullYear().toString())
     }, [currentUser._id])
 
+    // 数据处理函数
+    const processDataItem = (dataItem, dataType, code = null) => {
+        const cleanedItem = { ...dataItem };
+        
+        // 清理月份数据中的浮点数精度
+        monthFields.forEach(month => {
+            if (cleanedItem[month.key] !== undefined) {
+                cleanedItem[month.key] = formatNumber(cleanedItem[month.key]);
+            }
+        });
+        
+        // 清理总计数据
+        if (cleanedItem.total !== undefined) {
+            cleanedItem.total = formatNumber(cleanedItem.total);
+        }
+        
+        return {
+            ...cleanedItem,
+            dataType: dataType.value,
+            dataTypeLabel: dataType.label,
+            ...(code && { code })
+        };
+    };
+
+    // 优化的数据获取函数
     const fetchOutputsForYear = async (year) => {
         try {
             setLoading(true)
+            setLoadingChart(true)
             setErrorMessage(null)
             
-            // 为每种数据类型获取数据
             const allOutputs = []
             
-            for (const dataType of dataTypes) {
-                // 构建查询参数
-                const params = new URLSearchParams({
-                    year: year,
-                    data: dataType.value
-                })
+            // 批量获取单个数据类型的函数
+            const fetchDataTypeData = async (dataType) => {
+                const cacheKey = getCacheKey(year, dataType.value, selectedCodes, comparisonMode);
                 
-                // 如果选择了特定的 Job Code，添加到查询参数
-                if (selectedCodes.length > 0) {
-                    params.append('codes', selectedCodes.join(','))
+                // 检查缓存
+                if (dataCache[cacheKey]) {
+                    console.log('Using cached data for:', cacheKey);
+                    return dataCache[cacheKey];
                 }
-                
-                const res = await fetch(`/api/output/calculate?${params}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    // 确保数据格式正确
-                    if (Array.isArray(data)) {
-                        // 为每个数据项添加标识符并清理数据精度
-                        const dataWithType = data.map(item => {
-                            const cleanedItem = { ...item };
-                            // 清理月份数据中的浮点数精度
-                            monthFields.forEach(month => {
-                                if (cleanedItem[month.key] !== undefined) {
-                                    cleanedItem[month.key] = formatNumber(cleanedItem[month.key]);
-                                }
+
+                let results = [];
+
+                if (comparisonMode && selectedCodes.length > 0) {
+                    // 比较模式：并行获取所有 Job Code 的数据
+                    const fetchPromises = selectedCodes.map(async (code) => {
+                        try {
+                            const params = new URLSearchParams({
+                                year: year,
+                                data: dataType.value,
+                                codes: code
                             });
-                            // 清理总计数据
-                            if (cleanedItem.total !== undefined) {
-                                cleanedItem.total = formatNumber(cleanedItem.total);
+                            
+                            const res = await fetch(`/api/output/calculate?${params}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (Array.isArray(data)) {
+                                    return data.map(item => processDataItem(item, dataType, code));
+                                } else if (typeof data === 'object') {
+                                    return [processDataItem(data, dataType, code)];
+                                }
                             }
-                            return {
-                                ...cleanedItem,
-                                dataType: dataType.value,
-                                dataTypeLabel: dataType.label
-                            }
-                        })
-                        allOutputs.push(...dataWithType)
-                    } else if (typeof data === 'object') {
-                        // 为单个数据对象添加标识符并清理精度
-                        const cleanedData = { ...data };
-                        monthFields.forEach(month => {
-                            if (cleanedData[month.key] !== undefined) {
-                                cleanedData[month.key] = formatNumber(cleanedData[month.key]);
-                            }
-                        });
-                        if (cleanedData.total !== undefined) {
-                            cleanedData.total = formatNumber(cleanedData.total);
+                        } catch (error) {
+                            console.error(`Error fetching ${dataType.value} for ${code}:`, error);
                         }
-                        allOutputs.push({
-                            ...cleanedData,
-                            dataType: dataType.value,
-                            dataTypeLabel: dataType.label
-                        })
-                    }
+                        return [];
+                    });
+                    
+                    const batchResults = await Promise.all(fetchPromises);
+                    results = batchResults.flat();
                 } else {
-                    console.error(`Failed to fetch data for ${dataType.value}:`, res.status)
+                    // 普通模式：单个请求
+                    try {
+                        const params = new URLSearchParams({
+                            year: year,
+                            data: dataType.value
+                        });
+                        
+                        if (selectedCodes.length > 0) {
+                            params.append('codes', selectedCodes.join(','));
+                        }
+                        
+                        const res = await fetch(`/api/output/calculate?${params}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (Array.isArray(data)) {
+                                results = data.map(item => processDataItem(item, dataType));
+                            } else if (typeof data === 'object') {
+                                results = [processDataItem(data, dataType)];
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching ${dataType.value}:`, error);
+                    }
+                }
+
+                // 缓存结果
+                if (results.length > 0) {
+                    setDataCache(prev => ({
+                        ...prev,
+                        [cacheKey]: results
+                    }));
+                }
+
+                return results;
+            };
+
+            // 分批处理数据类型的获取，避免同时发起太多请求
+            for (let i = 0; i < dataTypes.length; i += API_BATCH_SIZE) {
+                const batch = dataTypes.slice(i, i + API_BATCH_SIZE);
+                const batchPromises = batch.map(dataType => fetchDataTypeData(dataType));
+                const batchResults = await Promise.all(batchPromises);
+                allOutputs.push(...batchResults.flat());
+                
+                // 小批量延迟，避免阻塞UI
+                if (i + API_BATCH_SIZE < dataTypes.length) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
             }
             
-            setOutputs(allOutputs)
-            setDisplayYear(year)
-            setShowTable(true)
+            setOutputs(allOutputs);
+            setDisplayYear(year);
+            setShowTable(true);
             
         } catch (error) {
-            setErrorMessage('Error fetching data: ' + error.message)
-            console.error('Fetch error:', error)
+            setErrorMessage('Error fetching data: ' + error.message);
+            console.error('Fetch error:', error);
         } finally {
-            setLoading(false)
+            setLoading(false);
+            setLoadingChart(false);
         }
-    }
+    };
 
-    // 准备图表数据
+    // 准备图表数据 - 支持比较模式
     const prepareChartData = () => {
         if (outputs.length === 0) {
-            console.log('No outputs data available');
             return null;
         }
 
-        console.log('Available outputs:', outputs);
-        console.log('Looking for data type:', selectedDataType);
+        let selectedData;
+        
+        if (comparisonMode && selectedCodes.length > 0) {
+            // 比较模式：过滤出当前数据类型和所有选中 codes 的数据
+            selectedData = outputs.filter(output => 
+                output.dataType === selectedDataType && 
+                selectedCodes.includes(output.code)
+            );
+        } else {
+            // 普通模式：获取当前数据类型的汇总数据
+            selectedData = outputs.filter(output => 
+                output.dataType === selectedDataType && 
+                !output.code
+            );
+            
+            // 如果没有找到汇总数据，尝试获取任何该类型的数据
+            if (selectedData.length === 0) {
+                selectedData = outputs.filter(output => 
+                    output.dataType === selectedDataType
+                );
+            }
+        }
 
-        // 获取当前选中的数据类型的输出
-        const selectedData = outputs.find(output => 
-            output.dataType === selectedDataType
-        );
-
-        console.log('Found data for chart:', selectedData);
-
-        if (!selectedData) {
-            console.log('No data found for selected data type');
+        if (!selectedData || selectedData.length === 0) {
             return null;
         }
 
         // 月份标签
         const labels = monthFields.map(month => month.name);
         
-        // 数据值 - 使用 formatNumber 确保精度
-        const data = monthFields.map(month => {
-            const value = selectedData[month.key];
-            return formatNumber(value);
-        });
+        // 图表数据
+        let chartData;
+        
+        if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
+            // 比较模式：多个数据集
+            const colors = generateColors(selectedData.length);
+            
+            const datasets = selectedData.map((dataItem, index) => {
+                const data = monthFields.map(month => {
+                    const value = dataItem[month.key];
+                    return formatNumber(value);
+                });
 
-        console.log('Chart data values:', data);
+                const color = colors[index];
 
-        // 修复后的饼图插件配置
+                return {
+                    label: `${dataItem.code || 'All'} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                    data,
+                    backgroundColor: selectedChartType === 'pie' 
+                        ? [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+                          ]
+                        : color.bg,
+                    borderColor: color.border,
+                    borderWidth: 2,
+                    fill: selectedChartType === 'line',
+                    tension: selectedChartType === 'line' ? 0.1 : undefined
+                };
+            });
+
+            chartData = {
+                labels,
+                datasets
+            };
+        } else {
+            // 普通模式：单个数据集
+            const singleData = Array.isArray(selectedData) ? selectedData[0] : selectedData;
+            const data = monthFields.map(month => {
+                const value = singleData[month.key];
+                return formatNumber(value);
+            });
+
+            chartData = {
+                labels,
+                datasets: [
+                    {
+                        label: `${singleData.code || 'All'} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                        data,
+                        backgroundColor: selectedChartType === 'pie' 
+                            ? [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                                '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
+                              ]
+                            : 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        fill: selectedChartType === 'line',
+                        tension: selectedChartType === 'line' ? 0.1 : undefined
+                    },
+                ],
+            };
+        }
+
+        // 饼图插件配置
         const piePlugins = {
             legend: { 
                 position: 'top',
@@ -296,7 +474,6 @@ const Outputs = () => {
                         const label = context.label || '';
                         const value = context.raw || 0;
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        // 修复：处理浮点数精度
                         const roundedValue = formatNumber(value);
                         const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
                         return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
@@ -307,17 +484,26 @@ const Outputs = () => {
 
         const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
-        // 图表配置
+        // 图表配置 - 优化图例显示
         const options = {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 10,
+                        font: {
+                            size: comparisonMode && selectedCodes.length > 8 ? 10 : 12
+                        }
+                    }
                 },
                 title: {
                     display: true,
-                    text: `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
+                    text: comparisonMode 
+                        ? `${dataTypes.find(dt => dt.value === selectedDataType)?.label} Comparison - ${displayYear} (${selectedCodes.length} Job Codes)`
+                        : `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
                     }
@@ -348,33 +534,78 @@ const Outputs = () => {
             } : undefined
         };
 
-        // 图表数据
-        const chartData = {
-            labels,
-            datasets: [
-                {
-                    label: dataTypes.find(dt => dt.value === selectedDataType)?.label,
-                    data,
-                    backgroundColor: selectedChartType === 'pie' 
-                        ? [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                          ]
-                        : 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 2,
-                    fill: selectedChartType === 'line',
-                    tension: selectedChartType === 'line' ? 0.1 : undefined
-                },
-            ],
-        };
-
         return { options, data: chartData, plugins };
     };
 
+    // 准备表格数据 - 在比较模式下汇总所有 Job Code 的数据
+    const prepareTableData = () => {
+        if (outputs.length === 0) return [];
+
+        // 按数据类型分组
+        const groupedByDataType = {};
+        
+        outputs.forEach(output => {
+            const dataType = output.dataType;
+            if (!groupedByDataType[dataType]) {
+                groupedByDataType[dataType] = [];
+            }
+            groupedByDataType[dataType].push(output);
+        });
+
+        const tableData = [];
+
+        Object.keys(groupedByDataType).forEach(dataType => {
+            const dataTypeOutputs = groupedByDataType[dataType];
+            const dataTypeLabel = dataTypeOutputs[0]?.dataTypeLabel || 'Unknown';
+            
+            if (comparisonMode && selectedCodes.length > 0) {
+                // 比较模式：汇总所有选中 Job Code 的数据
+                const aggregatedData = {
+                    dataType,
+                    dataTypeLabel,
+                    code: null, // 汇总数据没有特定的 code
+                    total: 0
+                };
+
+                // 初始化月份数据
+                monthFields.forEach(month => {
+                    aggregatedData[month.key] = 0;
+                });
+
+                // 累加所有 Job Code 的数据
+                dataTypeOutputs.forEach(output => {
+                    if (selectedCodes.includes(output.code)) {
+                        monthFields.forEach(month => {
+                            aggregatedData[month.key] += output[month.key] || 0;
+                        });
+                        aggregatedData.total += output.total || 0;
+                    }
+                });
+
+                // 格式化数字
+                monthFields.forEach(month => {
+                    aggregatedData[month.key] = formatNumber(aggregatedData[month.key]);
+                });
+                aggregatedData.total = formatNumber(aggregatedData.total);
+
+                tableData.push(aggregatedData);
+            } else {
+                // 普通模式：显示所有数据（包括汇总数据和单个 Job Code 数据）
+                dataTypeOutputs.forEach(output => {
+                    // 在普通模式下，只显示汇总数据或不带 code 的数据
+                    if (!output.code || selectedCodes.length === 0) {
+                        tableData.push(output);
+                    }
+                });
+            }
+        });
+
+        return tableData;
+    };
+
     const generateExcelReport = () => {
-        if (outputs.length === 0) {
+        const tableData = prepareTableData();
+        if (tableData.length === 0) {
             setErrorMessage('No data to export')
             return
         }
@@ -385,15 +616,9 @@ const Outputs = () => {
             // 添加报告标题和筛选信息
             worksheetData.push(['Outputs Report'])
             worksheetData.push([`Year: ${displayYear}`])
-            
-            // 添加筛选的 Job Code 信息
-            if (selectedCodes.length > 0) {
-                worksheetData.push([`Filtered Job Codes: ${selectedCodes.join(', ')}`])
-            } else {
-                worksheetData.push(['Filtered Job Codes: All codes selected'])
-            }
-            
-            worksheetData.push([]) // 空行
+            worksheetData.push([`Filtered Job Codes: ${selectedCodes.length > 0 ? selectedCodes.join(', ') : 'All codes selected'}`])
+            worksheetData.push([`Comparison Mode: ${comparisonMode ? 'Enabled' : 'Disabled'}`])
+            worksheetData.push([])
             
             // 添加标题行
             const headers = ['Data Type', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
@@ -401,8 +626,10 @@ const Outputs = () => {
             worksheetData.push(headers)
             
             // 添加数据行
-            outputs.forEach(output => {
-                const rowData = [output.dataTypeLabel || 'Unknown']
+            tableData.forEach(output => {
+                const rowData = [
+                    output.dataTypeLabel || 'Unknown'
+                ]
                 
                 monthFields.forEach(month => {
                     const value = output[month.key] || 0
@@ -421,29 +648,32 @@ const Outputs = () => {
             
             // 设置列宽
             const colWidths = [
-                { wch: 25 }, // Data Type 列
-                ...Array(12).fill({ wch: 10 }), // 月份列
-                { wch: 12 } // Total 列
+                { wch: 25 },
+                ...Array(12).fill({ wch: 10 }),
+                { wch: 12 }
             ]
             worksheet['!cols'] = colWidths
             
             // 合并标题单元格
             if (!worksheet['!merges']) worksheet['!merges'] = [];
-            worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }); // 合并标题行
-            worksheet['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }); // 合并年份行
-            worksheet['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }); // 合并筛选信息行
+            worksheet['!merges'].push(
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } },
+                { s: { r: 3, c: 0 }, e: { r: 3, c: 13 } }
+            );
             
-            // 添加工作表到工作簿
             XLSX.utils.book_append_sheet(workbook, worksheet, `Outputs ${displayYear}`)
             
-            // 生成 Excel 文件并下载
             const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
             const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             
-            // 生成文件名，包含筛选的 Job Code
             let fileName = `Outputs_Report_${displayYear}`
             if (selectedCodes.length > 0) {
                 fileName += `_${selectedCodes.join('_')}`
+            }
+            if (comparisonMode) {
+                fileName += '_comparison'
             }
             
             saveAs(data, `${fileName}.xlsx`)
@@ -492,7 +722,9 @@ const Outputs = () => {
         setCurrentPage(1)
     }
 
-    const filteredOutputs = outputs.filter(output => 
+    // 使用 prepareTableData 来获取过滤后的数据
+    const tableData = prepareTableData();
+    const filteredOutputs = tableData.filter(output => 
         output.dataTypeLabel && output.dataTypeLabel.toLowerCase().includes(searchTerm)
     )
 
@@ -509,7 +741,7 @@ const Outputs = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
-    // 移动端简洁分页组件 - 只显示 Previous/Next
+    // 移动端简洁分页组件
     const MobileSimplePagination = () => (
         <div className="flex items-center justify-center space-x-4">
             <Button
@@ -534,7 +766,7 @@ const Outputs = () => {
         </div>
     )
 
-    // 格式化数字显示（保留2位小数）- 用于显示
+    // 格式化数字显示
     const formatDisplayNumber = (value) => {
         if (value === undefined || value === null) return '0.00';
         const num = typeof value === 'number' ? value : parseFloat(value) || 0;
@@ -554,76 +786,27 @@ const Outputs = () => {
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                 {output.dataTypeLabel || 'Unknown'}
                             </h3>
+                            {/* 在比较模式下显示汇总信息 */}
+                            {comparisonMode && selectedCodes.length > 0 && (
+                                <Badge color="info" className="mt-1">
+                                    {selectedCodes.join(' + ')}
+                                </Badge>
+                            )}
                         </div>
                         
-                        {/* 月份数据网格 - 4行 x 3列 */}
                         <div className="space-y-3">
-                            {/* 第一行: Jan, Feb, Mar */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jan</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.jan)}</div>
+                            {[0, 3, 6, 9].map((startIndex) => (
+                                <div key={startIndex} className="grid grid-cols-3 gap-2">
+                                    {monthFields.slice(startIndex, startIndex + 3).map(month => (
+                                        <div key={month.key} className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                            <div className="text-xs text-gray-900 dark:text-gray-400">{month.name}</div>
+                                            <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output[month.key])}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Feb</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.feb)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Mar</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.mar)}</div>
-                                </div>
-                            </div>
-                            
-                            {/* 第二行: Apr, May, Jun */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Apr</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.apr)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">May</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.may)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jun</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.jun)}</div>
-                                </div>
-                            </div>
-                            
-                            {/* 第三行: Jul, Aug, Sep */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Jul</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.jul)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Aug</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.aug)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Sep</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.sep)}</div>
-                                </div>
-                            </div>
-                            
-                            {/* 第四行: Oct, Nov, Dec */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Oct</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.oct)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Nov</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.nov)}</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                    <div className="text-xs text-gray-900 dark:text-gray-400">Dec</div>
-                                    <div className="font-medium text-sm text-gray-900">{formatDisplayNumber(output.dec)}</div>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                         
-                        {/* 总计 */}
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total:</span>
@@ -659,14 +842,14 @@ const Outputs = () => {
                         color='green' 
                         className='cursor-pointer flex-1 sm:flex-none'
                         onClick={generateExcelReport}
-                        disabled={outputs.length === 0}
+                        disabled={tableData.length === 0}
                     >
                         Report
                     </Button>
                 </div>
             </div>
 
-            {/* Job Code 筛选器 - 移动端优化显示 */}
+            {/* Job Code 筛选器 */}
             <div className="mb-3 p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
                 <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold">Filter by Job Code</Label>
@@ -692,7 +875,6 @@ const Outputs = () => {
                     )}
                 </div>
                 
-                {/* Job Code 选项 - 移动端优化 */}
                 <div className="flex flex-wrap gap-1 mb-2">
                     {availableCodes.map(code => (
                         <div 
@@ -721,8 +903,37 @@ const Outputs = () => {
                 <div className="flex items-center gap-2 mt-2">
                     {selectedCodes.length > 0 && (
                         <div className="text-xs text-gray-600 dark:text-gray-400">
-                            Showing: {selectedCodes.join(' + ')}
+                            {comparisonMode ? `Comparing ${selectedCodes.length} Job Codes: ${selectedCodes.join(' + ')}` : `Showing: ${selectedCodes.join(' + ')}`}
                         </div>
+                    )}
+                </div>
+
+                {/* 比较模式开关 */}
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="comparisonMode" className="text-sm font-medium">
+                            Comparison Mode
+                        </Label>
+                        <input
+                            id="comparisonMode"
+                            type="checkbox"
+                            checked={comparisonMode}
+                            onChange={(e) => setComparisonMode(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <Label htmlFor="comparisonMode" className="text-xs text-gray-500">
+                            Compare selected Job Codes in chart
+                        </Label>
+                    </div>
+                    {comparisonMode && selectedCodes.length < 2 && (
+                        <p className="text-xs text-yellow-600 mt-1">
+                            Select at least 2 Job Codes for comparison
+                        </p>
+                    )}
+                    {comparisonMode && selectedCodes.length > 8 && (
+                        <p className="text-xs text-blue-600 mt-1">
+                            Comparing {selectedCodes.length} Job Codes - Chart may take longer to load
+                        </p>
                     )}
                 </div>
             </div>
@@ -767,7 +978,12 @@ const Outputs = () => {
                     </div>
 
                     {/* 图表显示区域 */}
-                    {chartData ? (
+                    {loadingChart ? (
+                        <div className="h-80 flex items-center justify-center">
+                            <Spinner size="xl" />
+                            <p className="ml-2">Loading chart data... ({selectedCodes.length} Job Codes)</p>
+                        </div>
+                    ) : chartData ? (
                         <div className="h-80 dark:bg-white">
                             {selectedChartType === 'bar' && (
                                 <Bar options={chartData.options} data={chartData.data}/>
@@ -790,11 +1006,10 @@ const Outputs = () => {
             {loading ? (
                 <div className="text-center py-8">
                     <Spinner size="xl" />
-                    <p className="mt-2 min-h-screen">Loading outputs...</p>
+                    <p className="mt-2 min-h-screen">Loading outputs...{comparisonMode && ` (${selectedCodes.length} Job Codes)`}</p>
                 </div>
-            ) : showTable && outputs.length > 0 ? (
+            ) : showTable && tableData.length > 0 ? (
                 <>
-                    {/* 移动端显示卡片，桌面端显示表格 */}
                     {isMobile ? (
                         renderMobileCards()
                     ) : (
@@ -833,7 +1048,6 @@ const Outputs = () => {
                             Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                         </p>
                         
-                        {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
                         {isMobile ? (
                             <div className="mt-4">
                                 <MobileSimplePagination />

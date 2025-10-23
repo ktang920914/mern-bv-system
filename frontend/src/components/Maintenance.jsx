@@ -18,6 +18,7 @@ const Maintenance = () => {
   const [openModalUpdateMaintenance,setOpenModalUpdateMaintenance] = useState(false)
   const [formData,setFormData] = useState({})
   const [updateFormData,setUpdateFormData] = useState({})
+  const [extruders,setExtruders] = useState([])
   const [items,setItems] = useState([])
   const [suppliers,setSuppliers] = useState([])
   const [maintenances,setMaintenances] = useState([])
@@ -58,6 +59,24 @@ const Maintenance = () => {
     
     setSearchParams(params)
   }, [currentPage, searchTerm, searchParams, setSearchParams])
+
+  useEffect(() => {
+    const fetchExtruders = async () => {
+      try {
+        const res = await fetch('/api/machine/getExtruders')
+        const data = await res.json()
+        if(data.success === false){
+          console.log(data.message)
+        }
+        if(res.ok){
+          setExtruders(data)
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+    }
+    fetchExtruders()
+  },[currentUser._id])
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -606,6 +625,9 @@ const Maintenance = () => {
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
                 <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
+                  {extruders.map((extruder) => (
+                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                  ))}
                   {items.map((item) => (
                     <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
                   ))}
@@ -725,6 +747,9 @@ const Maintenance = () => {
                   <option></option>
                   {items.map((item) => (
                     <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                  ))}
+                  {extruders.map((extruder) => (
+                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                   ))}
                 </Select>
               </div>

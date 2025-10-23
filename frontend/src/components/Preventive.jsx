@@ -160,7 +160,7 @@ const Preventive = () => {
         extruderCode: 'EXT002',
         category: 'Motor',
         task: '检查电机温度',
-        scheduledDate: '2025-10-26',
+        scheduledDate: '2025-10-25',
         frequency: 'weekly',
         status: 'completed',
         result: 'good',
