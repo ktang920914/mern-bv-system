@@ -5,6 +5,7 @@ import { HiOutlineDocumentCurrencyDollar } from "react-icons/hi2";
 import { GrDocumentUser } from "react-icons/gr";
 import { MdOutlineInventory } from "react-icons/md";
 import { GrDocumentStore, GrHostMaintenance, GrDocumentVerified} from "react-icons/gr";
+import { RiCalendarScheduleLine } from "react-icons/ri";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import useUserstore from "../store";
 import useThemeStore from "../themeStore";
@@ -265,6 +266,24 @@ const DashSidebar = () => {
                     className={tab === 'Cases' ? currentTheme.itemActive : currentTheme.item}
                   >
                     Cases
+                  </SidebarItem>
+                </Link>
+              </SidebarCollapse>
+
+              <SidebarCollapse 
+                icon={RiCalendarScheduleLine}
+                label="Schedule"
+                className={currentTheme.collapse}
+                renderChevronIcon={() => <span className="ml-auto">▼</span>}
+              >
+                <Link to='/?tab=Preventive'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Preventive'} 
+                    as='div'
+                    className={tab === 'Preventive' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Preventive
                   </SidebarItem>
                 </Link>
               </SidebarCollapse>
