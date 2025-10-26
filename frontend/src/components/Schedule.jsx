@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { Card, Button, Badge, Spinner } from 'flowbite-react'
+import { Card, Button, Badge, Spinner, Popover, Pagination } from 'flowbite-react'
 import useThemeStore from '../themeStore'
 
 const localizer = momentLocalizer(moment)
@@ -13,6 +13,8 @@ const Schedule = () => {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPage] = useState(10)
 
   // 检测屏幕大小变化
   useEffect(() => {
@@ -154,6 +156,136 @@ const Schedule = () => {
     </div>
   )
 
+  // 移动端卡片组件 - 模仿 Jobs 页面的样式
+  const ScheduleCard = ({ todo }) => (
+    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+      theme === 'light' 
+        ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+        : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+    }`}>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Date</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.date}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Item</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.code}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Section</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.section}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Status</p>
+          <Badge 
+            color={todo.status === 'Complete' ? 'success' : 'failure'}
+            size="sm"
+          >
+            {todo.status}
+          </Badge>
+        </div>
+      </div>
+      
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Description</p>
+        <Popover 
+          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+          content={
+            <div className="p-3 max-w-xs">
+              <p className="font-semibold text-sm">Full Description:</p>
+              <p className="text-xs mb-2">{todo.description}</p>
+              <p className="font-semibold text-sm">I/M:</p>
+              <p className="text-xs mb-2">{todo.im}</p>
+              <p className="font-semibold text-sm">Check Point:</p>
+              <p className="text-xs mb-2">{todo.checkpoint}</p>
+              <p className="font-semibold text-sm">Tools:</p>
+              <p className="text-xs mb-2">{todo.tool}</p>
+              <p className="font-semibold text-sm">Reaction Plan:</p>
+              <p className="text-xs">{todo.reactionplan}</p>
+            </div>
+          }
+          trigger='hover'
+          placement="top"
+          arrow={false}
+        >
+          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+          }`}>
+            {todo.description.length > 30 ? `${todo.description.substring(0, 30)}...` : todo.description}
+          </span>
+        </Popover>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-3">
+        <div>
+          <span className="font-medium">I/M Type:</span> {todo.im}
+        </div>
+        <div>
+          <span className="font-medium">Repeat:</span> {todo.repeatType === 'none' ? 'No Repeat' : todo.repeatType}
+        </div>
+      </div>
+    </div>
+  )
+
+  // 移动端简洁分页组件 - 和 Jobs 页面一样
+  const MobileSimplePagination = () => (
+    <div className="flex items-center justify-center space-x-4">
+      <Button
+        size="sm"
+        disabled={currentPage === 1}
+        onClick={() => handlePageChange(currentPage - 1)}
+        className="flex items-center"
+      >
+        <span>‹</span>
+        <span className="ml-1">Previous</span>
+      </Button>
+
+      <Button
+        size="sm"
+        disabled={currentPage === totalPages}
+        onClick={() => handlePageChange(currentPage + 1)}
+        className="flex items-center"
+      >
+        <span className="mr-1">Next</span>
+        <span>›</span>
+      </Button>
+    </div>
+  )
+
+  // 分页处理函数
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // 分页计算
+  const indexOfLastItem = currentPage * itemsPage
+  const indexOfFirstItem = indexOfLastItem - itemsPage
+  const currentEvents = events.slice(indexOfFirstItem, indexOfLastItem)
+  const totalEntries = events.length
+  const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+  const showingTo = Math.min(indexOfLastItem, totalEntries)
+  const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+  // 统计信息卡片
+  const StatsCards = () => (
+    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          {events.length}
+        </div>
+        <div className="text-sm text-blue-600 dark:text-blue-400">Total Tasks</div>
+      </div>
+      <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
+        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+          {events.filter(e => e.resource.status === 'Complete').length}
+        </div>
+        <div className="text-sm text-green-600 dark:text-green-400">Completed</div>
+      </div>
+    </div>
+  )
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -185,95 +317,55 @@ const Schedule = () => {
       <Card>
         <EventLegend />
         
-        {/* 修复移动端日历容器 */}
-        <div 
-          style={{ 
-            height: '600px',
-            // 添加这些样式来修复移动端问题
-            overflow: 'hidden',
-            position: 'relative'
-          }} 
-          className={`
-            ${theme === 'dark' ? 'text-gray-900' : ''}
-            ${isMobile ? 'overflow-x-hidden touch-pan-y' : ''}
-          `}
-        >
-          <Calendar
-            localizer={localizer}
-            events={events}
-            startAccessor="start"
-            endAccessor="end"
-            eventPropGetter={eventStyleGetter}
-            views={['month']}
-            defaultView="month"
-            components={{
-              toolbar: CustomToolbar,
-              event: CustomEvent
-            }}
-            popup
-            // 添加移动端优化属性
-            style={{
-              // 确保日历不会超出容器
-              minWidth: isMobile ? '100%' : 'auto',
-              // 防止水平滚动
-              overflow: 'hidden'
-            }}
-          />
-        </div>
+        {/* 内容区域 */}
+        {isMobile ? (
+          // 移动端：卡片视图（模仿 Jobs 页面）
+          <>
+            <div className="space-y-4">
+              {currentEvents.map((event) => (
+                <ScheduleCard key={event.id} todo={event.resource} />
+              ))}
+            </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {events.length}
+            {/* 移动端分页和信息显示 - 和 Jobs 页面一样 */}
+            <div className="flex-col justify-center text-center mt-4">
+              <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : 'text-gray-900'}`}>
+                Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+              </p>
+              
+              <div className="mt-4">
+                <MobileSimplePagination />
+              </div>
             </div>
-            <div className="text-sm text-blue-600 dark:text-blue-400">Total Tasks</div>
-          </div>
-          <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {events.filter(e => e.resource.status === 'Complete').length}
+          </>
+        ) : (
+          // 桌面端：日历视图
+          <>
+            <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
+              <Calendar
+                localizer={localizer}
+                events={events}
+                startAccessor="start"
+                endAccessor="end"
+                eventPropGetter={eventStyleGetter}
+                views={['month']}
+                defaultView="month"
+                components={{
+                  toolbar: CustomToolbar,
+                  event: CustomEvent
+                }}
+                popup
+              />
             </div>
-            <div className="text-sm text-green-600 dark:text-green-400">Completed</div>
-          </div>
-        </div>
+            
+            {/* 统计信息 */}
+            <StatsCards />
+          </>
+        )}
+        
+        {/* 移动端也显示统计信息 */}
+        {isMobile && <StatsCards />}
       </Card>
-
-      {/* 添加移动端特定的 CSS 修复 */}
-      <style jsx>{`
-        /* 修复 react-big-calendar 在移动端的响应式问题 */
-        @media (max-width: 768px) {
-          .rbc-month-view {
-            min-width: 100% !important;
-            overflow-x: hidden !important;
-          }
-          
-          .rbc-month-header {
-            min-width: 100% !important;
-          }
-          
-          .rbc-row-bg {
-            min-width: 100% !important;
-          }
-          
-          .rbc-day-bg {
-            min-width: calc(100% / 7) !important;
-          }
-          
-          .rbc-header {
-            min-width: calc(100% / 7) !important;
-            padding: 4px 2px !important;
-            font-size: 12px !important;
-          }
-          
-          .rbc-date-cell {
-            font-size: 11px !important;
-            padding: 2px !important;
-          }
-          
-          .rbc-row-content {
-            min-width: 100% !important;
-          }
-        }
-      `}</style>
     </div>
   )
 }
