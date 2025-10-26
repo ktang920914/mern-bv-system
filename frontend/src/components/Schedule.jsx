@@ -12,6 +12,17 @@ const Schedule = () => {
   const { theme } = useThemeStore()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  // 检测屏幕大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // 获取 Todo 数据
   useEffect(() => {
@@ -174,8 +185,19 @@ const Schedule = () => {
       <Card>
         <EventLegend />
         
-        {/* 日历容器添加 text-gray-900 类名 */}
-        <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
+        {/* 修复移动端日历容器 */}
+        <div 
+          style={{ 
+            height: '600px',
+            // 添加这些样式来修复移动端问题
+            overflow: 'hidden',
+            position: 'relative'
+          }} 
+          className={`
+            ${theme === 'dark' ? 'text-gray-900' : ''}
+            ${isMobile ? 'overflow-x-hidden touch-pan-y' : ''}
+          `}
+        >
           <Calendar
             localizer={localizer}
             events={events}
@@ -189,6 +211,13 @@ const Schedule = () => {
               event: CustomEvent
             }}
             popup
+            // 添加移动端优化属性
+            style={{
+              // 确保日历不会超出容器
+              minWidth: isMobile ? '100%' : 'auto',
+              // 防止水平滚动
+              overflow: 'hidden'
+            }}
           />
         </div>
 
@@ -207,6 +236,44 @@ const Schedule = () => {
           </div>
         </div>
       </Card>
+
+      {/* 添加移动端特定的 CSS 修复 */}
+      <style jsx>{`
+        /* 修复 react-big-calendar 在移动端的响应式问题 */
+        @media (max-width: 768px) {
+          .rbc-month-view {
+            min-width: 100% !important;
+            overflow-x: hidden !important;
+          }
+          
+          .rbc-month-header {
+            min-width: 100% !important;
+          }
+          
+          .rbc-row-bg {
+            min-width: 100% !important;
+          }
+          
+          .rbc-day-bg {
+            min-width: calc(100% / 7) !important;
+          }
+          
+          .rbc-header {
+            min-width: calc(100% / 7) !important;
+            padding: 4px 2px !important;
+            font-size: 12px !important;
+          }
+          
+          .rbc-date-cell {
+            font-size: 11px !important;
+            padding: 2px !important;
+          }
+          
+          .rbc-row-content {
+            min-width: 100% !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }
