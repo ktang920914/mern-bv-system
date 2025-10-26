@@ -5,6 +5,7 @@ import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { Card, Button, Badge, Spinner, Popover, Pagination } from 'flowbite-react'
 import useThemeStore from '../themeStore'
+import { useSearchParams } from 'react-router-dom'
 
 const localizer = momentLocalizer(moment)
 
@@ -13,7 +14,8 @@ const Schedule = () => {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [itemsPage] = useState(10)
 
   // 检测屏幕大小变化
@@ -25,6 +27,22 @@ const Schedule = () => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // 当页码变化时更新 URL - 只在移动端需要
+  useEffect(() => {
+    // 只有在移动端卡片视图才需要分页URL
+    if (isMobile) {
+      const params = new URLSearchParams(searchParams)
+      
+      if (currentPage === 1) {
+        params.delete('page')
+      } else {
+        params.set('page', currentPage.toString())
+      }
+      
+      setSearchParams(params)
+    }
+  }, [currentPage, searchParams, setSearchParams, isMobile])
 
   // 获取 Todo 数据
   useEffect(() => {
@@ -253,13 +271,13 @@ const Schedule = () => {
     </div>
   )
 
-  // 分页处理函数
+  // 分页处理函数 - 只在移动端使用
   const handlePageChange = (page) => {
     setCurrentPage(page)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // 分页计算
+  // 分页计算 - 只在移动端使用
   const indexOfLastItem = currentPage * itemsPage
   const indexOfFirstItem = indexOfLastItem - itemsPage
   const currentEvents = events.slice(indexOfFirstItem, indexOfLastItem)
@@ -339,7 +357,7 @@ const Schedule = () => {
             </div>
           </>
         ) : (
-          // 桌面端：日历视图
+          // 桌面端：日历视图（不需要分页）
           <>
             <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
               <Calendar
@@ -358,7 +376,7 @@ const Schedule = () => {
               />
             </div>
             
-            {/* 统计信息 */}
+            {/* 桌面端只显示统计信息，不需要分页 */}
             <StatsCards />
           </>
         )}
