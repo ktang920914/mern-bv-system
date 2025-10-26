@@ -158,10 +158,7 @@ const Schedule = () => {
     <div className="min-h-screen p-4">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Maintenance Schedule</h1>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
-            View and manage your maintenance schedule
-          </p>
+          <h1 className="text-2xl font-semibold">Schedule</h1>
         </div>
         <div className="flex space-x-2">
           <Button 
