@@ -251,9 +251,9 @@ const DashSidebar = () => {
                 <Link to='/?tab=Maintenances'>
                   <SidebarItem 
                     onClick={() => setSidebarOpen(false)} 
-                    active={tab === 'Maintenance'} 
+                    active={tab === 'Maintenances'} 
                     as='div'
-                    className={tab === 'Maintenance' ? currentTheme.itemActive : currentTheme.item}
+                    className={tab === 'Maintenances' ? currentTheme.itemActive : currentTheme.item}
                   >
                     Jobs
                   </SidebarItem>
@@ -272,18 +272,28 @@ const DashSidebar = () => {
 
               <SidebarCollapse 
                 icon={RiCalendarScheduleLine}
-                label="Schedule"
+                label="Preventive"
                 className={currentTheme.collapse}
                 renderChevronIcon={() => <span className="ml-auto">▼</span>}
               >
-                <Link to='/?tab=Preventive'>
+                <Link to='/?tab=ToDoListPreventive'>
                   <SidebarItem 
                     onClick={() => setSidebarOpen(false)} 
-                    active={tab === 'Preventive'} 
+                    active={tab === 'ToDoListPreventive'} 
                     as='div'
-                    className={tab === 'Preventive' ? currentTheme.itemActive : currentTheme.item}
+                    className={tab === 'ToDoListPreventive' ? currentTheme.itemActive : currentTheme.item}
                   >
-                    Preventive
+                    Todo List
+                  </SidebarItem>
+                </Link>
+                <Link to='/?tab=Schedule'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Schedule'} 
+                    as='div'
+                    className={tab === 'Schedule' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Schedule
                   </SidebarItem>
                 </Link>
               </SidebarCollapse>

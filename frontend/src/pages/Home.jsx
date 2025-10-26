@@ -22,7 +22,8 @@ import Products from "../components/Products"
 import Movement from "../components/Movement"
 import Materials from "../components/Materials"
 import Extruders from "../components/Extruders"
-import Preventive from "../components/Preventive"
+import ToDoListPreventive from "../components/ToDoListPreventive"
+import Schedule from "../components/Schedule"
 
 const Home = () => {
   const { theme } = useThemeStore()
@@ -74,7 +75,8 @@ const Home = () => {
           {tab === 'Transactions' && <Transactions/>}
           {tab === 'Maintenances' && <Maintenance/>}
           {tab === 'Cases' && <Cases/>}
-          {tab === 'Preventive' && <Preventive/>}
+          {tab === 'Schedule' && <Schedule/>}
+          {tab === 'ToDoListPreventive' && <ToDoListPreventive/>}
           {tab === 'Products' && <Products/>}
           {tab === 'Materials' && <Materials/>}
           {tab === 'Movements' && <Movement/>}

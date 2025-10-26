@@ -19,6 +19,7 @@ import productRoute from './routes/product.route.js'
 import materialRoute from './routes/material.route.js'
 import movementRoute from './routes/movement.route.js'
 import extruderRoute from './routes/extruder.route.js'
+import preventiveRoute from './routes/todo.route.js'
 import https from 'https'
 import fs from 'fs'
 
@@ -50,6 +51,7 @@ app.use('/api/case', caseRoute)
 app.use('/api/new', productRoute)
 app.use('/api/raw', materialRoute)
 app.use('/api/stock', movementRoute)
+app.use('/api/preventive', preventiveRoute)
 
 app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')

@@ -1,13 +1,11 @@
 // controllers/case.controller.js
 import Case from "../models/case.model.js";
 import Maintenance from "../models/maintenance.model.js";
-import Activity from "../models/activity.model.js";
 
 // 获取案例统计数据 - 修改为支持 Job Code 筛选和比较模式
 export const getCases = async (req, res, next) => {
     try {
         const { year, codes, code } = req.query;
-        console.log('API Query params:', { year, codes, code });
         
         // 如果是比较模式且指定了单个 code（前端为每个 code 单独调用）
         if (code) {
@@ -34,7 +32,6 @@ export const getCases = async (req, res, next) => {
 // 辅助函数：根据特定 Job Code 计算统计数据（用于比较模式）
 const calculateCasesByCode = async (year, jobCode) => {
     try {
-        console.log(`Calculating cases for code: ${jobCode}, year: ${year}`);
         
         // 构建查询条件
         const maintenanceQuery = { 
@@ -46,11 +43,8 @@ const calculateCasesByCode = async (year, jobCode) => {
             maintenanceQuery.code = jobCode;
         }
         
-        console.log('Maintenance query:', maintenanceQuery);
-        
         // 获取维护记录
         const maintenances = await Maintenance.find(maintenanceQuery);
-        console.log(`Found ${maintenances.length} maintenance records for ${jobCode}`);
         
         // 月份名称映射
         const monthNames = {
@@ -106,11 +100,9 @@ const calculateCasesByCode = async (year, jobCode) => {
         });
         
         const result = Object.values(caseStats);
-        console.log(`Generated ${result.length} case records for ${jobCode}`);
         return result;
         
     } catch (error) {
-        console.error('Error calculating cases by code:', error);
         return [];
     }
 };
@@ -118,7 +110,6 @@ const calculateCasesByCode = async (year, jobCode) => {
 // 辅助函数：根据 Job Code 筛选计算案例统计数据（用于普通模式）
 const calculateFilteredCases = async (year, jobCodes) => {
     try {
-        console.log(`Calculating filtered cases for codes: ${jobCodes}, year: ${year}`);
         
         // 构建查询条件
         const maintenanceQuery = { 
@@ -130,11 +121,8 @@ const calculateFilteredCases = async (year, jobCodes) => {
             maintenanceQuery.code = { $in: jobCodes };
         }
         
-        console.log('Maintenance query:', maintenanceQuery);
-        
         // 获取维护记录
         const maintenances = await Maintenance.find(maintenanceQuery);
-        console.log(`Found ${maintenances.length} maintenance records`);
         
         // 月份名称映射
         const monthNames = {
@@ -189,11 +177,9 @@ const calculateFilteredCases = async (year, jobCodes) => {
         });
         
         const result = Object.values(caseStats);
-        console.log(`Generated ${result.length} filtered case records`);
         return result;
         
     } catch (error) {
-        console.error('Error calculating filtered cases:', error);
         return [];
     }
 };
@@ -298,7 +284,6 @@ export const updateCaseStats = async (req, res, next) => {
         });
         
     } catch (error) {
-        console.error('Error in updateCaseStats:', error);
         next(error);
     }
 };
