@@ -377,10 +377,6 @@ const Schedule = () => {
         <div className="w-3 h-3 rounded bg-red-500" />
         <span className="text-sm text-gray-700 dark:text-gray-300">Incomplete</span>
       </div>
-      <div className="flex items-center space-x-2">
-        <div className="w-3 h-3 rounded bg-blue-500" />
-        <span className="text-sm text-gray-700 dark:text-gray-300">Pending</span>
-      </div>
     </div>
   )
 
