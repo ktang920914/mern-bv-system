@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { Card, Button, Badge, Spinner, Popover, Pagination } from 'flowbite-react'
+import { Card, Button, Badge, Spinner, Popover } from 'flowbite-react'
 import useThemeStore from '../themeStore'
-import { useSearchParams } from 'react-router-dom'
 
 const localizer = momentLocalizer(moment)
 
@@ -14,9 +13,7 @@ const Schedule = () => {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
-  const [itemsPage] = useState(10)
+  const [currentDate, setCurrentDate] = useState(moment())
 
   // 检测屏幕大小变化
   useEffect(() => {
@@ -27,22 +24,6 @@ const Schedule = () => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
-  // 当页码变化时更新 URL - 只在移动端需要
-  useEffect(() => {
-    // 只有在移动端卡片视图才需要分页URL
-    if (isMobile) {
-      const params = new URLSearchParams(searchParams)
-      
-      if (currentPage === 1) {
-        params.delete('page')
-      } else {
-        params.set('page', currentPage.toString())
-      }
-      
-      setSearchParams(params)
-    }
-  }, [currentPage, searchParams, setSearchParams, isMobile])
 
   // 获取 Todo 数据
   useEffect(() => {
@@ -78,7 +59,7 @@ const Schedule = () => {
     fetchTodos()
   }, [])
 
-  // 事件样式 - 只根据状态设置颜色
+  // 桌面端事件样式
   const eventStyleGetter = (event) => {
     let backgroundColor = '#3B82F6'
     
@@ -102,7 +83,7 @@ const Schedule = () => {
     }
   }
 
-  // 简化工具栏 - 只保留月份导航
+  // 桌面端工具栏
   const CustomToolbar = ({ onNavigate, date }) => {
     const goToBack = () => {
       onNavigate('PREV')
@@ -136,13 +117,13 @@ const Schedule = () => {
           </span>
         </div>
         
-        <div className="w-20"> {/* 占位空间保持对称 */}
+        <div className="w-20">
         </div>
       </div>
     )
   }
 
-  // 自定义事件组件
+  // 桌面端自定义事件组件
   const CustomEvent = ({ event }) => {
     return (
       <div className="text-xs p-1">
@@ -160,131 +141,152 @@ const Schedule = () => {
     )
   }
 
+  // 移动端日历导航
+  const goToPrevMonth = () => {
+    setCurrentDate(currentDate.clone().subtract(1, 'month'))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentDate(currentDate.clone().add(1, 'month'))
+  }
+
+  const goToToday = () => {
+    setCurrentDate(moment())
+  }
+
+  // 生成移动端日历数据
+  const generateCalendar = () => {
+    const startDay = currentDate.clone().startOf('month').startOf('week')
+    const endDay = currentDate.clone().endOf('month').endOf('week')
+    const calendar = []
+    const day = startDay.clone()
+
+    while (day.isBefore(endDay, 'day')) {
+      calendar.push(
+        Array(7)
+          .fill(0)
+          .map(() => day.add(1, 'day').clone())
+      )
+    }
+
+    return calendar
+  }
+
+  // 获取某一天的事件
+  const getEventsForDay = (day) => {
+    return events.filter(event => 
+      moment(event.start).isSame(day, 'day')
+    )
+  }
+
+  // 移动端自定义日历组件
+  const MobileCalendar = () => {
+    const calendar = generateCalendar()
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* 日历头部 */}
+        <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+          <div className="flex justify-between items-center mb-2">
+            <Button size="sm" onClick={goToPrevMonth} color="gray" className="px-2">
+              ‹
+            </Button>
+            <div className="text-center flex-1">
+              <span className="text-lg font-semibold">
+                {currentDate.format('MMMM YYYY')}
+              </span>
+            </div>
+            <Button size="sm" onClick={goToNextMonth} color="gray" className="px-2">
+              ›
+            </Button>
+          </div>
+          <div className="flex justify-center">
+            <Button size="sm" onClick={goToToday} color="blue" className="px-3">
+              Today
+            </Button>
+          </div>
+        </div>
+
+        {/* 星期标题 */}
+        <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+          {weekDays.map(day => (
+            <div key={day} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* 日历内容 */}
+        <div className="divide-y divide-gray-200 dark:divide-gray-600">
+          {calendar.map((week, weekIndex) => (
+            <div key={weekIndex} className="grid grid-cols-7">
+              {week.map((day, dayIndex) => {
+                const isCurrentMonth = day.month() === currentDate.month()
+                const isToday = day.isSame(moment(), 'day')
+                const dayEvents = getEventsForDay(day)
+
+                return (
+                  <div
+                    key={dayIndex}
+                    className={`min-h-[80px] p-1 border-r border-gray-200 dark:border-gray-600 ${
+                      !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800 text-gray-400' : ''
+                    } ${isToday ? 'bg-blue-50 dark:bg-blue-900' : ''} ${
+                      dayIndex === 6 ? 'border-r-0' : ''
+                    }`}
+                  >
+                    <div className={`text-xs text-center mb-1 ${
+                      isToday ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {day.format('D')}
+                    </div>
+                    
+                    {/* 事件列表 */}
+                    <div className="space-y-1">
+                      {dayEvents.slice(0, 2).map((event, eventIndex) => (
+                        <div
+                          key={eventIndex}
+                          className={`text-[10px] p-1 rounded text-white truncate ${
+                            event.resource.status === 'Complete' 
+                              ? 'bg-green-500' 
+                              : event.resource.status === 'Incomplete'
+                              ? 'bg-red-500'
+                              : 'bg-blue-500'
+                          }`}
+                          title={event.resource.code}
+                        >
+                          {event.resource.code}
+                        </div>
+                      ))}
+                      {dayEvents.length > 2 && (
+                        <div className="text-[10px] text-gray-500 text-center">
+                          +{dayEvents.length - 2} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   // 简化图例说明
   const EventLegend = () => (
     <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
       <div className="flex items-center space-x-2">
         <div className="w-3 h-3 rounded bg-green-500" />
-        <span className={`${theme === 'light' ? '' : 'text-gray-900'}`}>Completed</span>
+        <span className={`text-sm ${theme === 'light' ? 'text-gray-900 ' : 'text-gray-900'}`}>Completed</span>
       </div>
       <div className="flex items-center space-x-2">
         <div className="w-3 h-3 rounded bg-red-500" />
-        <span className={`${theme === 'light' ? '' : 'text-gray-900'}`}>Incomplete</span>
+        <span className={`text-sm ${theme === 'light' ? 'text-gray-900 ' : 'text-gray-900'}`}>Incomplete</span>
       </div>
     </div>
   )
-
-  // 移动端卡片组件 - 模仿 Jobs 页面的样式
-  const ScheduleCard = ({ todo }) => (
-    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
-      theme === 'light' 
-        ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
-        : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
-    }`}>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.date}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Item</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.code}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Section</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.section}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Status</p>
-          <Badge 
-            color={todo.status === 'Complete' ? 'success' : 'failure'}
-            size="sm"
-          >
-            {todo.status}
-          </Badge>
-        </div>
-      </div>
-      
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Description</p>
-        <Popover 
-          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-          content={
-            <div className="p-3 max-w-xs">
-              <p className="font-semibold text-sm">Full Description:</p>
-              <p className="text-xs mb-2">{todo.description}</p>
-              <p className="font-semibold text-sm">I/M:</p>
-              <p className="text-xs mb-2">{todo.im}</p>
-              <p className="font-semibold text-sm">Check Point:</p>
-              <p className="text-xs mb-2">{todo.checkpoint}</p>
-              <p className="font-semibold text-sm">Tools:</p>
-              <p className="text-xs mb-2">{todo.tool}</p>
-              <p className="font-semibold text-sm">Reaction Plan:</p>
-              <p className="text-xs">{todo.reactionplan}</p>
-            </div>
-          }
-          trigger='hover'
-          placement="top"
-          arrow={false}
-        >
-          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-          }`}>
-            {todo.description.length > 30 ? `${todo.description.substring(0, 30)}...` : todo.description}
-          </span>
-        </Popover>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-3">
-        <div>
-          <span className="font-medium">I/M Type:</span> {todo.im}
-        </div>
-        <div>
-          <span className="font-medium">Repeat:</span> {todo.repeatType === 'none' ? 'No Repeat' : todo.repeatType}
-        </div>
-      </div>
-    </div>
-  )
-
-  // 移动端简洁分页组件 - 和 Jobs 页面一样
-  const MobileSimplePagination = () => (
-    <div className="flex items-center justify-center space-x-4">
-      <Button
-        size="sm"
-        disabled={currentPage === 1}
-        onClick={() => handlePageChange(currentPage - 1)}
-        className="flex items-center"
-      >
-        <span>‹</span>
-        <span className="ml-1">Previous</span>
-      </Button>
-
-      <Button
-        size="sm"
-        disabled={currentPage === totalPages}
-        onClick={() => handlePageChange(currentPage + 1)}
-        className="flex items-center"
-      >
-        <span className="mr-1">Next</span>
-        <span>›</span>
-      </Button>
-    </div>
-  )
-
-  // 分页处理函数 - 只在移动端使用
-  const handlePageChange = (page) => {
-    setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  // 分页计算 - 只在移动端使用
-  const indexOfLastItem = currentPage * itemsPage
-  const indexOfFirstItem = indexOfLastItem - itemsPage
-  const currentEvents = events.slice(indexOfFirstItem, indexOfLastItem)
-  const totalEntries = events.length
-  const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
-  const showingTo = Math.min(indexOfLastItem, totalEntries)
-  const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
   // 统计信息卡片
   const StatsCards = () => (
@@ -337,27 +339,10 @@ const Schedule = () => {
         
         {/* 内容区域 */}
         {isMobile ? (
-          // 移动端：卡片视图（模仿 Jobs 页面）
-          <>
-            <div className="space-y-4">
-              {currentEvents.map((event) => (
-                <ScheduleCard key={event.id} todo={event.resource} />
-              ))}
-            </div>
-
-            {/* 移动端分页和信息显示 - 和 Jobs 页面一样 */}
-            <div className="flex-col justify-center text-center mt-4">
-              <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : 'text-gray-900'}`}>
-                Showing {showingFrom} to {showingTo} of {totalEntries} Entries
-              </p>
-              
-              <div className="mt-4">
-                <MobileSimplePagination />
-              </div>
-            </div>
-          </>
+          // 移动端：只显示自定义日历
+          <MobileCalendar />
         ) : (
-          // 桌面端：日历视图（不需要分页）
+          // 桌面端：显示 react-big-calendar
           <>
             <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
               <Calendar
@@ -375,14 +360,11 @@ const Schedule = () => {
                 popup
               />
             </div>
-            
-            {/* 桌面端只显示统计信息，不需要分页 */}
-            <StatsCards />
           </>
         )}
         
-        {/* 移动端也显示统计信息 */}
-        {isMobile && <StatsCards />}
+        {/* 统计信息 - 移动端和桌面端都显示 */}
+        <StatsCards />
       </Card>
     </div>
   )
