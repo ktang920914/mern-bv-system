@@ -141,7 +141,7 @@ export const todo = async (req, res, next) => {
     const newActivity = new Activity({
       date: currentDate,
       activity: 'Create todo',
-      detail: `${req.user.username} created todo: ${description}`
+      detail: `${req.user.username}`
     });
     await newActivity.save();
 
