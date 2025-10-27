@@ -269,7 +269,7 @@ const Schedule = () => {
                 ‹
               </Button>
               <div className="text-center flex-1">
-                <span className="text-lg font-semibold">
+                <span className="text-lg font-semibold text-gray-900">
                   {currentDate.format('MMMM YYYY')}
                 </span>
               </div>
