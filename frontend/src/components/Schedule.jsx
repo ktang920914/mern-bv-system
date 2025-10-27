@@ -41,7 +41,7 @@ const Schedule = () => {
         // 将 todos 转换为日历事件
         const calendarEvents = data.map(todo => ({
           id: todo._id,
-          title: `${todo.code} - ${todo.description.substring(0, 20)}${todo.description.length > 20 ? '...' : ''}`,
+          title: `${todo.code}`,
           start: new Date(todo.date),
           end: new Date(todo.date),
           allDay: true,
@@ -72,13 +72,18 @@ const Schedule = () => {
     return {
       style: {
         backgroundColor,
-        borderRadius: '6px',
+        borderRadius: '4px',
         opacity: 0.9,
         color: 'white',
         border: '0px',
-        fontSize: '12px',
-        padding: '2px 4px',
-        fontWeight: '500'
+        fontSize: '11px',
+        padding: '1px 3px',
+        fontWeight: '500',
+        margin: '1px 0',
+        height: '20px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
       }
     }
   }
@@ -123,13 +128,14 @@ const Schedule = () => {
     )
   }
 
-  // 桌面端自定义事件组件
+  // 桌面端自定义事件组件 - 简化显示
   const CustomEvent = ({ event }) => {
     return (
-      <div className="text-xs p-1">
-        <div className="font-semibold truncate">{event.resource.code}</div>
-        <div className="truncate">{event.resource.description}</div>
-        <div className="flex justify-center mt-1">
+      <div className="text-xs p-0.5">
+        <div className="font-semibold truncate" title={event.resource.code}>
+          {event.resource.code}
+        </div>
+        <div className="flex justify-center mt-0.5">
           <Badge 
             color={event.resource.status === 'Complete' ? 'success' : 'failure'}
             size="xs"
@@ -279,11 +285,15 @@ const Schedule = () => {
     <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
       <div className="flex items-center space-x-2">
         <div className="w-3 h-3 rounded bg-green-500" />
-        <span className={`text-sm ${theme === 'light' ? 'text-gray-900 ' : 'text-gray-900'}`}>Completed</span>
+        <span className="text-sm text-gray-700 dark:text-gray-300">Completed</span>
       </div>
       <div className="flex items-center space-x-2">
         <div className="w-3 h-3 rounded bg-red-500" />
-        <span className={`text-sm ${theme === 'light' ? 'text-gray-900 ' : 'text-gray-900'}`}>Incomplete</span>
+        <span className="text-sm text-gray-700 dark:text-gray-300">Incomplete</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <div className="w-3 h-3 rounded bg-blue-500" />
+        <span className="text-sm text-gray-700 dark:text-gray-300">Pending</span>
       </div>
     </div>
   )
