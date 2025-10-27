@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { Card, Button, Badge, Spinner, Popover } from 'flowbite-react'
+import { Card, Button, Badge, Spinner, Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react'
 import useThemeStore from '../themeStore'
 
 const localizer = momentLocalizer(moment)
@@ -14,6 +14,8 @@ const Schedule = () => {
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [currentDate, setCurrentDate] = useState(moment())
+  const [selectedDay, setSelectedDay] = useState(null)
+  const [showDayEvents, setShowDayEvents] = useState(false)
 
   // 检测屏幕大小变化
   useEffect(() => {
@@ -185,98 +187,182 @@ const Schedule = () => {
     )
   }
 
+  // 处理日期点击事件
+  const handleDayClick = (day, dayEvents) => {
+    if (dayEvents.length > 0) {
+      setSelectedDay({
+        date: day,
+        events: dayEvents
+      })
+      setShowDayEvents(true)
+    }
+  }
+
+  // 移动端事件详情模态框
+  const DayEventsModal = () => {
+    if (!selectedDay) return null
+
+    return (
+      <Modal show={showDayEvents} onClose={() => setShowDayEvents(false)} size="md">
+        <ModalHeader>
+          {selectedDay.date.format('MMMM D, YYYY')}
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {selectedDay.events.map((event, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border ${
+                  theme === 'light' 
+                    ? 'bg-white border-gray-200' 
+                    : 'bg-gray-800 border-gray-700 text-white'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="font-semibold text-sm">{event.resource.code}</div>
+                  <Badge 
+                    color={event.resource.status === 'Complete' ? 'success' : 'failure'}
+                    size="sm"
+                  >
+                    {event.resource.status}
+                  </Badge>
+                </div>
+                
+                <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                  <div><span className="font-medium">Section:</span> {event.resource.section}</div>
+                  <div><span className="font-medium">Description:</span> {event.resource.description}</div>
+                </div>
+                
+                <div className={`grid grid-cols-2 gap-2 text-xs  ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                  <div>
+                    <span className="font-medium">I/M Type:</span> {event.resource.im}
+                  </div>
+                  <div>
+                    <span className="font-medium">Repeat:</span> {event.resource.repeatType === 'none' ? 'No Repeat' : event.resource.repeatType}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="gray" onClick={() => setShowDayEvents(false)}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
+    )
+  }
+
   // 移动端自定义日历组件
   const MobileCalendar = () => {
     const calendar = generateCalendar()
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {/* 日历头部 */}
-        <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-          <div className="flex justify-between items-center mb-2">
-            <Button size="sm" onClick={goToPrevMonth} color="gray" className="px-2">
-              ‹
-            </Button>
-            <div className="text-center flex-1">
-              <span className="text-lg font-semibold">
-                {currentDate.format('MMMM YYYY')}
-              </span>
+      <>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* 日历头部 */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+            <div className="flex justify-between items-center mb-2">
+              <Button size="sm" onClick={goToPrevMonth} color="gray" className="px-2">
+                ‹
+              </Button>
+              <div className="text-center flex-1">
+                <span className="text-lg font-semibold">
+                  {currentDate.format('MMMM YYYY')}
+                </span>
+              </div>
+              <Button size="sm" onClick={goToNextMonth} color="gray" className="px-2">
+                ›
+              </Button>
             </div>
-            <Button size="sm" onClick={goToNextMonth} color="gray" className="px-2">
-              ›
-            </Button>
-          </div>
-          <div className="flex justify-center">
-            <Button size="sm" onClick={goToToday} color="blue" className="px-3">
-              Today
-            </Button>
-          </div>
-        </div>
-
-        {/* 星期标题 */}
-        <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-          {weekDays.map(day => (
-            <div key={day} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
-              {day}
+            <div className="flex justify-center">
+              <Button size="sm" onClick={goToToday} color="blue" className="px-3">
+                Today
+              </Button>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* 日历内容 */}
-        <div className="divide-y divide-gray-200 dark:divide-gray-600">
-          {calendar.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7">
-              {week.map((day, dayIndex) => {
-                const isCurrentMonth = day.month() === currentDate.month()
-                const isToday = day.isSame(moment(), 'day')
-                const dayEvents = getEventsForDay(day)
+          {/* 星期标题 */}
+          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+            {weekDays.map(day => (
+              <div key={day} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+                {day}
+              </div>
+            ))}
+          </div>
 
-                return (
-                  <div
-                    key={dayIndex}
-                    className={`min-h-[80px] p-1 border-r border-gray-200 dark:border-gray-600 ${
-                      !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800 text-gray-400' : ''
-                    } ${isToday ? 'bg-blue-50 dark:bg-blue-900' : ''} ${
-                      dayIndex === 6 ? 'border-r-0' : ''
-                    }`}
-                  >
-                    <div className={`text-xs text-center mb-1 ${
-                      isToday ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
-                    }`}>
-                      {day.format('D')}
-                    </div>
-                    
-                    {/* 事件列表 */}
-                    <div className="space-y-1">
-                      {dayEvents.slice(0, 2).map((event, eventIndex) => (
-                        <div
-                          key={eventIndex}
-                          className={`text-[10px] p-1 rounded text-white truncate ${
-                            event.resource.status === 'Complete' 
-                              ? 'bg-green-500' 
-                              : event.resource.status === 'Incomplete'
-                              ? 'bg-red-500'
-                              : 'bg-blue-500'
-                          }`}
-                          title={event.resource.code}
-                        >
-                          {event.resource.code}
-                        </div>
-                      ))}
-                      {dayEvents.length > 2 && (
-                        <div className="text-[10px] text-gray-500 text-center">
-                          +{dayEvents.length - 2} more
-                        </div>
+          {/* 日历内容 */}
+          <div className="divide-y divide-gray-200 dark:divide-gray-600">
+            {calendar.map((week, weekIndex) => (
+              <div key={weekIndex} className="grid grid-cols-7">
+                {week.map((day, dayIndex) => {
+                  const isCurrentMonth = day.month() === currentDate.month()
+                  const isToday = day.isSame(moment(), 'day')
+                  const dayEvents = getEventsForDay(day)
+
+                  return (
+                    <div
+                      key={dayIndex}
+                      className={`min-h-[80px] p-1 border-r border-gray-200 dark:border-gray-600 relative ${
+                        !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800 text-gray-400' : ''
+                      } ${isToday ? 'bg-blue-50 dark:bg-blue-900' : ''} ${
+                        dayIndex === 6 ? 'border-r-0' : ''
+                      }`}
+                    >
+                      <div className={`text-xs text-center mb-1 ${
+                        isToday ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {day.format('D')}
+                      </div>
+                      
+                      {/* 事件列表 */}
+                      <div className="space-y-1">
+                        {dayEvents.slice(0, 2).map((event, eventIndex) => (
+                          <div
+                            key={eventIndex}
+                            className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${
+                              event.resource.status === 'Complete' 
+                                ? 'bg-green-500' 
+                                : event.resource.status === 'Incomplete'
+                                ? 'bg-red-500'
+                                : 'bg-blue-500'
+                            }`}
+                            title={event.resource.code}
+                            onClick={() => handleDayClick(day, dayEvents)}
+                          >
+                            {event.resource.code}
+                          </div>
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <div 
+                            className="text-[10px] text-blue-500 text-center bg-blue-50 dark:bg-blue-900 rounded p-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
+                            onClick={() => handleDayClick(day, dayEvents)}
+                          >
+                            +{dayEvents.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* 透明点击层 - 点击单元格任意位置打开模态框 */}
+                      {dayEvents.length > 0 && (
+                        <div 
+                          className="absolute inset-0 cursor-pointer"
+                          onClick={() => handleDayClick(day, dayEvents)}
+                        />
                       )}
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+
+        {/* 事件详情模态框 */}
+        <DayEventsModal />
+      </>
     )
   }
 
