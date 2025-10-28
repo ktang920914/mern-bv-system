@@ -16,6 +16,7 @@ const Schedule = () => {
   const [currentDate, setCurrentDate] = useState(moment())
   const [selectedDay, setSelectedDay] = useState(null)
   const [showDayEvents, setShowDayEvents] = useState(false)
+  const [selectedEvents, setSelectedEvents] = useState([]) // 新增：用于桌面端的事件选择
 
   // 检测屏幕大小变化
   useEffect(() => {
@@ -85,8 +86,38 @@ const Schedule = () => {
         height: '20px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        cursor: 'pointer' // 添加指针样式表示可点击
       }
+    }
+  }
+
+  // 桌面端事件点击处理
+  const handleSelectEvent = (event) => {
+    // 获取同一天的所有事件
+    const dayEvents = events.filter(e => 
+      moment(e.start).isSame(event.start, 'day')
+    )
+    
+    setSelectedDay({
+      date: moment(event.start),
+      events: dayEvents
+    })
+    setShowDayEvents(true)
+  }
+
+  // 桌面端日期点击处理（点击空白区域）
+  const handleSelectSlot = (slotInfo) => {
+    const dayEvents = events.filter(event => 
+      moment(event.start).isSame(slotInfo.start, 'day')
+    )
+    
+    if (dayEvents.length > 0) {
+      setSelectedDay({
+        date: moment(slotInfo.start),
+        events: dayEvents
+      })
+      setShowDayEvents(true)
     }
   }
 
@@ -107,13 +138,13 @@ const Schedule = () => {
     return (
       <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="flex space-x-2">
-          <Button size="sm" onClick={goToBack} color="gray">
+          <Button size="sm" className='cursor-pointer' onClick={goToBack} color="gray">
             ‹
           </Button>
-          <Button size="sm" onClick={goToCurrent} color="gray">
+          <Button size="sm" className='cursor-pointer' onClick={goToCurrent} color="gray">
             Today
           </Button>
-          <Button size="sm" onClick={goToNext} color="gray">
+          <Button size="sm" className='cursor-pointer' onClick={goToNext} color="gray">
             ›
           </Button>
         </div>
@@ -187,7 +218,7 @@ const Schedule = () => {
     )
   }
 
-  // 处理日期点击事件
+  // 处理移动端日期点击事件
   const handleDayClick = (day, dayEvents) => {
     if (dayEvents.length > 0) {
       setSelectedDay({
@@ -198,7 +229,7 @@ const Schedule = () => {
     }
   }
 
-  // 移动端事件详情模态框
+  // 通用的事件详情模态框（桌面端和移动端共用）
   const DayEventsModal = () => {
     if (!selectedDay) return null
 
@@ -246,7 +277,7 @@ const Schedule = () => {
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button color="gray" onClick={() => setShowDayEvents(false)}>
+          <Button color="gray" className='cursor-pointer' onClick={() => setShowDayEvents(false)}>
             Close
           </Button>
         </ModalFooter>
@@ -410,7 +441,7 @@ const Schedule = () => {
   }
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Schedule</h1>
@@ -449,9 +480,15 @@ const Schedule = () => {
                   toolbar: CustomToolbar,
                   event: CustomEvent
                 }}
+                onSelectEvent={handleSelectEvent} // 新增：事件点击处理
+                onSelectSlot={handleSelectSlot}   // 新增：日期点击处理
+                selectable                         // 新增：启用选择功能
                 popup
               />
             </div>
+            
+            {/* 桌面端也使用同一个 Modal */}
+            <DayEventsModal />
           </>
         )}
         

@@ -4,6 +4,8 @@ import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore'
 import useUserstore from '../store'
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 
 const ToDoListPreventive = () => {
     const {theme} = useThemeStore()
@@ -296,6 +298,61 @@ const ToDoListPreventive = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
+    // 生成Excel报告的函数
+    const generateExcelReport = () => {
+        // 准备Excel数据 - 包含所有待办事项字段
+        const excelData = todos.map(todo => ({
+            'Date': todo.date,
+            'Item': todo.code,
+            'Section': todo.section,
+            'Description': todo.description,
+            'I/M': todo.im,
+            'Check Point': todo.checkpoint,
+            'Tools': todo.tool,
+            'Reaction Plan': todo.reactionplan,
+            'Status': todo.status,
+            'Repeat Type': todo.repeatType || 'None',
+            'Repeat End Date': todo.repeatEndDate || 'N/A',
+            'Created At': new Date(todo.createdAt).toLocaleString(),
+            'Updated At': new Date(todo.updatedAt).toLocaleString()
+        }))
+
+        // 创建工作簿和工作表
+        const workbook = XLSX.utils.book_new()
+        const worksheet = XLSX.utils.json_to_sheet(excelData)
+        
+        // 设置列宽
+        const colWidths = [
+            { wch: 15 }, // Date
+            { wch: 20 }, // Item
+            { wch: 15 }, // Section
+            { wch: 30 }, // Description
+            { wch: 10 }, // I/M
+            { wch: 20 }, // Check Point
+            { wch: 20 }, // Tools
+            { wch: 20 }, // Reaction Plan
+            { wch: 12 }, // Status
+            { wch: 15 }, // Repeat Type
+            { wch: 18 }, // Repeat End Date
+            { wch: 20 }, // Created At
+            { wch: 20 }  // Updated At
+        ]
+        worksheet['!cols'] = colWidths
+
+        // 添加工作表到工作簿
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'ToDo List Report')
+        
+        // 生成Excel文件并下载
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+        const blob = new Blob([excelBuffer], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        })
+        
+        // 使用当前日期作为文件名
+        const date = new Date().toISOString().split('T')[0]
+        saveAs(blob, `ToDo_List_Report_${date}.xlsx`)
+    }
+
     // 移动端简洁分页组件
     const MobileSimplePagination = () => (
         <div className="flex items-center justify-center space-x-4">
@@ -410,9 +467,18 @@ const ToDoListPreventive = () => {
                         className='w-full'
                     />
                 </div>
-                <Button className='cursor-pointer w-full sm:w-auto' onClick={handleCreateToDo}>
-                    Create ToDo
-                </Button>
+                <div className='flex gap-2 w-full sm:w-auto'> 
+                    <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateToDo}>
+                        Create ToDo
+                    </Button>
+                    <Button 
+                        color='green' 
+                        className='cursor-pointer flex-1 sm:flex-none' 
+                        onClick={generateExcelReport}
+                    >
+                        Report
+                    </Button>
+                </div>
             </div>
 
             {/* 桌面端表格视图 */}
