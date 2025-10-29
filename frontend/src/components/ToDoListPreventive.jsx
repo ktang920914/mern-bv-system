@@ -281,6 +281,7 @@ const ToDoListPreventive = () => {
         todo.im.toLowerCase().includes(searchTerm) ||
         todo.checkpoint.toLowerCase().includes(searchTerm) ||
         todo.tool.toLowerCase().includes(searchTerm) ||
+        todo.repeatType.toLowerCase().includes(searchTerm) ||
         todo.reactionplan.toLowerCase().includes(searchTerm) ||
         todo.status.toLowerCase().includes(searchTerm) && todo.status.toString().toLowerCase() === searchTerm
     )
