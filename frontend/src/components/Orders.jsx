@@ -566,6 +566,8 @@ const Orders = () => {
                                 <option>QC</option>
                                 <option>Mould</option>
                                 <option>Others</option>
+                                <option>TNB</option>
+                                <option>Air Selangor</option>
                             </Select>
                         </div>
 

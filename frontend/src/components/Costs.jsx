@@ -98,7 +98,9 @@ const Costs = () => {
         "Injection machine",
         "QC",
         "Mould",
-        "Others"
+        "Others",
+        "TNB",
+        "Air Selangor",
     ]
 
     const monthFields = [
