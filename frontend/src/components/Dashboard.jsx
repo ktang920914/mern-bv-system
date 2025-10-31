@@ -80,7 +80,7 @@ const Dashboard = () => {
 
   const costCategories = [
     "Spareparts", "Extruder", "Electrical & Installation", "Injection machine", 
-    "QC", "Mould", "Others"
+    "QC", "Mould", "Others", "TNB", "Air Selangor"
   ]
 
   const caseTypes = ["Breakdown", "Kaizen", "Inspect", "Maintenance"]
