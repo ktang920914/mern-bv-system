@@ -17,6 +17,9 @@ const dataTypes = [
     { value: 'oee', label: 'OEE' }
 ];
 
+// 需要计算平均值的数据类型
+const averageDataTypes = ['arr', 'availability', 'performance', 'quality', 'oee'];
+
 export const calculateOutputs = async (req, res, next) => {
     try {
         const { year, data, codes } = req.query;
@@ -68,7 +71,6 @@ export const calculateOutputs = async (req, res, next) => {
         };
         
         // 计算平均值的数据类型
-        const averageDataTypes = ['arr', 'availability', 'performance', 'quality', 'oee'];
         const isAverage = averageDataTypes.includes(data);
         
         // 初始化计数器和总和（用于计算平均值）
