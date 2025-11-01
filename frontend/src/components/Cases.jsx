@@ -241,7 +241,6 @@ const Cases = () => {
                 const res = await fetch(`/api/case/getcases?${params}`);
                 if (res.ok) {
                     const data = await res.json();
-                    console.log('Normal mode data:', data);
                     // 清理数据精度
                     allCases = data.map(caseItem => ({
                         ...caseItem,

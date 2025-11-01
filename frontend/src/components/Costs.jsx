@@ -208,7 +208,6 @@ const Costs = () => {
     // 准备图表数据
     const prepareChartData = () => {
         if (costs.length === 0) {
-            console.log('No costs data available');
             return null;
         }
 

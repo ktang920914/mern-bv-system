@@ -261,7 +261,6 @@ const Outputs = () => {
                 
                 // 检查缓存
                 if (dataCache[cacheKey]) {
-                    console.log('Using cached data for:', cacheKey);
                     return dataCache[cacheKey];
                 }
 
@@ -566,22 +565,15 @@ const Outputs = () => {
             const dataTypeOutputs = groupedByDataType[dataType];
             const dataTypeLabel = dataTypeOutputs[0]?.dataTypeLabel || 'Unknown';
             const isAverageType = averageDataTypes.includes(dataType);
-            
-            console.log(`处理数据类型: ${dataType}, 标签: ${dataTypeLabel}, 是平均值类型: ${isAverageType}`);
-            console.log(`该类型的数据:`, dataTypeOutputs);
 
             if (comparisonMode && selectedCodes.length > 0) {
-                console.log(`=== 比较模式处理 ${dataType} ===`);
                 
                 // 只过滤出当前选中的 job codes 的数据
                 const filteredOutputs = dataTypeOutputs.filter(output => 
                     selectedCodes.includes(output.code)
                 );
 
-                console.log(`过滤后的数据 (${selectedCodes.join(',')}):`, filteredOutputs);
-
                 if (filteredOutputs.length === 0) {
-                    console.log(`没有找到 ${dataType} 的匹配数据`);
                     return;
                 }
 
@@ -598,7 +590,6 @@ const Outputs = () => {
                 });
 
                 if (isAverageType) {
-                    console.log(`=== 计算 ${dataType} 的平均值 ===`);
                     
                     // 对于平均值类型：计算每个月份的平均值
                     monthFields.forEach(month => {
@@ -608,7 +599,6 @@ const Outputs = () => {
 
                         filteredOutputs.forEach(output => {
                             const value = output[monthKey];
-                            console.log(`Job ${output.code} 的 ${monthKey}: ${value}`);
                             if (value !== undefined && value !== null && value !== 0) {
                                 sum += value;
                                 count++;
@@ -617,10 +607,8 @@ const Outputs = () => {
 
                         if (count > 0) {
                             aggregatedData[monthKey] = sum / count;
-                            console.log(`月份 ${monthKey}: 总和=${sum}, 计数=${count}, 平均值=${sum/count}`);
                         } else {
                             aggregatedData[monthKey] = 0;
-                            console.log(`月份 ${monthKey}: 无有效数据`);
                         }
                     });
 
@@ -629,20 +617,15 @@ const Outputs = () => {
                         .map(month => aggregatedData[month.key])
                         .filter(value => value > 0);
                     
-                    console.log(`各月平均值:`, monthlyValues);
-                    
                     if (monthlyValues.length > 0) {
                         const totalSum = monthlyValues.reduce((a, b) => a + b, 0);
                         aggregatedData.total = totalSum / monthlyValues.length;
-                        console.log(`年度总计: 总和=${totalSum}, 月份数=${monthlyValues.length}, 平均值=${totalSum/monthlyValues.length}`);
                     } else {
                         aggregatedData.total = 0;
                     }
                 } else {
-                    console.log(`=== 计算 ${dataType} 的总和 ===`);
                     // 对于总和类型：直接累加所有 job code 的值
                     filteredOutputs.forEach(output => {
-                        console.log(`累加 Job ${output.code} 的数据:`, output);
                         monthFields.forEach(month => {
                             aggregatedData[month.key] += output[month.key] || 0;
                         });
@@ -655,24 +638,18 @@ const Outputs = () => {
                     aggregatedData[month.key] = formatNumber(aggregatedData[month.key]);
                 });
                 aggregatedData.total = formatNumber(aggregatedData.total);
-
-                console.log(`最终聚合数据:`, aggregatedData);
                 tableData.push(aggregatedData);
             } else {
                 // 普通模式：显示汇总数据或不带 code 的数据
-                console.log(`=== 普通模式处理 ${dataType} ===`);
                 dataTypeOutputs.forEach(output => {
                     // 在普通模式下，只显示汇总数据或不带 code 的数据
                     if (!output.code || selectedCodes.length === 0) {
-                        console.log(`添加数据:`, output);
                         tableData.push(output);
                     }
                 });
             }
         });
 
-        console.log('最终表格数据:', tableData);
-        console.log('=== 调试: 结束准备表格数据 ===');
         return tableData;
     };
 
