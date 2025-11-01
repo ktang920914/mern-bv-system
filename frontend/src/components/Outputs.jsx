@@ -544,10 +544,10 @@ const Outputs = () => {
     const prepareTableData = () => {
         if (outputs.length === 0) return [];
 
-        console.log('=== 调试: 开始准备表格数据 ===');
+        /*console.log('=== 调试: 开始准备表格数据 ===');
         console.log('所有 outputs:', outputs);
         console.log('选中的 codes:', selectedCodes);
-        console.log('比较模式:', comparisonMode);
+        console.log('比较模式:', comparisonMode);*/
 
         // 按数据类型分组
         const groupedByDataType = {};
@@ -933,20 +933,6 @@ const Outputs = () => {
                             </Button>
                         )}
                         {/* 调试按钮 */}
-                        <Button 
-                            size="xs" 
-                            color="warning"
-                            onClick={() => {
-                                console.log('=== 调试信息 ===');
-                                console.log('selectedCodes:', selectedCodes);
-                                console.log('outputs:', outputs);
-                                console.log('OEE data:', outputs.filter(o => o.dataType === 'oee'));
-                                console.log('tableData:', prepareTableData());
-                                alert('请查看浏览器控制台获取调试信息');
-                            }}
-                        >
-                            调试数据
-                        </Button>
                     </div>
                 </div>
                 
