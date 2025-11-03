@@ -443,7 +443,7 @@ const Costs = () => {
     // 获取图表数据
     const chartData = prepareChartData();
 
-    // 移动端卡片渲染函数
+    // 移动端卡片渲染函数 - 保持不变
     const renderMobileCards = () => {
         return (
             <div className="space-y-4">
@@ -621,38 +621,43 @@ const Costs = () => {
 
             {showTable && costs.length > 0 ? (
                 <>
-                    {/* 移动端显示卡片，桌面端显示表格 */}
+                    {/* 移动端显示卡片（保持不变），桌面端显示压缩表格 */}
                     {isMobile ? (
                         renderMobileCards()
                     ) : (
-                        <Table hoverable className='mb-6'>
-                            <TableHead>
-                                <TableRow>
-                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Cost category</TableHeadCell>
-                                    {monthFields.map(month => (
-                                        <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`} key={month.key}>{month.name}</TableHeadCell>
-                                    ))}
-                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {currentCosts.map(cost => ( 
-                                    <TableRow key={cost.type}> 
-                                        <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {cost.type} 
-                                        </TableCell>
+                        // 桌面端：添加水平滚动和小字体
+                        <div className="w-full overflow-x-auto">
+                            <Table hoverable className="[&_td]:py-1 [&_th]:py-2 [&_td]:text-[10px] [&_th]:text-[10px] min-w-full">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableHeadCell className={`w-40 ${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Cost Category</TableHeadCell>
                                         {monthFields.map(month => (
-                                            <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
-                                                {formatDisplayNumber(cost[month.key])} 
-                                            </TableCell>
+                                            <TableHeadCell className={`w-16 text-center ${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`} key={month.key}>
+                                                {month.name}
+                                            </TableHeadCell>
                                         ))}
-                                        <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {formatDisplayNumber(cost.total)}
-                                        </TableCell>
+                                        <TableHeadCell className={`w-20 text-center ${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHead>
+                                <TableBody>
+                                    {currentCosts.map(cost => ( 
+                                        <TableRow key={cost.type}> 
+                                            <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                                <span className="text-[10px]">{cost.type}</span>
+                                            </TableCell>
+                                            {monthFields.map(month => (
+                                                <TableCell className={`text-center font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} key={month.key}>
+                                                    <span className="text-[10px]">{formatDisplayNumber(cost[month.key])}</span>
+                                                </TableCell>
+                                            ))}
+                                            <TableCell className={`text-center font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                                <span className="text-[10px] font-bold">{formatDisplayNumber(cost.total)}</span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
 
                     <div className="flex-col justify-center text-center mt-4">

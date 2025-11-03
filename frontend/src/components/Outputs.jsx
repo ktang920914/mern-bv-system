@@ -826,7 +826,7 @@ const Outputs = () => {
     // 获取图表数据
     const chartData = prepareChartData();
 
-    // 移动端卡片渲染函数
+    // 移动端卡片渲染函数 - 保持不变
     const renderMobileCards = () => {
         return (
             <div className="space-y-4">
@@ -1066,34 +1066,39 @@ const Outputs = () => {
                     {isMobile ? (
                         renderMobileCards()
                     ) : (
-                        <Table hoverable className='mb-6'>
-                            <TableHead>
-                                <TableRow >
-                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Data Type</TableHeadCell>
-                                    {monthFields.map(month => (
-                                        <TableHeadCell key={month.key} className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>{month.name}</TableHeadCell>
-                                    ))}
-                                    <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {currentOutputs.map((output, index) => ( 
-                                    <TableRow key={output._id || index}> 
-                                        <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {output.dataTypeLabel || 'Unknown'} 
-                                        </TableCell>
+                        // 桌面端：添加水平滚动和小字体
+                        <div className="w-full overflow-x-auto">
+                            <Table hoverable className="[&_td]:py-1 [&_th]:py-2 [&_td]:text-[10px] [&_th]:text-[10px] min-w-full">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableHeadCell className={`w-40 ${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Data Type</TableHeadCell>
                                         {monthFields.map(month => (
-                                            <TableCell key={month.key} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                                {formatDisplayNumber(output[month.key])}
-                                            </TableCell>
+                                            <TableHeadCell key={month.key} className={`w-16 text-center ${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>
+                                                {month.name}
+                                            </TableHeadCell>
                                         ))}
-                                        <TableCell className={`font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                            {formatDisplayNumber(output.total)}
-                                        </TableCell>
+                                        <TableHeadCell className={`w-20 text-center ${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Total</TableHeadCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHead>
+                                <TableBody>
+                                    {currentOutputs.map((output, index) => ( 
+                                        <TableRow key={output._id || index}> 
+                                            <TableCell className={`font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                                <span className="text-[10px]">{output.dataTypeLabel || 'Unknown'}</span>
+                                            </TableCell>
+                                            {monthFields.map(month => (
+                                                <TableCell key={month.key} className={`text-center font-medium ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                                    <span className="text-[10px]">{formatDisplayNumber(output[month.key])}</span>
+                                                </TableCell>
+                                            ))}
+                                            <TableCell className={`text-center font-semibold ${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                                <span className="text-[10px] font-bold">{formatDisplayNumber(output.total)}</span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
 
                     <div className="flex-col justify-center text-center mt-4">
