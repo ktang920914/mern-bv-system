@@ -548,7 +548,7 @@ const Planning = () => {
         
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IRR</Label>
-                                <TextInput value={formData.irr} type='number' min='0.5' max='6.0' step='any'id="irr" placeholder='Enter IRR'  onChange={handleChange} onFocus={handleFocus} required/>
+                                <TextInput value={formData.irr} type='number' min='0.1' max='6.0' step='any'id="irr" placeholder='Enter IRR'  onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
 
                             <div className="mb-4 block">
