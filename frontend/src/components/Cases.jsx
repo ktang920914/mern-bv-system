@@ -180,7 +180,7 @@ const Cases = () => {
         return colors;
     };
 
-    // 数据获取函数 - 支持比较模式
+    // 数据获取函数 - 修改为直接调用实时 API
     const handleUpdateStats = async (silent = false) => {
         try {
             if (!silent) {
@@ -195,28 +195,23 @@ const Cases = () => {
 
             if (comparisonMode && selectedCodes.length > 0) {
                 // 比较模式：为每个选中的 Job Code 单独获取数据
-                console.log('Comparison mode: Fetching data for codes:', selectedCodes);
-                
                 const fetchPromises = selectedCodes.map(async (code) => {
                     try {
                         const params = new URLSearchParams({
                             year: displayYear,
-                            code: code // 使用 code 参数
+                            code: code
                         });
-                        
-                        console.log(`Fetching data for ${code} with params:`, params.toString());
                         
                         const res = await fetch(`/api/case/getcases?${params}`);
                         if (res.ok) {
                             const data = await res.json();
-                            console.log(`Data for ${code}:`, data);
                             
                             // 处理数据并添加 code 标识
                             return data.map(caseItem => ({
                                 ...caseItem,
                                 totalCost: formatNumber(caseItem.totalCost),
                                 count: formatNumber(caseItem.count),
-                                code: code // 确保 code 字段正确设置
+                                code: code
                             }));
                         }
                     } catch (error) {
@@ -227,7 +222,6 @@ const Cases = () => {
                 
                 const batchResults = await Promise.all(fetchPromises);
                 allCases = batchResults.flat();
-                console.log('All cases in comparison mode:', allCases);
             } else {
                 // 普通模式：获取汇总数据
                 const params = new URLSearchParams({

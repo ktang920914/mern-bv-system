@@ -565,7 +565,7 @@ const Suppliers = () => {
             <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
             <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                 <div className="space-y-6">
-                    <h3 className={`text-xl font-medium`}>Update User</h3>
+                    <h3 className={`text-xl font-medium`}>Update Supplier</h3>
                     <form onSubmit={handleUpdateSubmit}>
                         <div>
                             <div className="mb-4 block">
