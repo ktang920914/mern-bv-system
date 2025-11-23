@@ -71,85 +71,151 @@ const Oee = () => {
         setCurrentPage(1)
     }
 
-    // 生成Excel报告的函数
+    // 生成Excel报告的函数 - 修复版（导出所有数据）
     const generateExcelReport = () => {
-        // 准备Excel数据 - 包含所有字段
-        const excelData = jobs.map(job => ({
-            'Extruder': job.code,
-            'Lot No': job.lotno,
-            'Start Time': job.starttime,
-            'End Time': job.endtime,
-            'Order Date': job.orderdate,
-            'Colour Code': job.colourcode,
-            'Material': job.material,
-            'Total Order': job.totalorder,
-            'Total Output': job.totaloutput,
-            'Reject': job.reject,
-            'Startup': job.startup,
-            'Screw Out': job.screwout,
-            'Process Complication': job.processcomplication,
-            'QC Time': job.qctime,
-            'Reason': job.reason,
-            'Downtime': job.downtime,
-            'Wash Resin': job.washresin,
-            'Wash Up': job.washup,
-            'Strand Drop': job.stranddrop,
-            'White Oil': job.whiteoil,
-            'Vent': job.vent,
-            'Uneven Pallet': job.unevenpallet,
-            'Trial Run': job.trialrun,
-            'Wastage': job.wastage,
-            'Meter Start': job.meterstart,
-            'Meter End': job.meterend,
-            'Total Meter': job.totalmeter,
-            'Operator': job.operator,
-            'IRR': job.irr,
-            'ARR': job.arr,
-            'IPQC': job.ipqc,
-            'Setup': job.setup,
-            'Prod Lead Time': job.prodleadtime,
-            'Plan Prod Time': job.planprodtime,
-            'Operating Time': job.operatingtime,
-            'Availability': job.availability,
-            'Performance': job.performance,
-            'Quality': job.quality,
-            'OEE': job.oee,
-            'Created At': new Date(job.createdAt).toLocaleString(),
-            'Updated At': new Date(job.updatedAt).toLocaleString()
-        }))
+        try {
+            // 使用所有过滤后的数据，而不是当前页面的数据
+            const exportData = filteredJobs;
 
-        // 创建工作簿和工作表
-        const workbook = XLSX.utils.book_new()
-        const worksheet = XLSX.utils.json_to_sheet(excelData)
-        
-        // 设置列宽
-        const colWidths = [
-            { wch: 10 }, { wch: 15 }, { wch: 20 }, { wch: 20 },
-            { wch: 12 }, { wch: 15 }, { wch: 30 }, { wch: 12 },
-            { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
-            { wch: 15 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
-            { wch: 10 },{ wch: 8 }, { wch: 10 }, { wch: 10 }, 
-            { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, 
-            { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, 
-            { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, 
-            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, 
-            { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 20 }, 
-            { wch: 20 }
-        ]
-        worksheet['!cols'] = colWidths
+            // 准备Excel数据 - 包含所有字段
+            const excelData = exportData.map(job => ({
+                'Extruder': job.code,
+                'Lot No': job.lotno,
+                'Start Time': job.starttime,
+                'End Time': job.endtime,
+                'Order Date': job.orderdate,
+                'Colour Code': job.colourcode,
+                'Material': job.material,
+                'Total Order': job.totalorder,
+                'Total Output': job.totaloutput,
+                'Reject': job.reject,
+                'Startup': job.startup,
+                'Screw Out': job.screwout,
+                'Process Complication': job.processcomplication,
+                'QC Time': job.qctime,
+                'Reason': job.reason,
+                'Downtime': job.downtime,
+                'Wash Resin': job.washresin,
+                'Wash Up': job.washup,
+                'Strand Drop': job.stranddrop,
+                'White Oil': job.whiteoil,
+                'Vent': job.vent,
+                'Uneven Pallet': job.unevenpallet,
+                'Trial Run': job.trialrun,
+                'Wastage': job.wastage,
+                'Meter Start': job.meterstart,
+                'Meter End': job.meterend,
+                'Total Meter': job.totalmeter,
+                'Operator': job.operator,
+                'IRR': job.irr,
+                'ARR': job.arr,
+                'IPQC': job.ipqc,
+                'Setup': job.setup,
+                'Prod Lead Time': job.prodleadtime,
+                'Plan Prod Time': job.planprodtime,
+                'Operating Time': job.operatingtime,
+                'Availability': job.availability,
+                'Performance': job.performance,
+                'Quality': job.quality,
+                'OEE': job.oee,
+                'OEE %': Math.round(job.oee * 100) + '%',
+                'Created At': new Date(job.createdAt).toLocaleString(),
+                'Updated At': new Date(job.updatedAt).toLocaleString()
+            }))
 
-        // 添加工作表到工作簿
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'OEE Report')
-        
-        // 生成Excel文件并下载
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], { 
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        })
-        
-        // 使用当前日期作为文件名
-        const date = new Date().toISOString().split('T')[0]
-        saveAs(blob, `OEE_Report_${date}.xlsx`)
+            // 如果没有数据，显示提示
+            if (excelData.length === 0) {
+                alert('No data available to export.')
+                return;
+            }
+
+            // 创建工作簿和工作表
+            const workbook = XLSX.utils.book_new()
+            
+            // 先创建带标题的数据
+            const dataWithHeaders = [
+                ['OEE Report - Overall Equipment Effectiveness'], // 标题行
+                [`Generated on: ${new Date().toLocaleString()}`], // 日期行
+                [`Total Records: ${excelData.length}`], // 记录数量行
+                [''], // 空行
+                Object.keys(excelData[0]), // 表头
+                ...excelData.map(row => Object.values(row)) // 数据行
+            ]
+
+            const worksheet = XLSX.utils.aoa_to_sheet(dataWithHeaders)
+
+            // 获取数据范围
+            const range = XLSX.utils.decode_range(worksheet['!ref'])
+            
+            // 设置列宽
+            const colWidths = [
+                { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
+                { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 12 },
+                { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+                { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 12 },
+                { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, 
+                { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, 
+                { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, 
+                { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, 
+                { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
+                { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, 
+                { wch: 20 }, { wch: 20 }
+            ]
+            worksheet['!cols'] = colWidths
+
+            // 设置合并单元格
+            if (!worksheet['!merges']) worksheet['!merges'] = []
+            
+            // 合并标题单元格
+            worksheet['!merges'].push({
+                s: { r: 0, c: 0 },
+                e: { r: 0, c: Object.keys(excelData[0]).length - 1 }
+            })
+            
+            // 合并日期单元格
+            worksheet['!merges'].push({
+                s: { r: 1, c: 0 },
+                e: { r: 1, c: Object.keys(excelData[0]).length - 1 }
+            })
+
+            // 合并记录数量单元格
+            worksheet['!merges'].push({
+                s: { r: 2, c: 0 },
+                e: { r: 2, c: Object.keys(excelData[0]).length - 1 }
+            })
+
+            // 添加自动筛选器（从第5行开始，即表头行）
+            worksheet['!autofilter'] = { 
+                ref: XLSX.utils.encode_range({
+                    s: { r: 4, c: 0 },
+                    e: { r: range.e.r, c: range.e.c }
+                })
+            }
+
+            // 冻结窗格 - 冻结表头行（第5行）
+            worksheet['!freeze'] = { x: 0, y: 5 }
+
+            // 添加工作表到工作簿
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'OEE Report')
+            
+            // 生成Excel文件并下载
+            const excelBuffer = XLSX.write(workbook, { 
+                bookType: 'xlsx', 
+                type: 'array'
+            })
+            const blob = new Blob([excelBuffer], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            })
+            
+            // 使用当前日期作为文件名
+            const date = new Date().toISOString().split('T')[0]
+            saveAs(blob, `OEE_Report_${date}.xlsx`)
+            
+            console.log('Excel report generated successfully with', excelData.length, 'records')
+        } catch (error) {
+            console.error('Error generating Excel report:', error)
+            alert('Error generating report. Please check console for details.')
+        }
     }
 
     // 获取OEE百分比显示（去掉小数点）
@@ -184,7 +250,7 @@ const Oee = () => {
         job.availability.toString().toLowerCase().includes(searchTerm) ||
         job.performance.toString().toLowerCase().includes(searchTerm) ||
         job.quality.toString().toLowerCase().includes(searchTerm) ||
-        job.code.toLowerCase().includes(searchTerm) && job.code.toString().toLowerCase() === searchTerm
+        job.code.toLowerCase().includes(searchTerm)
     )
 
     const handlePageChange = (page) => {
