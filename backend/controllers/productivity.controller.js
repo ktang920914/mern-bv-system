@@ -146,6 +146,8 @@ export const updateProductivity = async (req, res, next) => {
                             processcomplication: processcomplication,
                             qctime: qctime,
                             downtime: downtime,
+                            reason: req.body.reason,           // ← 添加这行
+                            washresin: req.body.washresin,     // ← 添加这行
                             washup: washup,
                             stranddrop: stranddrop,
                             qcinspect:qcinspect,
@@ -186,6 +188,8 @@ export const updateProductivity = async (req, res, next) => {
                             processcomplication: processcomplication,
                             qctime: qctime,
                             downtime: downtime,
+                            reason: req.body.reason,           // ← 添加这行
+                            washresin: req.body.washresin,     // ← 添加这行
                             washup: washup,
                             stranddrop: stranddrop,
                             qcinspect:qcinspect,

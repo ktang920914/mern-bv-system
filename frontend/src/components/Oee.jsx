@@ -89,7 +89,9 @@ const Oee = () => {
             'Screw Out': job.screwout,
             'Process Complication': job.processcomplication,
             'QC Time': job.qctime,
+            'Reason': job.reason,
             'Downtime': job.downtime,
+            'Wash Resin': job.washresin,
             'Wash Up': job.washup,
             'Strand Drop': job.stranddrop,
             'White Oil': job.whiteoil,
@@ -123,15 +125,16 @@ const Oee = () => {
         // 设置列宽
         const colWidths = [
             { wch: 10 }, { wch: 15 }, { wch: 20 }, { wch: 20 },
-            { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
+            { wch: 12 }, { wch: 15 }, { wch: 30 }, { wch: 12 },
             { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
-            { wch: 15 }, { wch: 8 }, { wch: 10 }, { wch: 8 },
-            { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 },
-            { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
-            { wch: 12 }, { wch: 30 }, { wch: 8 }, { wch: 8 },
-            { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
-            { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
-            { wch: 8 }, { wch: 20 }, { wch: 20 }
+            { wch: 15 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
+            { wch: 10 },{ wch: 8 }, { wch: 10 }, { wch: 10 }, 
+            { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, 
+            { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, 
+            { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, 
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, 
+            { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 20 }, 
+            { wch: 20 }
         ]
         worksheet['!cols'] = colWidths
 
