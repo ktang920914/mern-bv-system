@@ -73,15 +73,26 @@ export const register = async (req,res,next) => {
     }
 }
 
-export const logout = async (req,res,next) => {
+export const logout = async (req, res, next) => {
     try {
         const currentDate = new Date().toLocaleString();
+        let username = 'Unknown User'
+        
+        // 处理被删除的用户
+        if (req.user.isDeleted) {
+            username = 'Deleted User'
+        } else {
+            username = req.user.username
+        }
+        
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Logout',
-            detail: `${req.user.username}`
+            detail: `${username}`
         })
         await newActivity.save()
+        
+        // 清除cookie
         res.clearCookie('access_token')
         res.status(200).json({message:'Signout Successfully'})
     } catch (error) {

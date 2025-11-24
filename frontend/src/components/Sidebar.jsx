@@ -27,21 +27,25 @@ const DashSidebar = () => {
   }, [location.search]);
 
   const handleLogout = async () => {
-    try {
-      const res = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (data.success === false) {
-        console.log(data.message);
-      } else {
-        navigate('/login');
-        signOutSuccess(data);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  try {
+    // 发送登出请求，但不关心响应结果
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+    }).catch(() => {
+      // 忽略所有错误，继续执行登出
+    })
+    
+    // 无论如何都执行登出逻辑
+    navigate('/login')
+    signOutSuccess({})
+    
+  } catch (error) {
+    console.log(error)
+    // 即使出错也执行登出
+    navigate('/login')
+    signOutSuccess({})
+  }
+}
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
