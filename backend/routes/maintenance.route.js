@@ -6,7 +6,7 @@ import { deleteMaintenance, getMaintenances, maintenance, updateMaintenance } fr
 const router = express.Router();
 
 router.post('/job', verifyToken, maintenance)
-router.get('/getmaintenances', getMaintenances)
+router.get('/getmaintenances', verifyToken, getMaintenances)
 router.delete('/delete/:maintenanceId', verifyToken, deleteMaintenance)
 router.put('/update/:maintenanceId', verifyToken, updateMaintenance)
 

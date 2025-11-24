@@ -5,7 +5,7 @@ import { deleteExtruder, extruder, getExtruders, updateExtruder } from '../contr
 const router = express.Router()
 
 router.post('/extruder', verifyToken, extruder)
-router.get('/getExtruders', getExtruders)
+router.get('/getExtruders', verifyToken, getExtruders)
 router.delete('/delete/:extruderId', verifyToken, deleteExtruder)
 router.put('/update/:extruderId', verifyToken, updateExtruder)
 

@@ -5,7 +5,7 @@ import { deleteMovement, getMovements, movement, updateMovement } from '../contr
 const router = express.Router();
 
 router.post('/movement', verifyToken, movement)
-router.get('/getmovements', getMovements)
+router.get('/getmovements', verifyToken, getMovements)
 router.delete('/delete/:movementId', verifyToken, deleteMovement)
 router.put('/update/:movementId', verifyToken, updateMovement)
 

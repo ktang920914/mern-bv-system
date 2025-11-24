@@ -5,7 +5,7 @@ import { deleteMaterial, getMaterials, material, updateMaterial } from '../contr
 const router = express.Router();
 
 router.post('/material', verifyToken, material)
-router.get('/getmaterials', getMaterials)
+router.get('/getmaterials', verifyToken, getMaterials)
 router.delete('/delete/:materialId', verifyToken, deleteMaterial)
 router.put('/update/:materialId', verifyToken, updateMaterial)
 
