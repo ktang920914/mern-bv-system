@@ -1,4 +1,4 @@
-import { Button, Pagination, Popover, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Button, Pagination, Popover, Select, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
 import useUserstore from '../store'
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
@@ -16,6 +16,8 @@ const Oee = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate'
+    const [sortOrder, setSortOrder] = useState('desc') // 'asc', 'desc'
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -71,11 +73,54 @@ const Oee = () => {
         setCurrentPage(1)
     }
 
+    // 日期解析函数
+    const parseDateTime = (dateTimeStr) => {
+        if (!dateTimeStr) return new Date(0)
+        // 处理 "YYYY-MM-DD HH:mm:ss" 格式
+        return new Date(dateTimeStr.replace(' ', 'T'))
+    }
+
+    // 排序和过滤 jobs
+    const filteredAndSortedJobs = jobs
+        .filter(job => 
+            job.lotno.toLowerCase().includes(searchTerm) ||
+            job.totaloutput.toString().toLowerCase().includes(searchTerm) || 
+            job.wastage.toString().toLowerCase().includes(searchTerm) ||
+            job.downtime.toString().toLowerCase().includes(searchTerm) ||
+            job.totalmeter.toString().toLowerCase().includes(searchTerm) ||
+            job.starttime.toLowerCase().includes(searchTerm) ||
+            job.endtime.toLowerCase().includes(searchTerm) ||
+            job.orderdate.toLowerCase().includes(searchTerm) ||
+            job.lotno.toLowerCase().includes(searchTerm) ||
+            job.colourcode.toLowerCase().includes(searchTerm) ||
+            job.material.toLowerCase().includes(searchTerm) ||
+            job.totalorder.toString().toLowerCase().includes(searchTerm) ||
+            job.irr.toString().toLowerCase().includes(searchTerm) ||
+            job.arr.toString().toLowerCase().includes(searchTerm) ||
+            job.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
+            job.planprodtime.toString().toLowerCase().includes(searchTerm) ||
+            job.operatingtime.toString().toLowerCase().includes(searchTerm) ||
+            job.availability.toString().toLowerCase().includes(searchTerm) ||
+            job.performance.toString().toLowerCase().includes(searchTerm) ||
+            job.quality.toString().toLowerCase().includes(searchTerm) ||
+            job.code.toLowerCase().includes(searchTerm)
+        )
+        .sort((a, b) => {
+            const dateA = parseDateTime(a[sortBy])
+            const dateB = parseDateTime(b[sortBy])
+            
+            if (sortOrder === 'asc') {
+                return dateA - dateB
+            } else {
+                return dateB - dateA
+            }
+        })
+
     // 生成Excel报告的函数 - 修复版（导出所有数据）
     const generateExcelReport = () => {
         try {
             // 使用所有过滤后的数据，而不是当前页面的数据
-            const exportData = filteredJobs;
+            const exportData = filteredAndSortedJobs;
 
             // 准备Excel数据 - 包含所有字段
             const excelData = exportData.map(job => ({
@@ -229,30 +274,6 @@ const Oee = () => {
         return percentage >= 85 ? 'text-green-500 font-semibold' : 'text-red-600 font-semibold';
     }
 
-    const filteredJobs = jobs.filter(job => 
-        job.lotno.toLowerCase().includes(searchTerm) ||
-        job.totaloutput.toString().toLowerCase().includes(searchTerm) || 
-        job.wastage.toString().toLowerCase().includes(searchTerm) ||
-        job.downtime.toString().toLowerCase().includes(searchTerm) ||
-        job.totalmeter.toString().toLowerCase().includes(searchTerm) ||
-        job.starttime.toLowerCase().includes(searchTerm) ||
-        job.endtime.toLowerCase().includes(searchTerm) ||
-        job.orderdate.toLowerCase().includes(searchTerm) ||
-        job.lotno.toLowerCase().includes(searchTerm) ||
-        job.colourcode.toLowerCase().includes(searchTerm) ||
-        job.material.toLowerCase().includes(searchTerm) ||
-        job.totalorder.toString().toLowerCase().includes(searchTerm) ||
-        job.irr.toString().toLowerCase().includes(searchTerm) ||
-        job.arr.toString().toLowerCase().includes(searchTerm) ||
-        job.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
-        job.planprodtime.toString().toLowerCase().includes(searchTerm) ||
-        job.operatingtime.toString().toLowerCase().includes(searchTerm) ||
-        job.availability.toString().toLowerCase().includes(searchTerm) ||
-        job.performance.toString().toLowerCase().includes(searchTerm) ||
-        job.quality.toString().toLowerCase().includes(searchTerm) ||
-        job.code.toLowerCase().includes(searchTerm)
-    )
-
     const handlePageChange = (page) => {
         setCurrentPage(page)
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -260,8 +281,8 @@ const Oee = () => {
 
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
-    const currentJobs = filteredJobs.slice(indexOfFirstItem, indexOfLastItem)
-    const totalEntries = filteredJobs.length
+    const currentJobs = filteredAndSortedJobs.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredAndSortedJobs.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
@@ -430,21 +451,44 @@ const Oee = () => {
         <div className='min-h-screen'>
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>OEEs</h1>
-                <div className='w-full sm:w-auto'>
+                <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
+                    {/* 排序控件 */}
+                    <div className='flex gap-2'>
+                        <Select 
+                            value={sortBy} 
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className='w-full sm:w-40'
+                        >
+                            <option value="starttime">Prod Start</option>
+                            <option value="endtime">Prod End</option>
+                            <option value="orderdate">Order Date</option>
+                        </Select>
+                        
+                        <Select 
+                            value={sortOrder} 
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className='w-full sm:w-40'
+                        >
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </Select>
+                    </div>
+                    
                     <TextInput 
                         placeholder='Enter searching' 
                         value={searchTerm} 
                         onChange={handleSearch}
-                        className='w-full'
+                        className='w-full sm:w-auto'
                     />
+                    
+                    <Button 
+                        color='green' 
+                        className='cursor-pointer w-full sm:w-auto'
+                        onClick={generateExcelReport}
+                    >
+                        Report
+                    </Button>
                 </div>
-                <Button 
-                    color='green' 
-                    className='cursor-pointer w-full sm:w-auto'
-                    onClick={generateExcelReport}
-                >
-                    Report
-                </Button>
             </div>
 
             {/* 桌面端表格视图 */}

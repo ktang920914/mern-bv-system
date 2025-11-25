@@ -385,7 +385,7 @@ const Planning = () => {
                         <Select 
                             value={sortBy} 
                             onChange={(e) => setSortBy(e.target.value)}
-                            className='w-full sm:w-auto'
+                            className='w-full sm:w-40'
                         >
                             <option value="starttime">Prod Start</option>
                             <option value="endtime">Prod End</option>
@@ -395,7 +395,7 @@ const Planning = () => {
                         <Select 
                             value={sortOrder} 
                             onChange={(e) => setSortOrder(e.target.value)}
-                            className='w-full sm:w-auto'
+                            className='w-full sm:w-40'
                         >
                             <option value="desc">Newest First</option>
                             <option value="asc">Oldest First</option>
