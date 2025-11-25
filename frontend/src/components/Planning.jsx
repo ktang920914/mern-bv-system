@@ -19,6 +19,8 @@ const Planning = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate'
+    const [sortOrder, setSortOrder] = useState('desc') // 'asc', 'desc'
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -131,26 +133,45 @@ const Planning = () => {
         setCurrentPage(1)
     }
 
-    const filteredPlannings = plannings.filter(planning => 
-        planning.lotno.toLowerCase().includes(searchTerm) ||
-        planning.totaloutput.toString().toLowerCase().includes(searchTerm) || 
-        planning.wastage.toString().toLowerCase().includes(searchTerm) ||
-        planning.downtime.toString().toLowerCase().includes(searchTerm) ||
-        planning.totalmeter.toString().toLowerCase().includes(searchTerm) ||
-        planning.starttime.toLowerCase().includes(searchTerm) ||
-        planning.endtime.toLowerCase().includes(searchTerm) ||
-        planning.orderdate.toLowerCase().includes(searchTerm) ||
-        planning.lotno.toLowerCase().includes(searchTerm) ||
-        planning.colourcode.toLowerCase().includes(searchTerm) ||
-        planning.material.toLowerCase().includes(searchTerm) ||
-        planning.totalorder.toString().toLowerCase().includes(searchTerm) ||
-        planning.irr.toString().toLowerCase().includes(searchTerm) ||
-        planning.arr.toString().toLowerCase().includes(searchTerm) ||
-        planning.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
-        planning.planprodtime.toString().toLowerCase().includes(searchTerm) ||
-        planning.operatingtime.toString().toLowerCase().includes(searchTerm) ||
-        planning.code.toLowerCase().includes(searchTerm) && planning.code.toString().toLowerCase() === searchTerm
-    )
+    // 日期解析函数
+    const parseDateTime = (dateTimeStr) => {
+        if (!dateTimeStr) return new Date(0)
+        // 处理 "YYYY-MM-DD HH:mm:ss" 格式
+        return new Date(dateTimeStr.replace(' ', 'T'))
+    }
+
+    // 排序和过滤 plannings
+    const filteredAndSortedPlannings = plannings
+        .filter(planning => 
+            planning.lotno.toLowerCase().includes(searchTerm) ||
+            planning.totaloutput.toString().toLowerCase().includes(searchTerm) || 
+            planning.wastage.toString().toLowerCase().includes(searchTerm) ||
+            planning.downtime.toString().toLowerCase().includes(searchTerm) ||
+            planning.totalmeter.toString().toLowerCase().includes(searchTerm) ||
+            planning.starttime.toLowerCase().includes(searchTerm) ||
+            planning.endtime.toLowerCase().includes(searchTerm) ||
+            planning.orderdate.toLowerCase().includes(searchTerm) ||
+            planning.lotno.toLowerCase().includes(searchTerm) ||
+            planning.colourcode.toLowerCase().includes(searchTerm) ||
+            planning.material.toLowerCase().includes(searchTerm) ||
+            planning.totalorder.toString().toLowerCase().includes(searchTerm) ||
+            planning.irr.toString().toLowerCase().includes(searchTerm) ||
+            planning.arr.toString().toLowerCase().includes(searchTerm) ||
+            planning.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
+            planning.planprodtime.toString().toLowerCase().includes(searchTerm) ||
+            planning.operatingtime.toString().toLowerCase().includes(searchTerm) ||
+            planning.code.toLowerCase().includes(searchTerm) && planning.code.toString().toLowerCase() === searchTerm
+        )
+        .sort((a, b) => {
+            const dateA = parseDateTime(a[sortBy])
+            const dateB = parseDateTime(b[sortBy])
+            
+            if (sortOrder === 'asc') {
+                return dateA - dateB
+            } else {
+                return dateB - dateA
+            }
+        })
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
@@ -159,8 +180,8 @@ const Planning = () => {
 
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
-    const currentPlannings = filteredPlannings.slice(indexOfFirstItem, indexOfLastItem)
-    const totalEntries = filteredPlannings.length
+    const currentPlannings = filteredAndSortedPlannings.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredAndSortedPlannings.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
@@ -358,12 +379,34 @@ const Planning = () => {
         <div className='min-h-screen'>
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Plannings</h1>
-                <div className='w-full sm:w-auto'>
+                <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
+                    {/* 排序控件 */}
+                    <div className='flex gap-2'>
+                        <Select 
+                            value={sortBy} 
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className='w-full sm:w-auto'
+                        >
+                            <option value="starttime">Prod Start</option>
+                            <option value="endtime">Prod End</option>
+                            <option value="orderdate">Order Date</option>
+                        </Select>
+                        
+                        <Select 
+                            value={sortOrder} 
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className='w-full sm:w-auto'
+                        >
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </Select>
+                    </div>
+                    
                     <TextInput 
                         placeholder='Enter searching' 
                         value={searchTerm} 
                         onChange={handleSearch}
-                        className='w-full'
+                        className='w-full sm:w-auto'
                     />
                 </div>
             </div>

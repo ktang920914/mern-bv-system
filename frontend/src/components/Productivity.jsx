@@ -19,6 +19,8 @@ const Productivity = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate'
+    const [sortOrder, setSortOrder] = useState('desc') // 'asc', 'desc'
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -139,22 +141,41 @@ const Productivity = () => {
         setCurrentPage(1)
     }
 
-    const filteredProductivities = productivities.filter(productivity => 
-        productivity.lotno.toLowerCase().includes(searchTerm) ||
-        productivity.totaloutput.toString().toLowerCase().includes(searchTerm) || 
-        productivity.reject.toString().toLowerCase().includes(searchTerm) || 
-        productivity.wastage.toString().toLowerCase().includes(searchTerm) ||
-        productivity.downtime.toString().toLowerCase().includes(searchTerm) ||
-        productivity.totalmeter.toString().toLowerCase().includes(searchTerm) ||
-        productivity.starttime.toLowerCase().includes(searchTerm) ||
-        productivity.endtime.toLowerCase().includes(searchTerm) ||
-        productivity.orderdate.toLowerCase().includes(searchTerm) ||
-        productivity.lotno.toLowerCase().includes(searchTerm) ||
-        productivity.colourcode.toLowerCase().includes(searchTerm) ||
-        productivity.material.toLowerCase().includes(searchTerm) ||
-        productivity.totalorder.toString().toLowerCase().includes(searchTerm) ||
-        productivity.code.toLowerCase().includes(searchTerm) && productivity.code.toString().toLowerCase() === searchTerm
-    )
+    // 日期解析函数
+    const parseDateTime = (dateTimeStr) => {
+        if (!dateTimeStr) return new Date(0)
+        // 处理 "YYYY-MM-DD HH:mm:ss" 格式
+        return new Date(dateTimeStr.replace(' ', 'T'))
+    }
+
+    // 排序和过滤 productivities
+    const filteredAndSortedProductivities = productivities
+        .filter(productivity => 
+            productivity.lotno.toLowerCase().includes(searchTerm) ||
+            productivity.totaloutput.toString().toLowerCase().includes(searchTerm) || 
+            productivity.reject.toString().toLowerCase().includes(searchTerm) || 
+            productivity.wastage.toString().toLowerCase().includes(searchTerm) ||
+            productivity.downtime.toString().toLowerCase().includes(searchTerm) ||
+            productivity.totalmeter.toString().toLowerCase().includes(searchTerm) ||
+            productivity.starttime.toLowerCase().includes(searchTerm) ||
+            productivity.endtime.toLowerCase().includes(searchTerm) ||
+            productivity.orderdate.toLowerCase().includes(searchTerm) ||
+            productivity.lotno.toLowerCase().includes(searchTerm) ||
+            productivity.colourcode.toLowerCase().includes(searchTerm) ||
+            productivity.material.toLowerCase().includes(searchTerm) ||
+            productivity.totalorder.toString().toLowerCase().includes(searchTerm) ||
+            productivity.code.toLowerCase().includes(searchTerm) && productivity.code.toString().toLowerCase() === searchTerm
+        )
+        .sort((a, b) => {
+            const dateA = parseDateTime(a[sortBy])
+            const dateB = parseDateTime(b[sortBy])
+            
+            if (sortOrder === 'asc') {
+                return dateA - dateB
+            } else {
+                return dateB - dateA
+            }
+        })
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
@@ -163,8 +184,8 @@ const Productivity = () => {
 
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
-    const currentProductivities = filteredProductivities.slice(indexOfFirstItem, indexOfLastItem)
-    const totalEntries = filteredProductivities.length
+    const currentProductivities = filteredAndSortedProductivities.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredAndSortedProductivities.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
@@ -343,12 +364,34 @@ const Productivity = () => {
         <div className='min-h-screen'>
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Productivities</h1>
-                <div className='w-full sm:w-auto'>
+                <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
+                    {/* 排序控件 */}
+                    <div className='flex gap-2'>
+                        <Select 
+                            value={sortBy} 
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className='w-full sm:w-auto'
+                        >
+                            <option value="starttime">Prod Start</option>
+                            <option value="endtime">Prod End</option>
+                            <option value="orderdate">Order Date</option>
+                        </Select>
+                        
+                        <Select 
+                            value={sortOrder} 
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className='w-full sm:w-auto'
+                        >
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </Select>
+                    </div>
+                    
                     <TextInput 
                         placeholder='Enter searching' 
                         value={searchTerm} 
                         onChange={handleSearch}
-                        className='w-full'
+                        className='w-full sm:w-auto'
                     />
                 </div>
             </div>

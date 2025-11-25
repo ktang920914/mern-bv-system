@@ -155,7 +155,8 @@ export const job = async (req, res, next) => {
 
 export const getJobs = async (req,res,next) => {
     try {
-        const jobs = await Job.find().sort({updatedAt:-1})
+        // 按生产开始时间倒序排列（最新的在最前面）
+        const jobs = await Job.find().sort({starttime: -1})
         res.status(200).json(jobs)
     } catch (error) {
         next(error)

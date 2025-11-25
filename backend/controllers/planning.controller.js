@@ -5,7 +5,8 @@ import Productivity from "../models/productivity.model.js";
 
 export const getPlannings = async (req, res, next) => {
     try {
-        const plannings = await Planning.find().sort({updatedAt:-1});
+        // 按生产开始时间倒序排列（最新的在最前面）
+        const plannings = await Planning.find().sort({starttime: -1});
         res.status(200).json(plannings);
     } catch (error) {
         next(error);
