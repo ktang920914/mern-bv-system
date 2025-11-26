@@ -134,6 +134,7 @@ const Oee = () => {
                 'Total Order': job.totalorder,
                 'Total Output': job.totaloutput,
                 'Reject': job.reject,
+                'Reject Cause': job.cause,
                 'Startup': job.startup,
                 'Screw Out': job.screwout,
                 'Process Complication': job.processcomplication,
@@ -196,15 +197,15 @@ const Oee = () => {
             const colWidths = [
                 { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
                 { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 12 },
-                { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-                { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 12 },
-                { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, 
-                { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, 
-                { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, 
-                { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, 
+                { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, 
+                { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 15 }, 
+                { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, 
+                { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, 
+                { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
+                { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, 
+                { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
                 { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
-                { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, 
-                { wch: 20 }, { wch: 20 }
+                { wch: 10 }, { wch: 20 }, { wch: 20 }
             ]
             worksheet['!cols'] = colWidths
 

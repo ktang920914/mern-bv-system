@@ -56,6 +56,9 @@ const jobSchema = new mongoose.Schema({
     reason:{
         type:String,
     },
+    cause:{
+        type:String,
+    },
     washresin:{
         type:String,
     },

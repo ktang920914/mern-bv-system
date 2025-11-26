@@ -77,7 +77,7 @@ const Productivity = () => {
     }
 
     const handleChange = (e) => {
-        if(e.target.id === 'reason' || e.target.id === 'washresin'){
+        if(e.target.id === 'reason' || e.target.id === 'washresin' || e.target.id === 'operator'){
         setFormData({...formData, [e.target.id]: e.target.value})
         }else{
         setFormData({...formData, [e.target.id]: e.target.value.trim()})
@@ -569,6 +569,11 @@ const Productivity = () => {
                             </div>
 
                             <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cause</Label>
+                                <TextInput value={formData.cause}  id="cause" placeholder='Enter reject cause' onChange={handleChange} onFocus={handleFocus}/>
+                            </div>
+
+                            <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start up</Label>
                                 <TextInput value={formData.startup}  type='number' min='0' id="startup" placeholder='Enter start up' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
@@ -590,7 +595,7 @@ const Productivity = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Reason</Label>
-                                <TextInput value={formData.reason} id="reason" placeholder='Enter reason' onChange={handleChange} onFocus={handleFocus}/>
+                                <TextInput value={formData.reason} id="reason" placeholder='Enter downtime reason' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
 
                             <div className="mb-4 block">

@@ -33,6 +33,9 @@ const planningSchema = new mongoose.Schema({
         type:Number,
         default:0
     },
+    cause:{
+        type:String,
+    },
     startup:{
         type:Number,
         default:0

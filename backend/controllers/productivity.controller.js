@@ -98,6 +98,7 @@ export const updateProductivity = async (req, res, next) => {
                 operator: operator,
                 totaloutput: totaloutput,
                 reject: reject,
+                cause: req.body.cause,
                 startup: startup,
                 screwout: screwout,
                 processcomplication: processcomplication,
@@ -142,6 +143,7 @@ export const updateProductivity = async (req, res, next) => {
                             lotno: req.body.lotno,
                             totaloutput: totaloutput,
                             reject: reject,
+                            cause: req.body.cause,
                             startup: startup,
                             screwout: screwout,
                             processcomplication: processcomplication,
@@ -184,6 +186,7 @@ export const updateProductivity = async (req, res, next) => {
                         $set: {
                             totaloutput: totaloutput,
                             reject: reject,
+                            cause: req.body.cause,
                             startup: startup,
                             screwout: screwout,
                             processcomplication: processcomplication,
