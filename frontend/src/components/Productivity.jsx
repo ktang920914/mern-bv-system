@@ -77,7 +77,7 @@ const Productivity = () => {
     }
 
     const handleChange = (e) => {
-        if(e.target.id === 'reason' || e.target.id === 'washresin' || e.target.id === 'operator'){
+        if(e.target.id === 'reason' || e.target.id === 'washresin' || e.target.id === 'operator' || e.target.id === 'cause'){
         setFormData({...formData, [e.target.id]: e.target.value})
         }else{
         setFormData({...formData, [e.target.id]: e.target.value.trim()})
@@ -96,7 +96,7 @@ const Productivity = () => {
             processcomplication:productivities.processcomplication, qctime: productivities.qctime, washup: productivities.washup, vent:productivities.vent,
             unevenpallet:productivities.unevenpallet, whiteoil:productivities.whiteoil, stranddrop:productivities.stranddrop, trialrun:productivities.trialrun,
             meterstart:productivities.meterstart,meterend:productivities.meterend, reason:productivities.reason, washresin:productivities.washresin,
-            color:productivities.color,density:productivities.density,operator:productivities.operator,qcinspect:productivities.qcinspect
+            color:productivities.color,density:productivities.density,operator:productivities.operator,qcinspect:productivities.qcinspect,cause:productivities.cause
         })
         setOpenModalUpdateProductivity(!openModalUpdateProductivity)
         setErrorMessage(null)
@@ -152,6 +152,9 @@ const Productivity = () => {
     const filteredAndSortedProductivities = productivities
         .filter(productivity => 
             productivity.lotno.toLowerCase().includes(searchTerm) ||
+            productivity.operator.toLowerCase().includes(searchTerm) ||
+            productivity.reason.toLowerCase().includes(searchTerm) ||
+            productivity.cause.toLowerCase().includes(searchTerm) ||
             productivity.totaloutput.toString().toLowerCase().includes(searchTerm) || 
             productivity.reject.toString().toLowerCase().includes(searchTerm) || 
             productivity.wastage.toString().toLowerCase().includes(searchTerm) ||
