@@ -154,7 +154,7 @@ const Productivity = () => {
             productivity.lotno.toLowerCase().includes(searchTerm) ||
             productivity.operator.toLowerCase().includes(searchTerm) ||
             productivity.reason.toLowerCase().includes(searchTerm) ||
-            productivity.cause.toLowerCase().includes(searchTerm) ||
+            productivity.cause?.toLowerCase().includes(searchTerm) ||
             productivity.totaloutput.toString().toLowerCase().includes(searchTerm) || 
             productivity.reject.toString().toLowerCase().includes(searchTerm) || 
             productivity.wastage.toString().toLowerCase().includes(searchTerm) ||
