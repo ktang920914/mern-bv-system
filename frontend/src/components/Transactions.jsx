@@ -18,6 +18,7 @@ const Transactions = () => {
   const [loading,setLoading] = useState(false)
   const [items,setItems] = useState([])
   const [extruders,setExtruders] = useState([])
+  const [spareparts,setSpareparts] = useState([])
   const [records,setRecords] = useState([])
   const [openModalDeleteRecord,setOpenModalDeleteRecord] = useState(false)
   const [openModalUpdateRecord,setOpenModalUpdateRecord] = useState(false)
@@ -93,6 +94,24 @@ const Transactions = () => {
       }
     }
     fetchExtruders()
+  },[currentUser._id])
+
+  useEffect(() => {
+    const fetchSpareparts = async () => {
+      try {
+        const res = await fetch('/api/other/getSpareparts')
+        const data = await res.json()
+        if(data.success === false){
+          console.log(data.message)
+        }
+        if(res.ok){
+          setSpareparts(data)
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+    }
+    fetchSpareparts()
   },[currentUser._id])
 
   useEffect(() => {
@@ -515,6 +534,9 @@ const Transactions = () => {
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
                 <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
+                  {spareparts.map((sparepart) => (
+                    <option key={sparepart._id} value={sparepart.code}>{`${sparepart.code} --- ${sparepart.type} --- ${sparepart.status}`}</option>
+                  ))}
                   {items.map((item) => (
                     <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
                   ))}

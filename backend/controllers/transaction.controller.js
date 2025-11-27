@@ -1,16 +1,20 @@
 import Transaction from "../models/transaction.model.js"
 import Inventory from "../models/inventory.model.js"
 import Extruder from "../models/extruder.model.js"
+import Sparepart from "../models/sparepart.model.js"
 import { errorHandler } from "../utils/error.js"
 import Activity from "../models/activity.model.js"
 
-// 检查记录属于哪种类型（inventory 或 extruder）
+// 检查记录属于哪种类型（inventory、extruder 或 sparepart）
 const checkItemType = async (code) => {
     const inventoryItem = await Inventory.findOne({ code });
     if (inventoryItem) return 'inventory';
     
     const extruderItem = await Extruder.findOne({ code });
     if (extruderItem) return 'extruder';
+
+    const sparepartItem = await Sparepart.findOne({ code });
+    if (sparepartItem) return 'sparepart';
     
     return null;
 };
@@ -34,8 +38,71 @@ const getItemAndQRFunction = async (code) => {
             type: 'extruder'
         };
     }
+
+    const sparepartItem = await Sparepart.findOne({ code });
+    if (sparepartItem) {
+        return {
+            item: sparepartItem,
+            updateQRFunction: updateSparepartQRCode,
+            type: 'sparepart'
+        };
+    }
     
     return null;
+};
+
+// 创建默认 item 的函数
+const createDefaultItem = async (code, type = 'inventory') => {
+    const defaultData = {
+        code,
+        balance: 0,
+        type: 'Unknown',
+        location: 'Unknown',
+        supplier: 'Unknown',
+        status: 'Active',
+        createdAt: new Date().toISOString()
+    };
+
+    switch (type) {
+        case 'inventory':
+            const newInventory = new Inventory(defaultData);
+            await newInventory.save();
+            return {
+                item: newInventory,
+                updateQRFunction: updateInventoryQRCode,
+                type: 'inventory'
+            };
+        case 'extruder':
+            const newExtruder = new Extruder(defaultData);
+            await newExtruder.save();
+            return {
+                item: newExtruder,
+                updateQRFunction: updateExtruderQRCode,
+                type: 'extruder'
+            };
+        case 'sparepart':
+            const newSparepart = new Sparepart(defaultData);
+            await newSparepart.save();
+            return {
+                item: newSparepart,
+                updateQRFunction: updateSparepartQRCode,
+                type: 'sparepart'
+            };
+        default:
+            throw new Error('Unknown item type');
+    }
+};
+
+// 根据 code 格式判断 item 类型
+const determineItemType = (code) => {
+    // 根据你的业务规则实现
+    // 例如：如果 code 以 "INV" 开头就是 inventory
+    // 如果 code 以 "EXT" 开头就是 extruder  
+    // 如果 code 以 "SPT" 开头就是 sparepart
+    if (code.startsWith('INV')) return 'inventory';
+    if (code.startsWith('EXT')) return 'extruder';
+    if (code.startsWith('SPT')) return 'sparepart';
+    return 'inventory'; // 默认
 };
 
 // 通用的 QR 码更新函数 - 用于 Inventory
@@ -94,34 +161,44 @@ const updateExtruderQRCode = async (extruder) => {
     return await extruder.save();
 };
 
+// 通用的 QR 码更新函数 - 用于 Sparepart
+const updateSparepartQRCode = async (sparepart) => {
+    const formatDate = (date) => {
+        return new Date(date).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
+    const qrCodeContent = JSON.stringify({
+        code: sparepart.code,
+        type: sparepart.type,
+        location: sparepart.location,
+        supplier: sparepart.supplier,
+        balance: sparepart.balance,
+        status: sparepart.status,
+        createdAt: formatDate(sparepart.createdAt),
+        lastUpdated: formatDate(new Date())
+    });
+    
+    sparepart.qrCode = qrCodeContent;
+    return await sparepart.save();
+};
+
 export const record = async (req,res,next) => {
     const {date,code,transaction,quantity,user,status} = req.body
     try {
-        // 检查 code 属于 inventory 还是 extruder
+        // 检查 code 属于 inventory、extruder 还是 sparepart
         let itemData = await getItemAndQRFunction(code);
         
         if (!itemData) {
-            // 如果item不存在，自动判断创建哪种类型的默认item
-            // 这里可以根据code的格式或其他规则来判断，或者默认创建inventory
-            const defaultData = {
-                code,
-                balance: 0,
-                type: 'Unknown',
-                location: 'Unknown',
-                supplier: 'Unknown',
-                status: 'Active',
-                createdAt: new Date().toISOString()
-            };
-
-            // 默认创建为 inventory，或者你可以根据业务规则调整
-            const newInventory = new Inventory(defaultData);
-            await newInventory.save();
-            
-            itemData = {
-                item: newInventory,
-                updateQRFunction: updateInventoryQRCode,
-                type: 'inventory'
-            };
+            // 如果item不存在，根据业务规则创建对应类型的默认item
+            const itemType = determineItemType(code);
+            itemData = await createDefaultItem(code, itemType);
         }
 
         const { item, updateQRFunction } = itemData;
@@ -340,6 +417,64 @@ export const updateRecord = async (req, res, next) => {
         await newActivity.save();
         
         res.status(200).json(updatedRecord);
+    } catch (error) {
+        next(error);
+    }
+}
+
+// 获取特定 code 的所有交易记录
+export const getRecordsByCode = async (req, res, next) => {
+    try {
+        const { code } = req.params;
+        const records = await Transaction.find({ code }).sort({ createdAt: -1 });
+        res.status(200).json(records);
+    } catch (error) {
+        next(error);
+    }
+}
+
+// 获取交易记录统计信息
+export const getTransactionStats = async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.query;
+        
+        let matchStage = {};
+        if (startDate && endDate) {
+            matchStage.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        const stats = await Transaction.aggregate([
+            { $match: matchStage },
+            {
+                $group: {
+                    _id: {
+                        transaction: '$transaction',
+                        status: '$status'
+                    },
+                    totalQuantity: { $sum: '$quantity' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.transaction',
+                    statusBreakdown: {
+                        $push: {
+                            status: '$_id.status',
+                            totalQuantity: '$totalQuantity',
+                            count: '$count'
+                        }
+                    },
+                    totalQuantity: { $sum: '$totalQuantity' },
+                    totalCount: { $sum: '$count' }
+                }
+            }
+        ]);
+
+        res.status(200).json(stats);
     } catch (error) {
         next(error);
     }
