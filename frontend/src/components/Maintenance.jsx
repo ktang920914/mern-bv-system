@@ -356,9 +356,15 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   worksheet.mergeCells(`A${row4.number}:B${row4.number}`)
   worksheet.mergeCells(`C${row4.number}:D${row4.number}`)
   
-  // 第5行: 空行 - 字体大小10
+  // 第5行: 填写请求人和日期/时间 - 字体大小10
   const row5 = worksheet.getRow(rowIndex++)
   row5.height = 16.5 //13.2
+  // A5-B5: 当前用户名
+  row5.getCell(1).value = currentUser.username || 'N/A'
+  row5.getCell(1).font = defaultFont
+  // C5-D5: 作业日期
+  row5.getCell(3).value = maintenance.jobdate || 'N/A'
+  row5.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row5.number}:B${row5.number}`)
   worksheet.mergeCells(`C${row5.number}:D${row5.number}`)
   
@@ -369,9 +375,13 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row6.getCell(1).font = headerFont
   worksheet.mergeCells(`A${row6.number}:D${row6.number}`)
   
-  // 第7行: 空行 - 字体大小10
+  // 第7行: 填写机器/项目 - 字体大小10
   const row7 = worksheet.getRow(rowIndex++)
   row7.height = 16.5 //13.2
+  // A7-D7: 项目代码和类型
+  const itemInfo = `${maintenance.code} - ${maintenance.jobtype || 'Maintenance Item'}`
+  row7.getCell(1).value = itemInfo
+  row7.getCell(1).font = defaultFont
   worksheet.mergeCells(`A${row7.number}:D${row7.number}`)
   
   // 第8行: 编号和问题描述 - 字体大小10
@@ -383,13 +393,19 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row8.getCell(2).font = headerFont
   worksheet.mergeCells(`B${row8.number}:D${row8.number}`)
 
-  // 第9-11行: 空行用于填写问题描述 - 字体大小10，合并单元格
+  // 第9-11行: 填写问题描述 - 字体大小10，合并单元格
   const row9 = worksheet.getRow(rowIndex++)
   row9.height = 16.5 //13.2
   // 合并 A9 到 A11
   worksheet.mergeCells(`A${row9.number}:A${row9.number + 2}`)
   // 合并 B9 到 D11  
   worksheet.mergeCells(`B${row9.number}:D${row9.number + 2}`)
+  
+  // 在B9单元格填写问题描述
+  row9.getCell(2).value = maintenance.problem || 'No problem description provided'
+  row9.getCell(2).font = defaultFont
+  row9.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
+  
   // 设置第10-11行的行高
   const row10 = worksheet.getRow(rowIndex++)
   row10.height = 16.5 //13.2
@@ -406,9 +422,15 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   worksheet.mergeCells(`A${row12.number}:B${row12.number}`)
   worksheet.mergeCells(`C${row12.number}:D${row12.number}`)
   
-  // 第13行: 空行 - 字体大小10
+  // 第13行: 填写处理人和完成日期 - 字体大小10
   const row13 = worksheet.getRow(rowIndex++)
   row13.height = 16.5 //13.2
+  // A13-B13: 供应商
+  row13.getCell(1).value = maintenance.supplier || 'N/A'
+  row13.getCell(1).font = defaultFont
+  // C13-D13: 完成日期
+  row13.getCell(3).value = maintenance.completiondate || 'N/A'
+  row13.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row13.number}:B${row13.number}`)
   worksheet.mergeCells(`C${row13.number}:D${row13.number}`)
   
@@ -421,15 +443,28 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row14.getCell(1).font = headerFont
   row14.getCell(2).font = headerFont
   row14.getCell(3).font = headerFont
-  worksheet.mergeCells(`B${row14.number}:D${row14.number}`)
+  // 合并 C14 到 D14
+  worksheet.mergeCells(`C${row14.number}:D${row14.number}`)
 
-  // 第15-17行: 空行用于填写问题描述 - 字体大小10，合并单元格
+  // 第15-17行: 填写根本原因和纠正措施 - 字体大小10，合并单元格
   const row15 = worksheet.getRow(rowIndex++)
   row15.height = 16.5 //13.2
   // 合并 A15 到 A17
   worksheet.mergeCells(`A${row15.number}:A${row15.number + 2}`)
-  // 合并 B15 到 D17  
-  worksheet.mergeCells(`B${row15.number}:D${row15.number + 2}`)
+  // 合并 B15 到 B17 用于根本原因
+  worksheet.mergeCells(`B${row15.number}:B${row15.number + 2}`)
+  // 合并 C15 到 D17 用于纠正措施
+  worksheet.mergeCells(`C${row15.number}:D${row15.number + 2}`)
+
+  // 在B15单元格填写根本原因
+  row15.getCell(2).value = maintenance.rootcause || 'N/A'
+  row15.getCell(2).font = defaultFont
+  row15.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
+
+  // 在C15单元格填写纠正措施
+  row15.getCell(3).value = maintenance.jobdetail || 'N/A'
+  row15.getCell(3).font = defaultFont
+  row15.getCell(3).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
 
   // 设置第16-17行的行高
   const row16 = worksheet.getRow(rowIndex++)
@@ -444,7 +479,7 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row18.getCell(1).font = headerFont
   worksheet.mergeCells(`A${row18.number}:D${row18.number}`)
 
-  // 第19-21行: 空行用于填写问题描述 - 字体大小10，合并单元格
+  // 第19-21行: 空行用于填写预防措施评论 - 字体大小10，合并单元格
   const row19 = worksheet.getRow(rowIndex++)
   row19.height = 16.5 //13.2
   // 合并 A19 到 D21  
@@ -540,9 +575,6 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   const row31 = worksheet.getRow(rowIndex++)
   row31.height = 18
 
-  // 添加一些间距
-  // rowIndex += 1
-
   // 创建第二张表格 (重复) - 使用相同的列宽和行高设置
   // 第32行: 公司名称和文档编号 - 字体大小8，行高18
   const row32 = worksheet.getRow(rowIndex++)
@@ -581,9 +613,15 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   worksheet.mergeCells(`A${row35.number}:B${row35.number}`)
   worksheet.mergeCells(`C${row35.number}:D${row35.number}`)
   
-  // 第36行: 空行 - 字体大小10
+  // 第36行: 填写请求人和日期/时间 - 字体大小10
   const row36 = worksheet.getRow(rowIndex++)
   row36.height = 16.5 //13.2
+  // A36-B36: 当前用户名
+  row36.getCell(1).value = currentUser.username || 'N/A'
+  row36.getCell(1).font = defaultFont
+  // C36-D36: 作业日期
+  row36.getCell(3).value = maintenance.jobdate || 'N/A'
+  row36.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row36.number}:B${row36.number}`)
   worksheet.mergeCells(`C${row36.number}:D${row36.number}`)
   
@@ -594,9 +632,13 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row37.getCell(1).font = headerFont
   worksheet.mergeCells(`A${row37.number}:D${row37.number}`)
   
-  // 第38行: 空行 - 字体大小10
+  // 第38行: 填写机器/项目 - 字体大小10
   const row38 = worksheet.getRow(rowIndex++)
   row38.height = 16.5 //13.2
+  // A38-D38: 项目代码和类型
+  const itemInfo2 = `${maintenance.code} - ${maintenance.jobtype || 'Maintenance Item'}`
+  row38.getCell(1).value = itemInfo2
+  row38.getCell(1).font = defaultFont
   worksheet.mergeCells(`A${row38.number}:D${row38.number}`)
   
   // 第39行: 编号和问题描述 - 字体大小10
@@ -608,13 +650,19 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row39.getCell(2).font = headerFont
   worksheet.mergeCells(`B${row39.number}:D${row39.number}`)
 
-  // 第40-42行: 空行用于填写问题描述 - 字体大小10，合并单元格
+  // 第40-42行: 填写问题描述 - 字体大小10，合并单元格
   const row40 = worksheet.getRow(rowIndex++)
   row40.height = 16.5 //13.2
   // 合并 A40 到 A42
   worksheet.mergeCells(`A${row40.number}:A${row40.number + 2}`)
   // 合并 B40 到 D42  
   worksheet.mergeCells(`B${row40.number}:D${row40.number + 2}`)
+  
+  // 在B40单元格填写问题描述
+  row40.getCell(2).value = maintenance.problem || 'No problem description provided'
+  row40.getCell(2).font = defaultFont
+  row40.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
+  
   // 设置第41-42行的行高
   const row41 = worksheet.getRow(rowIndex++)
   row41.height = 16.5 //13.2
@@ -631,9 +679,15 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   worksheet.mergeCells(`A${row43.number}:B${row43.number}`)
   worksheet.mergeCells(`C${row43.number}:D${row43.number}`)
   
-  // 第44行: 空行 - 字体大小10
+  // 第44行: 填写处理人和完成日期 - 字体大小10
   const row44 = worksheet.getRow(rowIndex++)
   row44.height = 16.5 //13.2
+  // A44-B44: 供应商
+  row44.getCell(1).value = maintenance.supplier || 'N/A'
+  row44.getCell(1).font = defaultFont
+  // C44-D44: 完成日期
+  row44.getCell(3).value = maintenance.completiondate || 'N/A'
+  row44.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row44.number}:B${row44.number}`)
   worksheet.mergeCells(`C${row44.number}:D${row44.number}`)
   
@@ -646,15 +700,28 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row45.getCell(1).font = headerFont
   row45.getCell(2).font = headerFont
   row45.getCell(3).font = headerFont
-  worksheet.mergeCells(`B${row45.number}:D${row45.number}`)
+  // 合并 C45 到 D45
+  worksheet.mergeCells(`C${row45.number}:D${row45.number}`)
 
-  // 第46-48行: 空行用于填写问题描述 - 字体大小10，合并单元格
+  // 第46-48行: 填写根本原因和纠正措施 - 字体大小10，合并单元格
   const row46 = worksheet.getRow(rowIndex++)
   row46.height = 16.5 //13.2
   // 合并 A46 到 A48
   worksheet.mergeCells(`A${row46.number}:A${row46.number + 2}`)
-  // 合并 B46 到 D48  
-  worksheet.mergeCells(`B${row46.number}:D${row46.number + 2}`)
+  // 合并 B46 到 B48 用于根本原因
+  worksheet.mergeCells(`B${row46.number}:B${row46.number + 2}`)
+  // 合并 C46 到 D48 用于纠正措施
+  worksheet.mergeCells(`C${row46.number}:D${row46.number + 2}`)
+
+  // 在B46单元格填写根本原因
+  row46.getCell(2).value = maintenance.rootcause || 'N/A'
+  row46.getCell(2).font = defaultFont
+  row46.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
+
+  // 在C46单元格填写纠正措施
+  row46.getCell(3).value = maintenance.jobdetail || 'N/A'
+  row46.getCell(3).font = defaultFont
+  row46.getCell(3).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
 
   // 设置第47-48行的行高
   const row47 = worksheet.getRow(rowIndex++)
@@ -669,7 +736,7 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row49.getCell(1).font = headerFont
   worksheet.mergeCells(`A${row49.number}:D${row49.number}`)
 
-  // 第50-52行: 空行用于填写问题描述 - 字体大小10，合并单元格
+  // 第50-52行: 空行用于填写预防措施评论 - 字体大小10，合并单元格
   const row50 = worksheet.getRow(rowIndex++)
   row50.height = 16.5 //13.2
   // 合并 A50 到 D52  
