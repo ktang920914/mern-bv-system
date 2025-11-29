@@ -6,6 +6,7 @@ import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import ExcelJS from 'exceljs'
 
 const Maintenance = () => {
 
@@ -284,6 +285,458 @@ const Maintenance = () => {
   const showingTo = Math.min(indexOfLastItem, totalEntries)
   const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
+  // 生成维护请求表格Excel文件 - 使用exceljs
+const generateMaintenanceRequestForm = async (maintenance) => {
+  // 创建工作簿
+  const workbook = new ExcelJS.Workbook()
+  
+  // 创建工作表
+  const worksheet = workbook.addWorksheet('Maintenance Request Form')
+  
+  // 设置列宽 - 根据您提供的精确列宽
+  worksheet.columns = [
+    { width: 4.45 },  // A列
+    { width: 40.67 }, // B列  
+    { width: 19.34 }, // C列
+    { width: 30 }  // D列
+  ]
+
+  // 定义边框样式
+  const borderStyle = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' }
+  }
+
+  // 定义字体样式
+  const smallFont = { name: 'Arial', size: 8 }
+  const defaultFont = { name: 'Arial', size: 10 }
+  const boldFont = { name: 'Arial', size: 10, bold: true }
+  const titleFont = { name: 'Arial', size: 18, bold: true }
+  const headerFont = { name: 'Arial', size: 10, bold: true }
+
+  // 创建第一张表格
+  let rowIndex = 1
+  
+  // 第1行: 公司名称和文档编号 - 字体大小8，行高18
+  const row1 = worksheet.getRow(rowIndex++)
+  row1.height = 16.5 //13.2
+  row1.getCell(1).value = 'Bold Vision Sdn Bhd'
+  row1.getCell(4).value = 'BV-F09-01'
+  row1.getCell(1).font = { ...defaultFont, bold: true }
+  row1.getCell(4).font = { ...smallFont, bold: true }
+  row1.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
+  row1.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' }
+  // 合并A1到C1单元格
+  worksheet.mergeCells(`A${row1.number}:C${row1.number}`)
+  
+  // 第2行: 空行和修订号 - 字体大小8，行高19
+  const row2 = worksheet.getRow(rowIndex++)
+  row2.height = 17.3 //13.8
+  row2.getCell(4).value = 'Rev.20170612'
+  row2.getCell(4).font = smallFont
+  row2.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' }
+  
+  // 第3行: 标题 - 字体大小18，行高18
+  const row3 = worksheet.getRow(rowIndex++)
+  row3.height = 29.3 //23.4
+  row3.getCell(1).value = 'MAINTENANCE REQUEST FORM'
+  row3.getCell(1).font = titleFont
+  row3.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+  worksheet.mergeCells(`A${row3.number}:D${row3.number}`)
+  
+  // 第4行: 请求人和日期/时间 - 字体大小10
+  const row4 = worksheet.getRow(rowIndex++)
+  row4.height = 16.5 //13.2
+  row4.getCell(1).value = 'REQUESTED BY:'
+  row4.getCell(3).value = 'DATE / TIME:'
+  row4.getCell(1).font = headerFont
+  row4.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row4.number}:B${row4.number}`)
+  worksheet.mergeCells(`C${row4.number}:D${row4.number}`)
+  
+  // 第5行: 空行 - 字体大小10
+  const row5 = worksheet.getRow(rowIndex++)
+  row5.height = 16.5 //13.2
+  
+  // 第6行: 机器/项目 - 字体大小10
+  const row6 = worksheet.getRow(rowIndex++)
+  row6.height = 16.5 //13.2
+  row6.getCell(1).value = 'MACHINE / ITEM:'
+  row6.getCell(1).font = headerFont
+  worksheet.mergeCells(`A${row6.number}:D${row6.number}`)
+  
+  // 第7行: 空行 - 字体大小10
+  const row7 = worksheet.getRow(rowIndex++)
+  row7.height = 16.5 //13.2
+  
+  // 第8行: 编号和问题描述 - 字体大小10
+  const row8 = worksheet.getRow(rowIndex++)
+  row8.height = 16.5 //13.2
+  row8.getCell(1).value = 'NO.'
+  row8.getCell(2).value = 'PROBLEM DESCRIPTION:'
+  row8.getCell(1).font = headerFont
+  row8.getCell(2).font = headerFont
+  worksheet.mergeCells(`B${row8.number}:D${row8.number}`)
+  
+  // 第9-11行: 空行用于填写问题描述 - 字体大小10
+  for (let i = 0; i < 3; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 16.5 //13.2
+  }
+  
+  // 第12行: 处理人和日期/时间 - 字体大小10
+  const row12 = worksheet.getRow(rowIndex++)
+  row12.height = 16.5 //13.2
+  row12.getCell(1).value = 'ATTENDED BY:'
+  row12.getCell(3).value = 'DATE / TIME:'
+  row12.getCell(1).font = headerFont
+  row12.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row12.number}:B${row12.number}`)
+  worksheet.mergeCells(`C${row12.number}:D${row12.number}`)
+  
+  // 第13行: 空行 - 字体大小10
+  const row13 = worksheet.getRow(rowIndex++)
+  row13.height = 16.5 //13.2
+  
+  // 第14行: 编号、根本原因和纠正措施 - 字体大小10
+  const row14 = worksheet.getRow(rowIndex++)
+  row14.height = 16.5 //13.2
+  row14.getCell(1).value = 'NO.'
+  row14.getCell(2).value = 'ROOT CAUSE:'
+  row14.getCell(3).value = 'CORRECTIVE ACTION:'
+  row14.getCell(1).font = headerFont
+  row14.getCell(2).font = headerFont
+  row14.getCell(3).font = headerFont
+  worksheet.mergeCells(`B${row14.number}:C${row14.number}`)
+  
+  // 第15-17行: 空行用于填写根本原因和纠正措施 - 字体大小10
+  for (let i = 0; i < 3; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 16.5 //13.2
+  }
+  
+  // 第18行: 预防措施评论 - 字体大小10
+  const row18 = worksheet.getRow(rowIndex++)
+  row18.height = 16.5 //13.2
+  row18.getCell(1).value = 'COMMENT ON PREVENTIVE ACTION (IF ANY)'
+  row18.getCell(1).font = headerFont
+  worksheet.mergeCells(`A${row18.number}:D${row18.number}`)
+  
+  // 第19-21行: 空行用于填写预防措施 - 字体大小10
+  for (let i = 0; i < 3; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 16.5 //13.2
+  }
+  
+  // 第22行: 检查人和验证人 - 字体大小10
+  const row22 = worksheet.getRow(rowIndex++)
+  row22.height = 16.5 //13.2
+  row22.getCell(1).value = 'CHECKED BY REQUESTOR:'
+  row22.getCell(3).value = 'VERIFIED BY HOD:'
+  row22.getCell(1).font = headerFont
+  row22.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row22.number}:B${row22.number}`)
+  worksheet.mergeCells(`C${row22.number}:D${row22.number}`)
+  
+  // 第23-24行: 空行 - 字体大小10
+  for (let i = 0; i < 2; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 16.5 //13.2
+  }
+  
+  // 第25行: 状态和评论 - 字体大小10
+  const row25 = worksheet.getRow(rowIndex++)
+  row25.height = 16.5 //13.2
+  row25.getCell(1).value = 'STATUS'
+  row25.getCell(3).value = 'COMMENT:'
+  row25.getCell(1).font = headerFont
+  row25.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row25.number}:B${row25.number}`)
+  worksheet.mergeCells(`C${row25.number}:D${row25.number}`)
+  
+  // 第26-28行: 状态选项 - 字体大小10
+  const row26 = worksheet.getRow(rowIndex++)
+  row26.height = 16.5 //13.2
+  row26.getCell(2).value = 'Job completed satisfactory'
+  row26.getCell(2).font = defaultFont
+  
+  const row27 = worksheet.getRow(rowIndex++)
+  row27.height = 16.5 //13.2
+  row27.getCell(2).value = 'Job completed and need follow-up'
+  row27.getCell(2).font = defaultFont
+  
+  const row28 = worksheet.getRow(rowIndex++)
+  row28.height = 16.5 //13.2
+  row28.getCell(2).value = 'Job not completed'
+  row28.getCell(2).font = defaultFont
+  
+  // 第29行: 空行 - 字体大小10
+  const row29 = worksheet.getRow(rowIndex++)
+  row29.height = 16.5 //13.2
+  
+  // 第30行: 保留期限和处理方法 - 字体大小8
+  const row30 = worksheet.getRow(rowIndex++)
+  row30.height = 16.5 //13.2
+  row30.getCell(1).value = 'Retention Period: 2 years'
+  row30.getCell(3).value = 'Disposition Method: Recycle or dispose it into dustbin'
+  row30.getCell(1).font = smallFont
+  row30.getCell(3).font = smallFont
+  worksheet.mergeCells(`A${row30.number}:B${row30.number}`)
+  worksheet.mergeCells(`C${row30.number}:D${row30.number}`)
+  
+  // 第31行: 空行 - 字体大小10
+  const row31 = worksheet.getRow(rowIndex++)
+  row31.height = 18
+
+  // 添加一些间距
+  // rowIndex += 1
+
+  // 创建第二张表格 (重复) - 使用相同的列宽和行高设置
+  // 第32行: 公司名称和文档编号 - 字体大小8，行高18
+  const row32 = worksheet.getRow(rowIndex++)
+  row32.height = 18
+  row32.getCell(1).value = 'Bold Vision Sdn Bhd'
+  row32.getCell(4).value = 'BV-F09-01'
+  row32.getCell(1).font = { ...smallFont, bold: true }
+  row32.getCell(4).font = { ...smallFont, bold: true }
+  row32.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
+  row32.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' }
+  // 合并A32到C32单元格
+  worksheet.mergeCells(`A${row32.number}:C${row32.number}`)
+  
+  // 第33行: 空行和修订号 - 字体大小8，行高19
+  const row33 = worksheet.getRow(rowIndex++)
+  row33.height = 19
+  row33.getCell(4).value = 'Rev.20170612'
+  row33.getCell(4).font = smallFont
+  row33.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' }
+  
+  // 第34行: 标题 - 字体大小18，行高18
+  const row34 = worksheet.getRow(rowIndex++)
+  row34.height = 18
+  row34.getCell(1).value = 'MAINTENANCE REQUEST FORM'
+  row34.getCell(1).font = titleFont
+  row34.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+  worksheet.mergeCells(`A${row34.number}:D${row34.number}`)
+  
+  // 第35行: 请求人和日期/时间 - 字体大小10
+  const row35 = worksheet.getRow(rowIndex++)
+  row35.height = 18
+  row35.getCell(1).value = 'REQUESTED BY:'
+  row35.getCell(3).value = 'DATE / TIME:'
+  row35.getCell(1).font = headerFont
+  row35.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row35.number}:B${row35.number}`)
+  worksheet.mergeCells(`C${row35.number}:D${row35.number}`)
+  
+  // 第36行: 空行 - 字体大小10
+  const row36 = worksheet.getRow(rowIndex++)
+  row36.height = 18
+  
+  // 第37行: 机器/项目 - 字体大小10
+  const row37 = worksheet.getRow(rowIndex++)
+  row37.height = 18
+  row37.getCell(1).value = 'MACHINE / ITEM:'
+  row37.getCell(1).font = headerFont
+  worksheet.mergeCells(`A${row37.number}:D${row37.number}`)
+  
+  // 第38行: 空行 - 字体大小10
+  const row38 = worksheet.getRow(rowIndex++)
+  row38.height = 18
+  
+  // 第39行: 编号和问题描述 - 字体大小10
+  const row39 = worksheet.getRow(rowIndex++)
+  row39.height = 18
+  row39.getCell(1).value = 'NO.'
+  row39.getCell(2).value = 'PROBLEM DESCRIPTION:'
+  row39.getCell(1).font = headerFont
+  row39.getCell(2).font = headerFont
+  worksheet.mergeCells(`B${row39.number}:D${row39.number}`)
+  
+  // 第40-42行: 空行用于填写问题描述 - 字体大小10
+  for (let i = 0; i < 3; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 18
+  }
+  
+  // 第43行: 处理人和日期/时间 - 字体大小10
+  const row43 = worksheet.getRow(rowIndex++)
+  row43.height = 18
+  row43.getCell(1).value = 'ATTENDED BY:'
+  row43.getCell(3).value = 'DATE / TIME:'
+  row43.getCell(1).font = headerFont
+  row43.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row43.number}:B${row43.number}`)
+  worksheet.mergeCells(`C${row43.number}:D${row43.number}`)
+  
+  // 第44行: 空行 - 字体大小10
+  const row44 = worksheet.getRow(rowIndex++)
+  row44.height = 18
+  
+  // 第45行: 编号、根本原因和纠正措施 - 字体大小10
+  const row45 = worksheet.getRow(rowIndex++)
+  row45.height = 18
+  row45.getCell(1).value = 'NO.'
+  row45.getCell(2).value = 'ROOT CAUSE:'
+  row45.getCell(3).value = 'CORRECTIVE ACTION:'
+  row45.getCell(1).font = headerFont
+  row45.getCell(2).font = headerFont
+  row45.getCell(3).font = headerFont
+  worksheet.mergeCells(`B${row45.number}:C${row45.number}`)
+  
+  // 第46-48行: 空行用于填写根本原因和纠正措施 - 字体大小10
+  for (let i = 0; i < 3; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 18
+  }
+  
+  // 第49行: 预防措施评论 - 字体大小10
+  const row49 = worksheet.getRow(rowIndex++)
+  row49.height = 18
+  row49.getCell(1).value = 'COMMENT ON PREVENTIVE ACTION (IF ANY)'
+  row49.getCell(1).font = headerFont
+  worksheet.mergeCells(`A${row49.number}:D${row49.number}`)
+  
+  // 第50-52行: 空行用于填写预防措施 - 字体大小10
+  for (let i = 0; i < 3; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 18
+  }
+  
+  // 第53行: 检查人和验证人 - 字体大小10
+  const row53 = worksheet.getRow(rowIndex++)
+  row53.height = 18
+  row53.getCell(1).value = 'CHECKED BY REQUESTOR:'
+  row53.getCell(3).value = 'VERIFIED BY HOD:'
+  row53.getCell(1).font = headerFont
+  row53.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row53.number}:B${row53.number}`)
+  worksheet.mergeCells(`C${row53.number}:D${row53.number}`)
+  
+  // 第54-55行: 空行 - 字体大小10
+  for (let i = 0; i < 2; i++) {
+    const row = worksheet.getRow(rowIndex++)
+    row.height = 18
+  }
+  
+  // 第56行: 状态和评论 - 字体大小10
+  const row56 = worksheet.getRow(rowIndex++)
+  row56.height = 18
+  row56.getCell(1).value = 'STATUS'
+  row56.getCell(3).value = 'COMMENT:'
+  row56.getCell(1).font = headerFont
+  row56.getCell(3).font = headerFont
+  worksheet.mergeCells(`A${row56.number}:B${row56.number}`)
+  worksheet.mergeCells(`C${row56.number}:D${row56.number}`)
+  
+  // 第57-59行: 状态选项 - 字体大小10
+  const row57 = worksheet.getRow(rowIndex++)
+  row57.height = 18
+  row57.getCell(2).value = 'Job completed satisfactory'
+  row57.getCell(2).font = defaultFont
+  
+  const row58 = worksheet.getRow(rowIndex++)
+  row58.height = 18
+  row58.getCell(2).value = 'Job completed and need follow-up'
+  row58.getCell(2).font = defaultFont
+  
+  const row59 = worksheet.getRow(rowIndex++)
+  row59.height = 18
+  row59.getCell(2).value = 'Job not completed'
+  row59.getCell(2).font = defaultFont
+  
+  // 第60行: 空行 - 字体大小10
+  const row60 = worksheet.getRow(rowIndex++)
+  row60.height = 18
+  
+  // 第61行: 保留期限和处理方法 - 字体大小8
+  const row61 = worksheet.getRow(rowIndex++)
+  row61.height = 18
+  row61.getCell(1).value = 'Retention Period: 2 years'
+  row61.getCell(3).value = 'Disposition Method: Recycle or dispose it into dustbin'
+  row61.getCell(1).font = smallFont
+  row61.getCell(3).font = smallFont
+  worksheet.mergeCells(`A${row61.number}:B${row61.number}`)
+  worksheet.mergeCells(`C${row61.number}:D${row61.number}`)
+
+  // 为所有有内容的单元格添加边框
+  for (let i = 1; i <= rowIndex; i++) {
+    const row = worksheet.getRow(i)
+    for (let j = 1; j <= 4; j++) {
+      const cell = row.getCell(j)
+      if (cell.value || worksheet.getCell(cell.address).isMerged) {
+        cell.border = borderStyle
+        cell.alignment = cell.alignment || { vertical: 'middle', horizontal: 'left', wrapText: true }
+      }
+    }
+  }
+
+  // 生成Excel文件并下载
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  })
+  
+  // 使用作业编号和日期作为文件名
+  const date = new Date().toISOString().split('T')[0]
+  saveAs(blob, `Maintenance_Request_Form_${maintenance.code}_${date}.xlsx`)
+}
+
+  // 生成Excel报告的函数
+  const generateExcelReport = () => {
+    // 准备Excel数据 - 包含所有维护作业字段
+    const excelData = maintenances.map(maintenance => ({
+      'Job Date': maintenance.jobdate,
+      'Job Type': maintenance.jobtype,
+      'Item Code': maintenance.code,
+      'Problem': maintenance.problem,
+      'Job Detail': maintenance.jobdetail,
+      'Root Cause': maintenance.rootcause,
+      'Supplier': maintenance.supplier,
+      'Cost': maintenance.cost,
+      'Completion Date': maintenance.completiondate,
+      'Status': maintenance.status,
+      'Created At': new Date(maintenance.createdAt).toLocaleString(),
+      'Updated At': new Date(maintenance.updatedAt).toLocaleString()
+    }))
+
+    // 创建工作簿和工作表
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.json_to_sheet(excelData)
+    
+    // 设置列宽
+    const colWidths = [
+      { wch: 12 }, // Job Date
+      { wch: 15 }, // Job Type
+      { wch: 15 }, // Item Code
+      { wch: 25 }, // Problem
+      { wch: 30 }, // Job Detail
+      { wch: 25 }, // Root Cause
+      { wch: 20 }, // Supplier
+      { wch: 10 }, // Cost
+      { wch: 15 }, // Completion Date
+      { wch: 15 }, // Status
+      { wch: 20 }, // Created At
+      { wch: 20 }  // Updated At
+    ]
+    worksheet['!cols'] = colWidths
+
+    // 添加工作表到工作簿
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Maintenance Jobs Report')
+    
+    // 生成Excel文件并下载
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([excelBuffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    // 使用当前日期作为文件名
+    const date = new Date().toISOString().split('T')[0]
+    saveAs(blob, `Maintenance_Jobs_Report_${date}.xlsx`)
+  }
+
   // 移动端简洁分页组件 - 只显示 Previous/Next
   const MobileSimplePagination = () => (
     <div className="flex items-center justify-center space-x-4">
@@ -395,6 +848,14 @@ const Maintenance = () => {
           Edit
         </Button>
         <Button 
+          color='blue'
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => generateMaintenanceRequestForm(maintenance)}
+        >
+          MRF
+        </Button>
+        <Button 
           color='red' 
           outline 
           className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
@@ -408,59 +869,6 @@ const Maintenance = () => {
       </div>
     </div>
   )
-
-  // 生成Excel报告的函数
-  const generateExcelReport = () => {
-    // 准备Excel数据 - 包含所有维护作业字段
-    const excelData = maintenances.map(maintenance => ({
-      'Job Date': maintenance.jobdate,
-      'Job Type': maintenance.jobtype,
-      'Item Code': maintenance.code,
-      'Problem': maintenance.problem,
-      'Job Detail': maintenance.jobdetail,
-      'Root Cause': maintenance.rootcause,
-      'Supplier': maintenance.supplier,
-      'Cost': maintenance.cost,
-      'Completion Date': maintenance.completiondate,
-      'Status': maintenance.status,
-      'Created At': new Date(maintenance.createdAt).toLocaleString(),
-      'Updated At': new Date(maintenance.updatedAt).toLocaleString()
-    }))
-
-    // 创建工作簿和工作表
-    const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(excelData)
-    
-    // 设置列宽
-    const colWidths = [
-      { wch: 12 }, // Job Date
-      { wch: 15 }, // Job Type
-      { wch: 15 }, // Item Code
-      { wch: 25 }, // Problem
-      { wch: 30 }, // Job Detail
-      { wch: 25 }, // Root Cause
-      { wch: 20 }, // Supplier
-      { wch: 10 }, // Cost
-      { wch: 15 }, // Completion Date
-      { wch: 15 }, // Status
-      { wch: 20 }, // Created At
-      { wch: 20 }  // Updated At
-    ]
-    worksheet['!cols'] = colWidths
-
-    // 添加工作表到工作簿
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Maintenance Jobs Report')
-    
-    // 生成Excel文件并下载
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([excelBuffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    })
-    
-    // 使用当前日期作为文件名
-    const date = new Date().toISOString().split('T')[0]
-    saveAs(blob, `Maintenance_Jobs_Report_${date}.xlsx`)
-  }
 
   return (
     <div className='min-h-screen'>
@@ -496,6 +904,7 @@ const Maintenance = () => {
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Completion date</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
+              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>MRF</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
             </TableRow>
           </TableHead>
@@ -560,6 +969,13 @@ const Maintenance = () => {
                 <TableCell className="align-middle">{maintenance.status}</TableCell>
                 <TableCell className="align-middle">
                   <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'  onClick={() => {handleUpdate(maintenance)}}>Edit</Button>
+                </TableCell>
+                <TableCell className="align-middle">
+                  <Button color='blue' outline className='cursor-pointer py-1 px-1 text-sm h-8'
+                    onClick={() => generateMaintenanceRequestForm(maintenance)}
+                  >
+                    MRF
+                  </Button>
                 </TableCell>
                 <TableCell className="align-middle">
                   <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8'
