@@ -554,6 +554,7 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row30.getCell(3).value = 'Disposition Method: Recycle or dispose it into dustbin'
   row30.getCell(1).font = smallFont
   row30.getCell(3).font = smallFont
+  row30.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' }
   worksheet.mergeCells(`A${row30.number}:B${row30.number}`)
   worksheet.mergeCells(`C${row30.number}:D${row30.number}`)
   
@@ -796,6 +797,7 @@ const generateMaintenanceRequestForm = async (maintenance) => {
   row61.getCell(3).value = 'Disposition Method: Recycle or dispose it into dustbin'
   row61.getCell(1).font = smallFont
   row61.getCell(3).font = smallFont
+  row61.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' }
   worksheet.mergeCells(`A${row61.number}:B${row61.number}`)
   worksheet.mergeCells(`C${row61.number}:D${row61.number}`)
 
