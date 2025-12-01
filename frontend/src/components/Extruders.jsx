@@ -90,7 +90,13 @@ const Extruders = () => {
 
     // Handle input change
     const handleChange = (e) => setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
-    const handleUpdateChange = (e) => setUpdateFormData({ ...updateFormData, [e.target.id]: e.target.value.trim() });
+    const handleUpdateChange = (e) => {
+        if(e.target.id === 'code'||e.target.id === 'type'){
+        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
+        }else{
+        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
+        }
+    }
     const handleFocus = () => { setErrorMessage(null); setLoading(false); };
 
     // Open/close modals

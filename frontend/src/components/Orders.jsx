@@ -175,7 +175,11 @@ const Orders = () => {
     }
 
     const handleUpdateChange = (e) => {
+        if(e.target.id === 'item'||e.target.id === 'docno'){
+        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
+        }else{
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
+        }
     }
 
     const handleUpdateSubmit = async (e) => {

@@ -232,7 +232,11 @@ const ToDoListPreventive = () => {
     }
 
     const handleUpdateChange = (e) => {
+        if(e.target.id === 'section'||e.target.id === 'description'||e.target.id === 'checkpoint'||e.target.id === 'tool'||e.target.id === 'reactionplan'){
+        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
+        }else{
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
+        }
     }
 
     const handleUpdateSubmit = async (e) => {

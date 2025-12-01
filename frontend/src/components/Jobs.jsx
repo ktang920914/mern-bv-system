@@ -173,7 +173,11 @@ const Jobs = () => {
     }
 
     const handleUpdateChange = (e) => {
+        if(e.target.id === 'lotno'||e.target.id === 'colourcode'||e.target.id === 'material'){
+        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
+        }else{
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
+        }
     }
 
     const handleUpdateSubmit = async (e) => {

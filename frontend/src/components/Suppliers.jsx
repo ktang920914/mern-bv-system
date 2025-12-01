@@ -156,7 +156,7 @@ const Suppliers = () => {
     }
 
     const handleUpdateChange = (e) => {
-        if(e.target.id === 'supplier' ||e.target.id === 'address'||e.target.id === 'description'){
+        if(e.target.id === 'supplier'||e.target.id === 'address'||e.target.id === 'description'||e.target.id === 'pic'){
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
         }else{
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})

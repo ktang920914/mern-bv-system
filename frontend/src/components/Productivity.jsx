@@ -77,7 +77,7 @@ const Productivity = () => {
     }
 
     const handleChange = (e) => {
-        if(e.target.id === 'reason' || e.target.id === 'washresin' || e.target.id === 'operator' || e.target.id === 'cause'){
+        if(e.target.id === 'reason' || e.target.id === 'washresin' || e.target.id === 'operator' || e.target.id === 'cause' || e.target.id === 'color'|| e.target.id === 'density'){
         setFormData({...formData, [e.target.id]: e.target.value})
         }else{
         setFormData({...formData, [e.target.id]: e.target.value.trim()})

@@ -161,7 +161,7 @@ const Materials = () => {
   }
 
   const handleUpdateChange = (e) => {
-    if(e.target.id === 'material'){
+    if(e.target.id === 'material'|| e.target.id === 'palletno'){
       setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
     }else{
       setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
