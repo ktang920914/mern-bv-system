@@ -19,7 +19,7 @@ const Productivity = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-    const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate'
+    const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate', 'updatedAt'
     const [sortOrder, setSortOrder] = useState('desc') // 'asc', 'desc'
 
     // 监听窗口大小变化
@@ -141,9 +141,15 @@ const Productivity = () => {
         setCurrentPage(1)
     }
 
-    // 日期解析函数
+    // 日期解析函数 - 更新以支持 updatedAt
     const parseDateTime = (dateTimeStr) => {
         if (!dateTimeStr) return new Date(0)
+        
+        // 如果是 ISO 格式（updatedAt），直接创建 Date 对象
+        if (dateTimeStr.includes('T') && dateTimeStr.includes('Z')) {
+            return new Date(dateTimeStr)
+        }
+        
         // 处理 "YYYY-MM-DD HH:mm:ss" 格式
         return new Date(dateTimeStr.replace(' ', 'T'))
     }
@@ -170,8 +176,13 @@ const Productivity = () => {
             productivity.code.toLowerCase().includes(searchTerm) && productivity.code.toString().toLowerCase() === searchTerm
         )
         .sort((a, b) => {
-            const dateA = parseDateTime(a[sortBy])
-            const dateB = parseDateTime(b[sortBy])
+            // 针对 updatedAt 使用 ISO 字符串，其他使用自定义解析
+            const dateA = sortBy === 'updatedAt' ? 
+                new Date(a.updatedAt) : 
+                parseDateTime(a[sortBy])
+            const dateB = sortBy === 'updatedAt' ? 
+                new Date(b.updatedAt) : 
+                parseDateTime(b[sortBy])
             
             if (sortOrder === 'asc') {
                 return dateA - dateB
@@ -192,6 +203,13 @@ const Productivity = () => {
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+    // 格式化 updated date 用于显示
+    const formatUpdatedDate = (updatedAt) => {
+        if (!updatedAt) return '-'
+        const date = new Date(updatedAt)
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
 
     // 移动端简洁分页组件 - 只显示 Previous/Next
     const MobileSimplePagination = () => (
@@ -218,7 +236,7 @@ const Productivity = () => {
         </div>
     )
 
-    // 移动端卡片组件
+    // 移动端卡片组件 - 添加 updated date 信息
     const ProductivityCard = ({ productivity }) => (
         <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
             theme === 'light' 
@@ -368,7 +386,7 @@ const Productivity = () => {
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Productivities</h1>
                 <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
-                    {/* 排序控件 */}
+                    {/* 排序控件 - 增加 updatedAt 选项 */}
                     <div className='flex gap-2'>
                         <Select 
                             value={sortBy} 
@@ -378,6 +396,7 @@ const Productivity = () => {
                             <option value="starttime">Prod Start</option>
                             <option value="endtime">Prod End</option>
                             <option value="orderdate">Order Date</option>
+                            <option value="updatedAt">Updated Date</option>
                         </Select>
                         
                         <Select 
@@ -399,7 +418,7 @@ const Productivity = () => {
                 </div>
             </div>
 
-            {/* 桌面端表格视图 */}
+            {/* 桌面端表格视图 - 增加 Updated 列 */}
             {!isMobile && (
                 <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                     <TableHead>
