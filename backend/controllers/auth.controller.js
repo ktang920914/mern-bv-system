@@ -5,42 +5,39 @@ import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 
-export const login = async (req,res,next) => {
-    const {username, password} = req.body
+export const login = async (req, res, next) => {
+    const { username, password } = req.body
     try {
-        if(username === '' || password === ''){
-            return next(errorHandler(404, 'Login Failed'))
-        }
+        if (!username || !password) return next(errorHandler(404, 'Login Failed'))
 
-        const validUser = await User.findOne({username})
-
-        if(!validUser){
-            return next(errorHandler(404, 'Login Failed'))
-        }
+        const validUser = await User.findOne({ username })
+        if (!validUser) return next(errorHandler(404, 'Login Failed'))
 
         const validPassword = bcryptjs.compareSync(password, validUser.password)
+        if (!validPassword) return next(errorHandler(404, 'Login Failed'))
 
-        if(!validPassword){
-            return next(errorHandler(404, 'Login Failed'))
-        }
+        // 生成 token 时加 tokenVersion
+        const token = jwt.sign(
+            { id: validUser._id, username: validUser.username, tokenversion: validUser.tokenversion },
+            process.env.JWT_SECRET,
+            { expiresIn: '90d' }
+        )
 
-        const token = jwt.sign({id:validUser._id,username:validUser.username},process.env.JWT_SECRET,{expiresIn:'90d'})
-        const {password:pass,...rest} = validUser._doc
+        const { password: pass, ...rest } = validUser._doc
 
-        const currentDate = new Date().toLocaleString();
+        // 记录活动
         const newActivity = new Activity({
-            date: currentDate,
+            date: new Date().toLocaleString(),
             activity: 'Login',
             detail: `${username}`
         })
         await newActivity.save()
 
-        res.cookie('access_token',token,{
-            httpOnly:true,
-            maxAge:90*24*60*60*1000
+        res.cookie('access_token', token, {
+            httpOnly: true,
+            maxAge: 90*24*60*60*1000
         })
         res.status(200).json(rest)
-
     } catch (error) {
         next(error)
     }
@@ -125,37 +122,45 @@ export const deleteUser = async (req,res,next) => {
     }
 }
 
-export const updateUser = async (req,res,next) => {
+export const updateUser = async (req, res, next) => {
     try {
         const existingUser = await User.findOne({ 
             username: req.body.username,
             _id: { $ne: req.params.userId } 
-        });
-        
-        if (existingUser) {
-            return next(errorHandler(404, 'Update Failed'))
-        }
-        if(req.body.password){
-        req.body.password = bcryptjs.hashSync(req.body.password, 10)
-        }
-        const updatedUser = await User.findByIdAndUpdate(req.params.userId, {
-        $set: {
-            username: req.body.username,
-            password: req.body.password,
-            role: req.body.role
-        },
-    },{new:true})
+        })
+        if(existingUser) return next(errorHandler(404, 'Update Failed'))
 
-    const {password, ...rest} = updatedUser._doc
-    const currentDate = new Date().toLocaleString();
+        if(req.body.password){
+            req.body.password = bcryptjs.hashSync(req.body.password, 10)
+        }
+
+        // 更新 user 并 tokenVersion +1
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.userId,
+            { 
+                $set: {
+                    username: req.body.username,
+                    password: req.body.password,
+                    role: req.body.role
+                },
+                $inc: { tokenversion: 1 }  // <- 强制旧 token 失效
+            },
+            { new: true }
+        )
+
+        const { password, ...rest } = updatedUser._doc
+
+        // 记录活动
         const newActivity = new Activity({
-            date: currentDate,
+            date: new Date().toLocaleString(),
             activity: 'Update user',
             detail: `${req.user.username}`
         })
         await newActivity.save()
-    res.status(200).json(rest)
+
+        res.status(200).json(rest)
     } catch (error) {
         next(error)
     }
 }
+
