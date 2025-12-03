@@ -8,22 +8,7 @@ const todoSchema = new mongoose.Schema({
     code:{
         type: String,
     },
-    section:{
-        type: String,
-    },
-    description:{
-        type: String,
-    },
-    im:{
-        type: String,
-    },
-    checkpoint:{
-        type: String,
-    },
-    tool:{
-        type: String,
-    },
-    reactionplan:{
+    activity:{
         type: String,
     },
     status:{

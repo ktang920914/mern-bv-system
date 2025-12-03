@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore'
@@ -216,13 +216,8 @@ const ToDoListPreventive = () => {
         setUpdateFormData({
             date: t.date, 
             code: t.code, 
-            section: t.section, 
             status: t.status, 
-            description: t.description,
-            im: t.im, 
-            checkpoint: t.checkpoint, 
-            tool: t.tool, 
-            reactionplan: t.reactionplan, 
+            activity: t.activity,
             repeatType: t.repeatType,
             repeatEndDate: t.repeatEndDate
         })
@@ -232,7 +227,7 @@ const ToDoListPreventive = () => {
     }
 
     const handleUpdateChange = (e) => {
-        if(e.target.id === 'section'||e.target.id === 'description'||e.target.id === 'checkpoint'||e.target.id === 'tool'||e.target.id === 'reactionplan'){
+        if(e.target.id === 'activity'){
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
         }else{
         setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
@@ -280,13 +275,7 @@ const ToDoListPreventive = () => {
     const filteredTodos = todos.filter(todo => 
         todo.date.toLowerCase().includes(searchTerm) || 
         todo.code.toLowerCase().includes(searchTerm) ||
-        todo.section.toLowerCase().includes(searchTerm) ||
-        todo.description.toLowerCase().includes(searchTerm) ||
-        todo.im.toLowerCase().includes(searchTerm) ||
-        todo.checkpoint.toLowerCase().includes(searchTerm) ||
-        todo.tool.toLowerCase().includes(searchTerm) ||
-        todo.repeatType.toLowerCase().includes(searchTerm) ||
-        todo.reactionplan.toLowerCase().includes(searchTerm) ||
+        todo.activity.toLowerCase().includes(searchTerm) ||
         todo.status.toLowerCase().includes(searchTerm) && todo.status.toString().toLowerCase() === searchTerm
     )
 
@@ -309,12 +298,7 @@ const ToDoListPreventive = () => {
         const excelData = todos.map(todo => ({
             'Date': todo.date,
             'Item': todo.code,
-            'Section': todo.section,
             'Description': todo.description,
-            'I/M': todo.im,
-            'Check Point': todo.checkpoint,
-            'Tools': todo.tool,
-            'Reaction Plan': todo.reactionplan,
             'Status': todo.status,
             'Repeat Type': todo.repeatType || 'None',
             'Repeat End Date': todo.repeatEndDate || 'N/A',
@@ -330,12 +314,7 @@ const ToDoListPreventive = () => {
         const colWidths = [
             { wch: 15 }, // Date
             { wch: 20 }, // Item
-            { wch: 15 }, // Section
-            { wch: 30 }, // Description
-            { wch: 10 }, // I/M
-            { wch: 20 }, // Check Point
-            { wch: 20 }, // Tools
-            { wch: 20 }, // Reaction Plan
+            { wch: 30 }, // Activity
             { wch: 12 }, // Status
             { wch: 15 }, // Repeat Type
             { wch: 18 }, // Repeat End Date
@@ -400,41 +379,13 @@ const ToDoListPreventive = () => {
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.code}</p>
                 </div>
                 <div>
-                    <p className="text-sm font-semibold text-gray-500">Section</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.section}</p>
+                    <p className="text-sm font-semibold text-gray-500">Activity</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.activity}</p>
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Status</p>
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.status}</p>
                 </div>
-            </div>
-            
-            <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-500">Description</p>
-                <Popover 
-                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-                    content={
-                        <div className="p-3 max-w-xs">
-                            <p className="font-semibold text-sm">I/M:</p>
-                            <p className="text-xs mb-2">{todo.im}</p>
-                            <p className="font-semibold text-sm">Check Point:</p>
-                            <p className="text-xs mb-2">{todo.checkpoint}</p>
-                            <p className="font-semibold text-sm">Tools:</p>
-                            <p className="text-xs mb-2">{todo.tool}</p>
-                            <p className="font-semibold text-sm">Reaction Plan:</p>
-                            <p className="text-xs">{todo.reactionplan}</p>
-                        </div>
-                    }
-                    trigger='hover'
-                    placement="top"
-                    arrow={false}
-                >
-                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-                        theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-                    }`}>
-                        {todo.description.length > 30 ? `${todo.description.substring(0, 30)}...` : todo.description}
-                    </span>
-                </Popover>
             </div>
 
             <div className="flex gap-2">
@@ -493,9 +444,7 @@ const ToDoListPreventive = () => {
                         <TableRow>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Date</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Item</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Section</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Description</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>I/M</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Activity</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
@@ -506,30 +455,7 @@ const ToDoListPreventive = () => {
                             <TableRow key={todo._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                 <TableCell className="align-middle">{todo.date}</TableCell>
                                 <TableCell className="align-middle">{todo.code}</TableCell>
-                                <TableCell className="align-middle">{todo.section}</TableCell>
-                                <TableCell className="align-middle">
-                                    <Popover 
-                                        className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">Check Point:</p>
-                                                <p className="text-xs mb-2">{todo.checkpoint}</p>
-                                                <p className="font-semibold text-sm">Tools:</p>
-                                                <p className="text-xs mb-2">{todo.tool}</p>
-                                                <p className="font-semibold text-sm">Reaction Plan:</p>
-                                                <p className="text-xs">{todo.reactionplan}</p>
-                                            </div>
-                                        }
-                                        trigger='hover'
-                                        placement="right"
-                                        arrow={false}
-                                    >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {todo.description.length > 30 ? `${todo.description.substring(0, 30)}...` : todo.description}
-                                        </span>
-                                    </Popover>
-                                </TableCell>
-                                <TableCell className="align-middle">{todo.im}</TableCell>
+                                <TableCell className="align-middle">{todo.activity}</TableCell>
                                 <TableCell className="align-middle">{todo.status}</TableCell>
                                 <TableCell className="align-middle">
                                     <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(todo)}}>
@@ -635,37 +561,8 @@ const ToDoListPreventive = () => {
                                 </div>
 
                                 <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Section</Label>
-                                <TextInput id="section" placeholder='Enter section' onChange={handleChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Description</Label>
-                                <TextInput id="description" placeholder='Enter description' onChange={handleChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>I/M</Label>
-                                    <Select id="im" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                                        <option></option>
-                                        <option>Inspection</option>
-                                        <option>Maintenance</option>
-                                    </Select>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Check point</Label>
-                                <TextInput id="checkpoint" placeholder='Enter checkpoint' onChange={handleChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Tools</Label>
-                                <TextInput id="tool" placeholder='Enter tools' onChange={handleChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Reaction plan</Label>
-                                <TextInput id="reactionplan" placeholder='Enter reaction plan' onChange={handleChange} onFocus={handleFocus} required/>
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Activity</Label>
+                                <Textarea id="activity" placeholder='Enter activity' onChange={handleChange} onFocus={handleFocus} required/>
                                 </div>
 
                                 <div className="mb-4 block">
@@ -774,37 +671,8 @@ const ToDoListPreventive = () => {
                                 </div>
 
                                 <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Section</Label>
-                                <TextInput value={updateFormData.section || ''} id="section" placeholder='Enter section' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Description</Label>
-                                <TextInput value={updateFormData.description || ''} id="description" placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>I/M</Label>
-                                    <Select value={updateFormData.im || ''} id="im" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
-                                        <option></option>
-                                        <option>Inspection</option>
-                                        <option>Maintenance</option>
-                                    </Select>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Check point</Label>
-                                <TextInput value={updateFormData.checkpoint || ''} id="checkpoint" placeholder='Enter checkpoint' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Tools</Label>
-                                <TextInput value={updateFormData.tool || ''} id="tool" placeholder='Enter tools' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                                </div>
-
-                                <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Reaction plan</Label>
-                                <TextInput value={updateFormData.reactionplan || ''} id="reactionplan" placeholder='Enter reaction plan' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Activity</Label>
+                                <TextInput value={updateFormData.activity || ''} id="activity" placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required/>
                                 </div>
 
                                 <div className="mb-4 block">

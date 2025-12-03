@@ -260,14 +260,10 @@ const Schedule = () => {
                 </div>
                 
                 <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div><span className="font-medium">Section:</span> {event.resource.section}</div>
-                  <div><span className="font-medium">Description:</span> {event.resource.description}</div>
+                  <div><span className="font-medium">Activity:</span> {event.resource.activity}</div>
                 </div>
                 
                 <div className={`grid grid-cols-2 gap-2 text-xs  ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div>
-                    <span className="font-medium">I/M Type:</span> {event.resource.im}
-                  </div>
                   <div>
                     <span className="font-medium">Repeat:</span> {event.resource.repeatType === 'none' ? 'No Repeat' : event.resource.repeatType}
                   </div>

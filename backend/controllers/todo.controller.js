@@ -18,12 +18,7 @@ export async function generateRecurringTodos(mainTodo) {
     const recurringTodos = recurringDates.map(recurringDate => ({
       date: recurringDate.toISOString().split('T')[0],
       code: mainTodo.code,
-      section: mainTodo.section,
-      description: mainTodo.description,
-      im: mainTodo.im,
-      checkpoint: mainTodo.checkpoint,
-      tool: mainTodo.tool,
-      reactionplan: mainTodo.reactionplan,
+      activity: mainTodo.activity,
       status: 'Incomplete',
       repeatType: 'none',
       isRecurring: false,
@@ -98,12 +93,7 @@ export const todo = async (req, res, next) => {
     const {
       date,
       code,
-      section,
-      description,
-      im,
-      checkpoint,
-      tool,
-      reactionplan,
+      activity,
       status = 'Incomplete',
       repeatType = 'none',
       repeatInterval = 1,
@@ -111,7 +101,7 @@ export const todo = async (req, res, next) => {
     } = req.body;
 
     // 验证必填字段
-    if (!date || !code || !section || !description || !im || !checkpoint || !tool || !reactionplan) {
+    if (!date || !code || !activity) {
       return next(errorHandler(400, 'All fields are required'));
     }
 
@@ -119,12 +109,7 @@ export const todo = async (req, res, next) => {
     const todoData = {
       date,
       code,
-      section,
-      description,
-      im,
-      checkpoint,
-      tool,
-      reactionplan,
+      activity,
       status,
       repeatType,
       repeatInterval,
@@ -237,12 +222,7 @@ export const updateTodo = async (req, res, next) => {
       $set: {
         date: req.body.date,
         code: req.body.code,
-        section: req.body.section,
-        description: req.body.description,
-        im: req.body.im,
-        checkpoint: req.body.checkpoint,
-        tool: req.body.tool,
-        reactionplan: req.body.reactionplan,
+        activity: req.body.activity,
         status: req.body.status,
         repeatType: req.body.repeatType,
         repeatInterval: req.body.repeatInterval,
