@@ -276,6 +276,7 @@ const ToDoListPreventive = () => {
         todo.date.toLowerCase().includes(searchTerm) || 
         todo.code.toLowerCase().includes(searchTerm) ||
         todo.activity.toLowerCase().includes(searchTerm) ||
+        todo.repeatType.toLowerCase().includes(searchTerm) ||
         todo.status.toLowerCase().includes(searchTerm) && todo.status.toString().toLowerCase() === searchTerm
     )
 
