@@ -5,6 +5,8 @@ import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { Card, Button, Badge, Spinner, Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react'
 import useThemeStore from '../themeStore'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 const localizer = momentLocalizer(moment)
 
@@ -16,7 +18,9 @@ const Schedule = () => {
   const [currentDate, setCurrentDate] = useState(moment())
   const [selectedDay, setSelectedDay] = useState(null)
   const [showDayEvents, setShowDayEvents] = useState(false)
-  const [selectedEvents, setSelectedEvents] = useState([]) // 新增：用于桌面端的事件选择
+  const [selectedEvents, setSelectedEvents] = useState([])
+  const [preventiveData, setPreventiveData] = useState([])
+  const [calendarYear, setCalendarYear] = useState(moment().year()) // 新增：跟踪日历显示的年份
 
   // 检测屏幕大小变化
   useEffect(() => {
@@ -27,6 +31,11 @@ const Schedule = () => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // 当 currentDate 变化时更新 calendarYear（移动端）
+  useEffect(() => {
+    setCalendarYear(currentDate.year())
+  }, [currentDate])
 
   // 获取 Todo 数据
   useEffect(() => {
@@ -52,6 +61,7 @@ const Schedule = () => {
         }))
         
         setEvents(calendarEvents)
+        setPreventiveData(data)
       } catch (error) {
         console.error('Error fetching todos:', error)
       } finally {
@@ -61,6 +71,285 @@ const Schedule = () => {
     
     fetchTodos()
   }, [])
+
+  // 页面设置辅助函数
+  const setupWorksheetPrint = (worksheet, options = {}) => {
+    const {
+      paperSize = 9, // A4
+      orientation = 'landscape',
+      margins = {
+        left: 0.25,
+        right: 0.25,
+        top: 0.75,
+        bottom: 0.75,
+        header: 0.3,
+        footer: 0.3
+      },
+      horizontalCentered = true,
+      verticalCentered = false,
+      fitToPage = true,
+      fitToHeight = 1,
+      fitToWidth = 1,
+      scale = 100
+    } = options
+
+    worksheet.pageSetup = {
+      paperSize,
+      orientation,
+      margins,
+      horizontalCentered,
+      verticalCentered,
+      fitToPage,
+      fitToHeight,
+      fitToWidth,
+      scale,
+      showGridLines: false,
+      blackAndWhite: false
+    }
+  }
+
+  // 生成Excel维护计划报告
+  const generateScheduleReport = async () => {
+    try {
+      // 创建工作簿
+      const workbook = new ExcelJS.Workbook()
+      
+      // 使用日历显示的年份
+      const reportYear = calendarYear
+      
+      // 创建工作表 - 只创建当前年份
+      const worksheet = workbook.addWorksheet(reportYear.toString())
+      
+      // 设置页面打印属性
+      setupWorksheetPrint(worksheet, {
+        fitToHeight: 1,
+        fitToWidth: 1,
+        horizontalCentered: true,
+        verticalCentered: false
+      })
+      
+      // 设置精确的列宽（移除了PQR列）
+      worksheet.columns = [
+        { width: 5.45 },   // A列
+        { width: 42.89 },  // B列
+        { width: 12.1 },   // C列
+        { width: 11.45 },  // D列 (JAN)
+        { width: 11.45 },  // E列 (FEB)
+        { width: 11.45 },  // F列 (MAR)
+        { width: 11.45 },  // G列 (APR)
+        { width: 11.45 },  // H列 (MAY)
+        { width: 11.45 },  // I列 (JUN)
+        { width: 11.45 },  // J列 (JUL)
+        { width: 11.45 },  // K列 (AUG)
+        { width: 11.45 },  // L列 (SEP)
+        { width: 11.45 },  // M列 (OCT)
+        { width: 11.45 },  // N列 (NOV)
+        { width: 11.45 }   // O列 (DEC)
+      ]
+
+      // 定义样式
+      const calibri9Font = { name: 'Calibri', size: 9, bold: true }
+      const arialBlack18Font = { name: 'Arial Black', size: 18, bold: true }
+      const defaultFont = { name: 'Calibri', size: 9 }
+      const headerFont = { name: 'Calibri', size: 9, bold: true }
+      
+      const borderStyle = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+
+      // 定义对齐方式
+      const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+      const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+
+      // 第1行: 公司名称和标题
+      const row1 = worksheet.getRow(1)
+      row1.height = 35.2
+
+      // A-B合并: Bold Vision Sdn Bhd (Calibri 9, Bold) - 底部对齐
+      row1.getCell(1).value = 'Bold Vision Sdn. Bhd.'
+      row1.getCell(1).font = calibri9Font
+      row1.getCell(1).alignment = { 
+        ...leftAlignment, 
+        vertical: 'bottom'  // 添加底部对齐
+      }
+      worksheet.mergeCells(`A1:B1`)
+
+      // C-O合并: 标题 (Arial Black 18, Bold)
+      row1.getCell(3).value = `MASTER SCHEDULE OF MAINTENANCE ACTIVITY YEAR ${reportYear}`
+      row1.getCell(3).font = arialBlack18Font
+      row1.getCell(3).alignment = centerAlignment
+      worksheet.mergeCells(`C1:O1`)
+
+      // 第2行: 表头
+      const row2 = worksheet.getRow(2)
+      row2.height = 22.5
+      const headers = ['No.', 'Activity', 'Frequency', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+      headers.forEach((header, index) => {
+        const cell = row2.getCell(index + 1)
+        cell.value = header
+        cell.font = headerFont
+        cell.alignment = centerAlignment
+        cell.border = borderStyle
+      })
+
+      // 获取数据（使用实际数据）
+      const scheduleData = processPreventiveData(preventiveData, reportYear)
+
+      // 如果没有数据，创建一个空数组
+      const dataToUse = scheduleData.length > 0 ? scheduleData : []
+
+      // 填充数据行 (row3到row21的行高为39.8)
+      let rowIndex = 3  // 从第3行开始
+      dataToUse.forEach((item, index) => {
+        const row = worksheet.getRow(rowIndex)
+        row.height = 46.8  // 设置行高为46.8（原39.8）
+        
+        // No.
+        row.getCell(1).value = item.no || index + 1
+        row.getCell(1).font = defaultFont
+        row.getCell(1).alignment = centerAlignment
+        row.getCell(1).border = borderStyle
+
+        // Activity
+        row.getCell(2).value = item.activity || ''
+        row.getCell(2).font = defaultFont
+        row.getCell(2).alignment = leftAlignment
+        row.getCell(2).border = borderStyle
+
+        // Frequency
+        row.getCell(3).value = item.frequency || ''
+        row.getCell(3).font = defaultFont
+        row.getCell(3).alignment = centerAlignment
+        row.getCell(3).border = borderStyle
+
+        // 月份数据 (JAN-DEC)
+        for (let month = 1; month <= 12; month++) {
+          const columnIndex = month + 3 // D=4 (JAN), E=5 (FEB), etc.
+          const monthData = item.months && item.months[month] ? item.months[month] : ''
+          row.getCell(columnIndex).value = monthData
+          row.getCell(columnIndex).font = defaultFont
+          row.getCell(columnIndex).alignment = leftAlignment
+          row.getCell(columnIndex).border = borderStyle
+        }
+
+        rowIndex++
+      })
+
+      // 如果数据行数少于19行（row3到row21是19行），填充剩余行
+      while (rowIndex <= 21) {
+        const row = worksheet.getRow(rowIndex)
+        row.height = 44.1  // 设置行高为44.1
+        
+        // 填充所有列（1-15列，移除了PQR列）
+        for (let col = 1; col <= 15; col++) {
+          const cell = row.getCell(col)
+          if (col === 1) {
+            cell.value = rowIndex - 2 // No.列填充序号
+            cell.font = defaultFont
+            cell.alignment = centerAlignment
+          } else {
+            cell.value = '' // 其他列为空
+          }
+          cell.border = borderStyle
+        }
+        rowIndex++
+      }
+
+      // 第22行: 批准人信息
+      const row22 = worksheet.getRow(22)
+      row22.height = 30.9
+
+      // A-B合并：Prepared by :
+      row22.getCell(1).value = 'Prepared by :'
+      row22.getCell(1).alignment = { 
+        horizontal: 'left',
+        vertical: 'bottom'
+      }
+      worksheet.mergeCells(`A22:B22`)
+
+      // L列：Approved by:
+      row22.getCell(12).value = 'Approved by :'  // L列是第12列
+      row22.getCell(12).alignment = {
+        horizontal: 'left',
+        vertical: 'bottom'
+      }
+      row22.getCell(12).font = defaultFont
+
+      // 第23行: 最后一行 - Date签名
+      const row23 = worksheet.getRow(23)
+      row23.height = 18.7
+
+      // A-B合并：Date :
+      row23.getCell(1).value = 'Date :'
+      row23.getCell(1).alignment = leftAlignment
+      worksheet.mergeCells(`A23:B23`)
+
+      // L列：Date :
+      row23.getCell(12).value = 'Date :'  // L列是第12列
+      row23.getCell(12).alignment = leftAlignment
+      row23.getCell(12).font = defaultFont
+
+      // 生成Excel文件并下载
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      })
+      
+      const date = moment().format('YYYY_MM_DD')
+      saveAs(blob, `Maintenance_Schedule_${reportYear}_${date}.xlsx`)
+
+    } catch (error) {
+      console.error('Error generating Excel report:', error)
+      alert('Failed to generate Excel report. Please try again.')
+    }
+  }
+
+  // 处理预防性维护数据的函数
+  const processPreventiveData = (data, year) => {
+    // 按活动和频率分组
+    const activitiesMap = {}
+    
+    data.forEach((item, index) => {
+      if (!item.date) return
+      
+      const itemYear = moment(item.date).year()
+      if (itemYear !== year) return
+      
+      const activity = item.activity || 'Uncategorized'
+      const frequency = item.repeatType || 'Once'
+      
+      const key = `${activity}-${frequency}`
+      if (!activitiesMap[key]) {
+        activitiesMap[key] = {
+          activity,
+          frequency,
+          months: {}
+        }
+      }
+      
+      const month = moment(item.date).month() + 1
+      if (item.code) {
+        if (!activitiesMap[key].months[month]) {
+          activitiesMap[key].months[month] = []
+        }
+        activitiesMap[key].months[month].push(item.code)
+      }
+    })
+    
+    // 转换为需要的格式
+    return Object.values(activitiesMap).map((item, index) => ({
+      no: index + 1,
+      activity: item.activity,
+      frequency: item.frequency,
+      months: Object.keys(item.months).reduce((acc, month) => {
+        acc[month] = item.months[month].join(', ')
+        return acc
+      }, {})
+    }))
+  }
 
   // 桌面端事件样式
   const eventStyleGetter = (event) => {
@@ -87,14 +376,13 @@ const Schedule = () => {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        cursor: 'pointer' // 添加指针样式表示可点击
+        cursor: 'pointer'
       }
     }
   }
 
   // 桌面端事件点击处理
   const handleSelectEvent = (event) => {
-    // 获取同一天的所有事件
     const dayEvents = events.filter(e => 
       moment(e.start).isSame(event.start, 'day')
     )
@@ -122,7 +410,7 @@ const Schedule = () => {
   }
 
   // 桌面端工具栏
-  const CustomToolbar = ({ onNavigate, date }) => {
+  const CustomToolbar = ({ onNavigate, date, label }) => {
     const goToBack = () => {
       onNavigate('PREV')
     }
@@ -134,6 +422,11 @@ const Schedule = () => {
     const goToCurrent = () => {
       onNavigate('TODAY')
     }
+
+    // 当月份变化时更新年份
+    useEffect(() => {
+      setCalendarYear(moment(date).year())
+    }, [date])
 
     return (
       <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -450,6 +743,13 @@ const Schedule = () => {
           >
             Go Todos
           </Button>
+          <Button 
+            onClick={generateScheduleReport}
+            color="green"
+            className='cursor-pointer'
+          >
+            Schedule Report
+          </Button>
         </div>
       </div>
 
@@ -476,9 +776,9 @@ const Schedule = () => {
                   toolbar: CustomToolbar,
                   event: CustomEvent
                 }}
-                onSelectEvent={handleSelectEvent} // 新增：事件点击处理
-                onSelectSlot={handleSelectSlot}   // 新增：日期点击处理
-                selectable                         // 新增：启用选择功能
+                onSelectEvent={handleSelectEvent}
+                onSelectSlot={handleSelectSlot}
+                selectable
                 popup
               />
             </div>
