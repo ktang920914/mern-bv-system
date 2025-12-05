@@ -553,10 +553,10 @@ const ToDoListPreventive = () => {
                                     <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                                         <option></option>
                                         {extruders.map((extruder) => (
-                                        <option key={extruder._id} value={extruder.type}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                                        <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                                     ))}
                                         {items.map((item) => (
-                                        <option key={item._id} value={item.type}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                                        <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
                                     ))}
                                     </Select>
                                 </div>
@@ -663,10 +663,10 @@ const ToDoListPreventive = () => {
                                     <Select value={updateFormData.code || ''} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                                         <option></option>
                                         {extruders.map((extruder) => (
-                                        <option key={extruder._id} value={extruder.type}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                                        <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                                     ))}
                                         {items.map((item) => (
-                                        <option key={item._id} value={item.type}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                                        <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
                                     ))}
                                     </Select>
                                 </div>

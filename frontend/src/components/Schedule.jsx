@@ -163,6 +163,11 @@ const Schedule = () => {
       // 定义对齐方式
       const centerAlignment = { horizontal: 'center', vertical: 'middle' }
       const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+      const wrapTextAlignment = { 
+        horizontal: 'left', 
+        vertical: 'middle',
+        wrapText: true  // 添加文字换行属性
+      }
 
       // 第1行: 公司名称和标题
       const row1 = worksheet.getRow(1)
@@ -207,31 +212,31 @@ const Schedule = () => {
         const row = worksheet.getRow(rowIndex)
         row.height = 46.8  // 设置行高为46.8（原39.8）
         
-        // No.
+        // No. (A列)
         row.getCell(1).value = item.no || index + 1
         row.getCell(1).font = defaultFont
         row.getCell(1).alignment = centerAlignment
         row.getCell(1).border = borderStyle
 
-        // Activity
+        // Activity (B列) - 设置文字换行
         row.getCell(2).value = item.activity || ''
         row.getCell(2).font = defaultFont
-        row.getCell(2).alignment = leftAlignment
+        row.getCell(2).alignment = wrapTextAlignment  // 使用文字换行对齐方式
         row.getCell(2).border = borderStyle
 
-        // Frequency
+        // Frequency (C列) - 居中对齐
         row.getCell(3).value = item.frequency || ''
         row.getCell(3).font = defaultFont
         row.getCell(3).alignment = centerAlignment
         row.getCell(3).border = borderStyle
 
-        // 月份数据 (JAN-DEC)
+        // 月份数据 (D-O列, JAN-DEC) - 所有月份列都居中对齐
         for (let month = 1; month <= 12; month++) {
           const columnIndex = month + 3 // D=4 (JAN), E=5 (FEB), etc.
           const monthData = item.months && item.months[month] ? item.months[month] : ''
           row.getCell(columnIndex).value = monthData
           row.getCell(columnIndex).font = defaultFont
-          row.getCell(columnIndex).alignment = leftAlignment
+          row.getCell(columnIndex).alignment = centerAlignment  // 月份列居中对齐
           row.getCell(columnIndex).border = borderStyle
         }
 
@@ -250,8 +255,14 @@ const Schedule = () => {
             cell.value = rowIndex - 2 // No.列填充序号
             cell.font = defaultFont
             cell.alignment = centerAlignment
-          } else {
+          } else if (col === 2) {
+            // B列: 设置文字换行
             cell.value = '' // 其他列为空
+            cell.alignment = wrapTextAlignment
+          } else if (col >= 3 && col <= 15) {
+            // C列到O列: 居中对齐
+            cell.value = '' // 其他列为空
+            cell.alignment = centerAlignment
           }
           cell.border = borderStyle
         }
