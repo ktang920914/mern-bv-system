@@ -843,7 +843,7 @@ const ToDoListPreventive = () => {
                                         ))}
                                     </div>
                                     {updateFormData.selectedCodes && updateFormData.selectedCodes.length > 0 && (
-                                        <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                        <div className={`${theme === 'light' ? 'mt-2 text-sm' : 'text-gray-50 mt-2 text-sm'}`}>
                                             Selected: {updateFormData.selectedCodes.join(', ')}
                                         </div>
                                     )}

@@ -218,7 +218,7 @@ const Schedule = () => {
         // 找出所有独立的活动（主任务，不是生成的实例）
         const mainActivities = data.filter(item => !item.isGenerated || item.parentTodo === null)
         
-        // 第一步：只按activity name分组
+        // 第一步：按activity name和频率分组
         mainActivities.forEach((activity) => {
           const activityName = activity.activity
           const repeatType = activity.repeatType || 'none'
@@ -233,17 +233,21 @@ const Schedule = () => {
           
           if (startYear > year) return
           
-          // 只按activity name分组
-          if (!activityGroups[activityName]) {
-            activityGroups[activityName] = {
+          // 创建分组的键，包含活动名称和频率信息
+          const groupKey = `${activityName}_${repeatType}_${repeatInterval}`
+          
+          if (!activityGroups[groupKey]) {
+            activityGroups[groupKey] = {
               activity: activityName,
+              repeatType: repeatType,
+              repeatInterval: repeatInterval,
               itemCodes: new Set(), // 存储所有item codes
               monthsData: {} // 存储每个月对应的item codes
             }
           }
           
           // 添加item code到集合中
-          activityGroups[activityName].itemCodes.add(itemCode)
+          activityGroups[groupKey].itemCodes.add(itemCode)
           
           // 计算结束月份
           let endMonth = 12
@@ -312,10 +316,10 @@ const Schedule = () => {
           
           // 为每个月份添加item code
           monthsToAdd.forEach(month => {
-            if (!activityGroups[activityName].monthsData[month]) {
-              activityGroups[activityName].monthsData[month] = new Set()
+            if (!activityGroups[groupKey].monthsData[month]) {
+              activityGroups[groupKey].monthsData[month] = new Set()
             }
-            activityGroups[activityName].monthsData[month].add(itemCode)
+            activityGroups[groupKey].monthsData[month].add(itemCode)
           })
         })
         
@@ -335,11 +339,38 @@ const Schedule = () => {
               monthsData[monthNum] = monthItems.sort().join(', ')
             })
             
-            // 对于合并的活动，频率显示为"Multiple"或显示第一个活动的频率
-            // 由于可能包含不同频率，我们显示"Various"
+            // 根据重复类型显示正确的频率
+            let frequency = ''
+            switch (group.repeatType) {
+              case 'none':
+                frequency = 'No Repeat'
+                break
+              case 'daily':
+                frequency = 'Daily'
+                break
+              case 'weekly':
+                frequency = 'Weekly'
+                break
+              case 'monthly':
+                frequency = 'Monthly'
+                break
+              case 'yearly':
+                frequency = 'Yearly'
+                break
+              case 'custom':
+                if (group.repeatInterval > 0) {
+                  frequency = `${group.repeatInterval} Month${group.repeatInterval > 1 ? 's' : ''}`
+                } else {
+                  frequency = 'Custom'
+                }
+                break
+              default:
+                frequency = group.repeatType
+            }
+            
             activitiesArray.push({
               activity: group.activity,
-              frequency: 'Various', // 或者保持第一个活动的频率
+              frequency: frequency,
               months: monthsData,
               itemCodes: sortedCodes
             })
