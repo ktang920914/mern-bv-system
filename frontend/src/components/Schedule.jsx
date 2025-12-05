@@ -1,4 +1,3 @@
-// Schedule.jsx
 import React, { useState, useEffect } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
@@ -18,26 +17,22 @@ const Schedule = () => {
   const [currentDate, setCurrentDate] = useState(moment())
   const [selectedDay, setSelectedDay] = useState(null)
   const [showDayEvents, setShowDayEvents] = useState(false)
-  const [selectedEvents, setSelectedEvents] = useState([])
   const [preventiveData, setPreventiveData] = useState([])
-  const [calendarYear, setCalendarYear] = useState(moment().year()) // 新增：跟踪日历显示的年份
+  const [calendarYear, setCalendarYear] = useState(moment().year())
+  const [parentActivities, setParentActivities] = useState({})
 
-  // 检测屏幕大小变化
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)
     }
-
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // 当 currentDate 变化时更新 calendarYear（移动端）
   useEffect(() => {
     setCalendarYear(currentDate.year())
   }, [currentDate])
 
-  // 获取 Todo 数据
   useEffect(() => {
     const fetchTodos = async () => {
       try {
@@ -50,18 +45,44 @@ const Schedule = () => {
         
         const data = await res.json()
         
-        // 将 todos 转换为日历事件
-        const calendarEvents = data.map(todo => ({
-          id: todo._id,
-          title: `${todo.code}`,
-          start: new Date(todo.date),
-          end: new Date(todo.date),
-          allDay: true,
-          resource: todo
-        }))
+        const parentMap = {}
+        data.forEach(todo => {
+          if (todo.parentTodo) {
+            if (!parentMap[todo.parentTodo]) {
+              const parent = data.find(d => d._id === todo.parentTodo)
+              if (parent) {
+                parentMap[todo.parentTodo] = {
+                  activity: parent.activity,
+                  repeatType: parent.repeatType
+                }
+              }
+            }
+          }
+        })
+        
+        setParentActivities(parentMap)
+        setPreventiveData(data)
+        
+        const calendarEvents = data.map(todo => {
+          let displayActivity = todo.activity
+          if (todo.parentTodo && parentMap[todo.parentTodo]) {
+            displayActivity = parentMap[todo.parentTodo].activity
+          }
+          
+          return {
+            id: todo._id,
+            title: `${todo.code}`,
+            start: new Date(todo.date),
+            end: new Date(todo.date),
+            allDay: true,
+            resource: {
+              ...todo,
+              displayActivity: displayActivity
+            }
+          }
+        })
         
         setEvents(calendarEvents)
-        setPreventiveData(data)
       } catch (error) {
         console.error('Error fetching todos:', error)
       } finally {
@@ -72,10 +93,9 @@ const Schedule = () => {
     fetchTodos()
   }, [])
 
-  // 页面设置辅助函数
   const setupWorksheetPrint = (worksheet, options = {}) => {
     const {
-      paperSize = 9, // A4
+      paperSize = 9,
       orientation = 'landscape',
       margins = {
         left: 0.25,
@@ -108,19 +128,12 @@ const Schedule = () => {
     }
   }
 
-  // 生成Excel维护计划报告
   const generateScheduleReport = async () => {
     try {
-      // 创建工作簿
       const workbook = new ExcelJS.Workbook()
-      
-      // 使用日历显示的年份
       const reportYear = calendarYear
-      
-      // 创建工作表 - 只创建当前年份
       const worksheet = workbook.addWorksheet(reportYear.toString())
       
-      // 设置页面打印属性
       setupWorksheetPrint(worksheet, {
         fitToHeight: 1,
         fitToWidth: 1,
@@ -128,7 +141,6 @@ const Schedule = () => {
         verticalCentered: false
       })
       
-      // 设置精确的列宽（移除了PQR列）
       worksheet.columns = [
         { width: 5.45 },   // A列
         { width: 42.89 },  // B列
@@ -147,7 +159,6 @@ const Schedule = () => {
         { width: 11.45 }   // O列 (DEC)
       ]
 
-      // 定义样式
       const calibri9Font = { name: 'Calibri', size: 9, bold: true }
       const arialBlack18Font = { name: 'Arial Black', size: 18, bold: true }
       const defaultFont = { name: 'Calibri', size: 9 }
@@ -160,35 +171,30 @@ const Schedule = () => {
         right: { style: 'thin' }
       }
 
-      // 定义对齐方式
       const centerAlignment = { horizontal: 'center', vertical: 'middle' }
       const leftAlignment = { horizontal: 'left', vertical: 'middle' }
       const wrapTextAlignment = { 
         horizontal: 'left', 
         vertical: 'middle',
-        wrapText: true  // 添加文字换行属性
+        wrapText: true
       }
 
-      // 第1行: 公司名称和标题
       const row1 = worksheet.getRow(1)
       row1.height = 35.2
 
-      // A-B合并: Bold Vision Sdn Bhd (Calibri 9, Bold) - 底部对齐
       row1.getCell(1).value = 'Bold Vision Sdn. Bhd.'
       row1.getCell(1).font = calibri9Font
       row1.getCell(1).alignment = { 
         ...leftAlignment, 
-        vertical: 'bottom'  // 添加底部对齐
+        vertical: 'bottom'
       }
       worksheet.mergeCells(`A1:B1`)
 
-      // C-O合并: 标题 (Arial Black 18, Bold)
       row1.getCell(3).value = `MASTER SCHEDULE OF MAINTENANCE ACTIVITY YEAR ${reportYear}`
       row1.getCell(3).font = arialBlack18Font
       row1.getCell(3).alignment = centerAlignment
       worksheet.mergeCells(`C1:O1`)
 
-      // 第2行: 表头
       const row2 = worksheet.getRow(2)
       row2.height = 22.5
       const headers = ['No.', 'Activity', 'Frequency', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -200,68 +206,204 @@ const Schedule = () => {
         cell.border = borderStyle
       })
 
-      // 获取数据（使用实际数据）
-      const scheduleData = processPreventiveData(preventiveData, reportYear)
+      // =================== 修改的数据处理函数 START ===================
+      const processDataForExcel = (data, year) => {
+        const activityGroups = {}
+        
+        // 找出所有独立的活动（主任务，不是生成的实例）
+        const mainActivities = data.filter(item => !item.isGenerated || item.parentTodo === null)
+        
+        // 第一步：按活动、重复类型和间隔分组收集所有item codes
+        mainActivities.forEach((activity) => {
+          const activityName = activity.activity
+          const repeatType = activity.repeatType || 'none'
+          const repeatInterval = activity.repeatInterval || 1
+          const startDate = activity.date ? moment(activity.date) : null
+          
+          if (!startDate) return
+          
+          const startYear = startDate.year()
+          const startMonth = startDate.month() + 1
+          
+          if (startYear > year) return
+          
+          // 使用活动名称、重复类型和间隔作为分组键
+          const groupKey = `${activityName}_${repeatType}_${repeatInterval}`
+          
+          if (!activityGroups[groupKey]) {
+            activityGroups[groupKey] = {
+              activity: activityName,
+              repeatType: repeatType,
+              repeatInterval: repeatInterval,
+              startYear: startYear,
+              startMonth: startMonth,
+              itemCodes: new Set(), // 存储该组的所有item codes
+              monthsToDisplay: new Set() // 存储需要显示的月份
+            }
+          }
+          
+          // 添加item code到集合中
+          if (activity.code) {
+            activityGroups[groupKey].itemCodes.add(activity.code)
+          }
+          
+          // 计算结束月份
+          let endMonth = 12
+          if (activity.repeatEndDate) {
+            const endDate = moment(activity.repeatEndDate)
+            if (endDate.year() < year) return
+            if (endDate.year() === year) {
+              endMonth = endDate.month() + 1
+            }
+          }
+          
+          // 根据重复类型确定哪些月份需要显示
+          switch (repeatType) {
+            case 'none':
+              if (startYear === year) {
+                activityGroups[groupKey].monthsToDisplay.add(startMonth)
+              }
+              break
+              
+            case 'weekly':
+            case 'monthly':
+            case 'daily':
+              if (startYear <= year) {
+                let displayStartMonth = 1
+                if (startYear === year) {
+                  displayStartMonth = startMonth
+                }
+                
+                for (let month = displayStartMonth; month <= endMonth; month++) {
+                  activityGroups[groupKey].monthsToDisplay.add(month)
+                }
+              }
+              break
+              
+            case 'yearly':
+              if (startYear <= year) {
+                activityGroups[groupKey].monthsToDisplay.add(startMonth)
+              }
+              break
+              
+            case 'custom':
+              if (startYear <= year) {
+                const customInterval = repeatInterval
+                let currentMonth = startMonth
+                
+                if (startYear < year) {
+                  const yearsDiff = year - startYear
+                  const monthsDiff = yearsDiff * 12
+                  while (currentMonth + customInterval <= startMonth + monthsDiff) {
+                    currentMonth += customInterval
+                  }
+                  while (currentMonth > 12) {
+                    currentMonth -= 12
+                  }
+                }
+                
+                for (let month = currentMonth; month <= endMonth; month += customInterval) {
+                  if (month > 0 && month <= 12) {
+                    activityGroups[groupKey].monthsToDisplay.add(month)
+                  }
+                }
+              }
+              break
+          }
+        })
+        
+        // 第二步：转换为输出格式
+        const activitiesMap = {}
+        Object.values(activityGroups).forEach((group, index) => {
+          if (group.itemCodes.size > 0 && group.monthsToDisplay.size > 0) {
+            // 对item codes进行排序
+            const sortedCodes = Array.from(group.itemCodes).sort()
+            const itemCodesStr = sortedCodes.join(', ')
+            
+            // 为每个需要显示的月份填充数据
+            const monthsData = {}
+            Array.from(group.monthsToDisplay).sort((a, b) => a - b).forEach(month => {
+              monthsData[month] = itemCodesStr
+            })
+            
+            // 计算频率显示文本
+            const getFrequencyText = (type, interval) => {
+              switch (type) {
+                case 'none': return 'Once'
+                case 'daily': return 'Daily'
+                case 'weekly': return 'Weekly'
+                case 'monthly': return 'Monthly'
+                case 'yearly': return 'Yearly'
+                case 'custom': return `${interval} Months`
+                default: return type
+              }
+            }
+            
+            activitiesMap[`${group.activity}_${index}`] = {
+              no: Object.keys(activitiesMap).length + 1,
+              activity: group.activity,
+              frequency: getFrequencyText(group.repeatType, group.repeatInterval),
+              months: monthsData
+            }
+          }
+        })
+        
+        return Object.values(activitiesMap).sort((a, b) => 
+          a.activity.localeCompare(b.activity)
+        )
+      }
+      // =================== 修改的数据处理函数 END ===================
 
-      // 如果没有数据，创建一个空数组
+      const scheduleData = processDataForExcel(preventiveData, reportYear)
       const dataToUse = scheduleData.length > 0 ? scheduleData : []
 
-      // 填充数据行 (row3到row21的行高为39.8)
-      let rowIndex = 3  // 从第3行开始
-      dataToUse.forEach((item, index) => {
+      let rowIndex = 3
+      dataToUse.forEach((item) => {
         const row = worksheet.getRow(rowIndex)
-        row.height = 46.8  // 设置行高为46.8（原39.8）
+        row.height = 46.8
         
-        // No. (A列)
-        row.getCell(1).value = item.no || index + 1
+        row.getCell(1).value = item.no
         row.getCell(1).font = defaultFont
         row.getCell(1).alignment = centerAlignment
         row.getCell(1).border = borderStyle
 
-        // Activity (B列) - 设置文字换行
         row.getCell(2).value = item.activity || ''
         row.getCell(2).font = defaultFont
-        row.getCell(2).alignment = wrapTextAlignment  // 使用文字换行对齐方式
+        row.getCell(2).alignment = wrapTextAlignment
         row.getCell(2).border = borderStyle
 
-        // Frequency (C列) - 居中对齐
         row.getCell(3).value = item.frequency || ''
         row.getCell(3).font = defaultFont
         row.getCell(3).alignment = centerAlignment
         row.getCell(3).border = borderStyle
 
-        // 月份数据 (D-O列, JAN-DEC) - 所有月份列都居中对齐
         for (let month = 1; month <= 12; month++) {
-          const columnIndex = month + 3 // D=4 (JAN), E=5 (FEB), etc.
+          const columnIndex = month + 3
           const monthData = item.months && item.months[month] ? item.months[month] : ''
           row.getCell(columnIndex).value = monthData
           row.getCell(columnIndex).font = defaultFont
-          row.getCell(columnIndex).alignment = centerAlignment  // 月份列居中对齐
+          row.getCell(columnIndex).alignment = centerAlignment
           row.getCell(columnIndex).border = borderStyle
         }
 
         rowIndex++
       })
 
-      // 如果数据行数少于19行（row3到row21是19行），填充剩余行
       while (rowIndex <= 21) {
         const row = worksheet.getRow(rowIndex)
-        row.height = 44.1  // 设置行高为44.1
+        row.height = 44.1
         
-        // 填充所有列（1-15列，移除了PQR列）
         for (let col = 1; col <= 15; col++) {
           const cell = row.getCell(col)
           if (col === 1) {
-            cell.value = rowIndex - 2 // No.列填充序号
+            cell.value = rowIndex - 2
             cell.font = defaultFont
             cell.alignment = centerAlignment
           } else if (col === 2) {
-            // B列: 设置文字换行
-            cell.value = '' // 其他列为空
+            cell.value = ''
             cell.alignment = wrapTextAlignment
           } else if (col >= 3 && col <= 15) {
-            // C列到O列: 居中对齐
-            cell.value = '' // 其他列为空
+            cell.value = ''
             cell.alignment = centerAlignment
           }
           cell.border = borderStyle
@@ -269,11 +411,9 @@ const Schedule = () => {
         rowIndex++
       }
 
-      // 第22行: 批准人信息
       const row22 = worksheet.getRow(22)
       row22.height = 30.9
 
-      // A-B合并：Prepared by :
       row22.getCell(1).value = 'Prepared by :'
       row22.getCell(1).alignment = { 
         horizontal: 'left',
@@ -281,29 +421,24 @@ const Schedule = () => {
       }
       worksheet.mergeCells(`A22:B22`)
 
-      // L列：Approved by:
-      row22.getCell(12).value = 'Approved by :'  // L列是第12列
+      row22.getCell(12).value = 'Approved by :'
       row22.getCell(12).alignment = {
         horizontal: 'left',
         vertical: 'bottom'
       }
       row22.getCell(12).font = defaultFont
 
-      // 第23行: 最后一行 - Date签名
       const row23 = worksheet.getRow(23)
       row23.height = 18.7
 
-      // A-B合并：Date :
       row23.getCell(1).value = 'Date :'
       row23.getCell(1).alignment = leftAlignment
       worksheet.mergeCells(`A23:B23`)
 
-      // L列：Date :
-      row23.getCell(12).value = 'Date :'  // L列是第12列
+      row23.getCell(12).value = 'Date :'
       row23.getCell(12).alignment = leftAlignment
       row23.getCell(12).font = defaultFont
 
-      // 生成Excel文件并下载
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -318,51 +453,6 @@ const Schedule = () => {
     }
   }
 
-  // 处理预防性维护数据的函数
-  const processPreventiveData = (data, year) => {
-    // 按活动和频率分组
-    const activitiesMap = {}
-    
-    data.forEach((item, index) => {
-      if (!item.date) return
-      
-      const itemYear = moment(item.date).year()
-      if (itemYear !== year) return
-      
-      const activity = item.activity || 'Uncategorized'
-      const frequency = item.repeatType || 'Once'
-      
-      const key = `${activity}-${frequency}`
-      if (!activitiesMap[key]) {
-        activitiesMap[key] = {
-          activity,
-          frequency,
-          months: {}
-        }
-      }
-      
-      const month = moment(item.date).month() + 1
-      if (item.code) {
-        if (!activitiesMap[key].months[month]) {
-          activitiesMap[key].months[month] = []
-        }
-        activitiesMap[key].months[month].push(item.code)
-      }
-    })
-    
-    // 转换为需要的格式
-    return Object.values(activitiesMap).map((item, index) => ({
-      no: index + 1,
-      activity: item.activity,
-      frequency: item.frequency,
-      months: Object.keys(item.months).reduce((acc, month) => {
-        acc[month] = item.months[month].join(', ')
-        return acc
-      }, {})
-    }))
-  }
-
-  // 桌面端事件样式
   const eventStyleGetter = (event) => {
     let backgroundColor = '#3B82F6'
     
@@ -392,7 +482,6 @@ const Schedule = () => {
     }
   }
 
-  // 桌面端事件点击处理
   const handleSelectEvent = (event) => {
     const dayEvents = events.filter(e => 
       moment(e.start).isSame(event.start, 'day')
@@ -405,7 +494,6 @@ const Schedule = () => {
     setShowDayEvents(true)
   }
 
-  // 桌面端日期点击处理（点击空白区域）
   const handleSelectSlot = (slotInfo) => {
     const dayEvents = events.filter(event => 
       moment(event.start).isSame(slotInfo.start, 'day')
@@ -420,7 +508,6 @@ const Schedule = () => {
     }
   }
 
-  // 桌面端工具栏
   const CustomToolbar = ({ onNavigate, date, label }) => {
     const goToBack = () => {
       onNavigate('PREV')
@@ -434,7 +521,6 @@ const Schedule = () => {
       onNavigate('TODAY')
     }
 
-    // 当月份变化时更新年份
     useEffect(() => {
       setCalendarYear(moment(date).year())
     }, [date])
@@ -465,7 +551,6 @@ const Schedule = () => {
     )
   }
 
-  // 桌面端自定义事件组件 - 简化显示
   const CustomEvent = ({ event }) => {
     return (
       <div className="text-xs p-0.5">
@@ -484,7 +569,6 @@ const Schedule = () => {
     )
   }
 
-  // 移动端日历导航
   const goToPrevMonth = () => {
     setCurrentDate(currentDate.clone().subtract(1, 'month'))
   }
@@ -497,7 +581,6 @@ const Schedule = () => {
     setCurrentDate(moment())
   }
 
-  // 生成移动端日历数据
   const generateCalendar = () => {
     const startDay = currentDate.clone().startOf('month').startOf('week')
     const endDay = currentDate.clone().endOf('month').endOf('week')
@@ -515,14 +598,12 @@ const Schedule = () => {
     return calendar
   }
 
-  // 获取某一天的事件
   const getEventsForDay = (day) => {
     return events.filter(event => 
       moment(event.start).isSame(day, 'day')
     )
   }
 
-  // 处理移动端日期点击事件
   const handleDayClick = (day, dayEvents) => {
     if (dayEvents.length > 0) {
       setSelectedDay({
@@ -533,7 +614,6 @@ const Schedule = () => {
     }
   }
 
-  // 通用的事件详情模态框（桌面端和移动端共用）
   const DayEventsModal = () => {
     if (!selectedDay) return null
 
@@ -564,12 +644,15 @@ const Schedule = () => {
                 </div>
                 
                 <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div><span className="font-medium">Activity:</span> {event.resource.activity}</div>
+                  <div><span className="font-medium">Activity:</span> {event.resource.displayActivity}</div>
                 </div>
                 
                 <div className={`grid grid-cols-2 gap-2 text-xs  ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                   <div>
                     <span className="font-medium">Repeat:</span> {event.resource.repeatType === 'none' ? 'No Repeat' : event.resource.repeatType}
+                  </div>
+                  <div>
+                    <span className="font-medium">Type:</span> {event.resource.isGenerated ? 'Recurring Instance' : 'Main Task'}
                   </div>
                 </div>
               </div>
@@ -585,7 +668,6 @@ const Schedule = () => {
     )
   }
 
-  // 移动端自定义日历组件
   const MobileCalendar = () => {
     const calendar = generateCalendar()
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -593,7 +675,6 @@ const Schedule = () => {
     return (
       <>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          {/* 日历头部 */}
           <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <div className="flex justify-between items-center mb-2">
               <Button size="sm" onClick={goToPrevMonth} color="gray" className="px-2">
@@ -615,7 +696,6 @@ const Schedule = () => {
             </div>
           </div>
 
-          {/* 星期标题 */}
           <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             {weekDays.map(day => (
               <div key={day} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
@@ -624,7 +704,6 @@ const Schedule = () => {
             ))}
           </div>
 
-          {/* 日历内容 */}
           <div className="divide-y divide-gray-200 dark:divide-gray-600">
             {calendar.map((week, weekIndex) => (
               <div key={weekIndex} className="grid grid-cols-7">
@@ -648,7 +727,6 @@ const Schedule = () => {
                         {day.format('D')}
                       </div>
                       
-                      {/* 事件列表 */}
                       <div className="space-y-1">
                         {dayEvents.slice(0, 2).map((event, eventIndex) => (
                           <div
@@ -676,7 +754,6 @@ const Schedule = () => {
                         )}
                       </div>
                       
-                      {/* 透明点击层 - 点击单元格任意位置打开模态框 */}
                       {dayEvents.length > 0 && (
                         <div 
                           className="absolute inset-0 cursor-pointer"
@@ -691,13 +768,11 @@ const Schedule = () => {
           </div>
         </div>
 
-        {/* 事件详情模态框 */}
         <DayEventsModal />
       </>
     )
   }
 
-  // 简化图例说明
   const EventLegend = () => (
     <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
       <div className="flex items-center space-x-2">
@@ -711,23 +786,27 @@ const Schedule = () => {
     </div>
   )
 
-  // 统计信息卡片
-  const StatsCards = () => (
-    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
-        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-          {events.length}
+  const StatsCards = () => {
+    const totalTasks = preventiveData.length
+    const completedTasks = preventiveData.filter(e => e.status === 'Complete').length
+
+    return (
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {totalTasks}
+          </div>
+          <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Tasks</div>
         </div>
-        <div className="text-sm text-blue-600 dark:text-blue-400">Total Tasks</div>
-      </div>
-      <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-          {events.filter(e => e.resource.status === 'Complete').length}
+        <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg shadow">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+            {completedTasks}
+          </div>
+          <div className="text-sm text-green-600 dark:text-green-400 font-medium">Completed</div>
         </div>
-        <div className="text-sm text-green-600 dark:text-green-400">Completed</div>
       </div>
-    </div>
-  )
+    )
+  }
 
   if (loading) {
     return (
@@ -745,6 +824,9 @@ const Schedule = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Schedule</h1>
+          <p className={`${theme === 'light' ? ' text-gray-900' : 'text-gray-300'}`}>
+            Showing maintenance schedule for {calendarYear}
+          </p>
         </div>
         <div className="flex space-x-2">
           <Button 
@@ -767,12 +849,9 @@ const Schedule = () => {
       <Card>
         <EventLegend />
         
-        {/* 内容区域 */}
         {isMobile ? (
-          // 移动端：只显示自定义日历
           <MobileCalendar />
         ) : (
-          // 桌面端：显示 react-big-calendar
           <>
             <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
               <Calendar
@@ -794,12 +873,10 @@ const Schedule = () => {
               />
             </div>
             
-            {/* 桌面端也使用同一个 Modal */}
             <DayEventsModal />
           </>
         )}
         
-        {/* 统计信息 - 移动端和桌面端都显示 */}
         <StatsCards />
       </Card>
     </div>

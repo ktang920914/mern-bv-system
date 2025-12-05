@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput, Checkbox, MultiSelect } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore'
@@ -15,10 +15,13 @@ const ToDoListPreventive = () => {
     const [openModalUpdateToDo,setOpenModalUpdateToDo] = useState(false)
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
-    const [formData,setFormData] = useState({})
+    const [formData,setFormData] = useState({
+        selectedCodes: [] // 改为存储多个item codes
+    })
     const [updateFormData,setUpdateFormData] = useState({})
     const [extruders,setExtruders] = useState([])
     const [items,setItems] = useState([])
+    const [allItems, setAllItems] = useState([]) // 合并的items列表
     const [todos,setTodos] = useState([])
     const [todoIdToDelete,setTodoIdToDelete] = useState('')
     const [todoIdToUpdate,setTodoIdToUpdate] = useState('')
@@ -94,6 +97,23 @@ const ToDoListPreventive = () => {
         fetchItems()
     },[currentUser._id])
 
+    // 合并extruders和items到allItems
+    useEffect(() => {
+        const combined = [
+            ...extruders.map(extruder => ({
+                ...extruder,
+                type: 'Machine',
+                displayText: `${extruder.code} --- ${extruder.type} --- ${extruder.status}`
+            })),
+            ...items.map(item => ({
+                ...item,
+                type: 'Inventory',
+                displayText: `${item.code} --- ${item.type} --- ${item.status}`
+            }))
+        ]
+        setAllItems(combined)
+    }, [extruders, items])
+
     useEffect(() => {
         const fetchTodos = async () => {
             try {
@@ -116,6 +136,15 @@ const ToDoListPreventive = () => {
         setOpenModalCreateToDo(!openModalCreateToDo)
         setErrorMessage(null)
         setLoading(false)
+        setFormData({
+            selectedCodes: [],
+            activity: '',
+            date: '',
+            repeatType: 'none',
+            repeatInterval: 1,
+            repeatEndDate: '',
+            status: 'Incomplete'
+        })
     }
 
     const handleFocus = () => {
@@ -132,46 +161,74 @@ const ToDoListPreventive = () => {
         }
     }
 
+    // 处理多选item codes
+    const handleCodeSelect = (selectedOptions) => {
+        const selectedCodes = selectedOptions.map(option => option.value)
+        setFormData({...formData, selectedCodes})
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        
+        if (formData.selectedCodes.length === 0) {
+            setErrorMessage('Please select at least one item')
+            setLoading(false)
+            return
+        }
+
         try {
-            const res = await fetch('/api/preventive/todo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...formData,
+            // 为每个选中的item code创建一个todo
+            const promises = formData.selectedCodes.map(async (code) => {
+                const todoData = {
+                    date: formData.date,
+                    code: code,
+                    activity: formData.activity,
+                    status: formData.status || 'Incomplete',
+                    repeatType: formData.repeatType || 'none',
+                    repeatInterval: formData.repeatInterval || 1,
+                    repeatEndDate: formData.repeatEndDate,
                     userId: currentUser._id
-                }),
+                }
+
+                const res = await fetch('/api/preventive/todo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(todoData),
+                })
+                
+                return res.json()
             })
+
+            const results = await Promise.all(promises)
+            const hasError = results.some(result => !result.success)
             
-            const data = await res.json()
-            if(data.success === false){
-                setErrorMessage(data.message)
+            if (hasError) {
+                setErrorMessage('Some items failed to create. Please try again.')
                 setLoading(false)
                 return
             }
             
-            if(res.ok){
-                setOpenModalCreateToDo(false)
-                const fetchTodos = async () => {
-                    try {
-                        const res = await fetch('/api/preventive/getTodos')
-                        const data = await res.json()
-                        if(data.success === false){
-                            console.log(data.message)
-                        }
-                        if(res.ok){
-                            setTodos(data)
-                        }
-                    } catch (error) {
-                        console.log(error.message)
+            setOpenModalCreateToDo(false)
+            // 刷新todos列表
+            const fetchTodos = async () => {
+                try {
+                    const res = await fetch('/api/preventive/getTodos')
+                    const data = await res.json()
+                    if(data.success === false){
+                        console.log(data.message)
                     }
+                    if(res.ok){
+                        setTodos(data)
+                    }
+                } catch (error) {
+                    console.log(error.message)
                 }
-                fetchTodos()
             }
+            await fetchTodos()
+            
         } catch (error) {
             setErrorMessage(error.message)
             setLoading(false)
@@ -504,8 +561,8 @@ const ToDoListPreventive = () => {
                 )}
             </div>
 
-            {/* 模态框保持不变 */}
-            <Modal show={openModalCreateToDo} onClose={handleCreateToDo} popup>
+            {/* 模态框 */}
+            <Modal show={openModalCreateToDo} onClose={handleCreateToDo} popup size="xl">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
                     <div className="space-y-6">
@@ -549,16 +606,41 @@ const ToDoListPreventive = () => {
                                 </div>
 
                                 <div className="mb-4 block">
-                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Item</Label>
-                                    <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                                        <option></option>
-                                        {extruders.map((extruder) => (
-                                        <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
-                                    ))}
-                                        {items.map((item) => (
-                                        <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
-                                    ))}
-                                    </Select>
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Select Items (Multiple)</Label>
+                                    <div className="mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto">
+                                        {allItems.map((item) => (
+                                            <div key={item._id} className="flex items-center mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`item-${item._id}`}
+                                                    value={item.code}
+                                                    checked={formData.selectedCodes?.includes(item.code)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setFormData({
+                                                                ...formData,
+                                                                selectedCodes: [...(formData.selectedCodes || []), item.code]
+                                                            })
+                                                        } else {
+                                                            setFormData({
+                                                                ...formData,
+                                                                selectedCodes: formData.selectedCodes?.filter(code => code !== item.code)
+                                                            })
+                                                        }
+                                                    }}
+                                                    className="mr-2"
+                                                />
+                                                <label htmlFor={`item-${item._id}`} className="text-sm">
+                                                    {item.displayText}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {formData.selectedCodes && formData.selectedCodes.length > 0 && (
+                                        <div className="mt-2 text-sm text-gray-600">
+                                            Selected: {formData.selectedCodes.join(', ')}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mb-4 block">
