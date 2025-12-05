@@ -16,12 +16,12 @@ const ToDoListPreventive = () => {
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
     const [formData,setFormData] = useState({
-        selectedCodes: [] // 改为存储多个item codes
+        selectedCodes: []
     })
     const [updateFormData,setUpdateFormData] = useState({})
     const [extruders,setExtruders] = useState([])
     const [items,setItems] = useState([])
-    const [allItems, setAllItems] = useState([]) // 合并的items列表
+    const [allItems, setAllItems] = useState([])
     const [todos,setTodos] = useState([])
     const [todoIdToDelete,setTodoIdToDelete] = useState('')
     const [todoIdToUpdate,setTodoIdToUpdate] = useState('')
@@ -32,32 +32,26 @@ const ToDoListPreventive = () => {
     const [showCustomInterval, setShowCustomInterval] = useState(false)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
-    // 监听窗口大小变化
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth < 768)
         }
-
         window.addEventListener('resize', handleResize)
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
-    // 当页码或搜索词变化时更新 URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
-        
         if (currentPage === 1) {
             params.delete('page')
         } else {
             params.set('page', currentPage.toString())
         }
-        
         if (searchTerm === '') {
             params.delete('search')
         } else {
             params.set('search', searchTerm)
         }
-        
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
@@ -97,7 +91,6 @@ const ToDoListPreventive = () => {
         fetchItems()
     },[currentUser._id])
 
-    // 合并extruders和items到allItems
     useEffect(() => {
         const combined = [
             ...extruders.map(extruder => ({
@@ -145,6 +138,7 @@ const ToDoListPreventive = () => {
             repeatEndDate: '',
             status: 'Incomplete'
         })
+        setShowCustomInterval(false)
     }
 
     const handleFocus = () => {
@@ -153,18 +147,30 @@ const ToDoListPreventive = () => {
     }
 
     const handleChange = (e) => {
-        const { id, value } = e.target;
-        setFormData({...formData, [id]: value.trim()})
+        const { id, value, type } = e.target;
         
         if (id === 'repeatType') {
             setShowCustomInterval(value === 'custom');
         }
-    }
-
-    // 处理多选item codes
-    const handleCodeSelect = (selectedOptions) => {
-        const selectedCodes = selectedOptions.map(option => option.value)
-        setFormData({...formData, selectedCodes})
+        
+        if (type === 'checkbox') {
+            const { value: checkboxValue, checked } = e.target;
+            const currentSelected = formData.selectedCodes || [];
+            
+            if (checked) {
+                setFormData({
+                    ...formData,
+                    selectedCodes: [...currentSelected, checkboxValue]
+                })
+            } else {
+                setFormData({
+                    ...formData,
+                    selectedCodes: currentSelected.filter(code => code !== checkboxValue)
+                })
+            }
+        } else {
+            setFormData({...formData, [id]: value.trim()})
+        }
     }
 
     const handleSubmit = async (e) => {
@@ -178,48 +184,39 @@ const ToDoListPreventive = () => {
         }
 
         try {
-            // 为每个选中的item code创建一个todo
-            const promises = formData.selectedCodes.map(async (code) => {
-                const todoData = {
-                    date: formData.date,
-                    code: code,
-                    activity: formData.activity,
-                    status: formData.status || 'Incomplete',
-                    repeatType: formData.repeatType || 'none',
-                    repeatInterval: formData.repeatInterval || 1,
-                    repeatEndDate: formData.repeatEndDate,
-                    userId: currentUser._id
-                }
+            const todoData = {
+                date: formData.date,
+                selectedCodes: formData.selectedCodes,
+                activity: formData.activity,
+                status: formData.status || 'Incomplete',
+                repeatType: formData.repeatType || 'none',
+                repeatInterval: formData.repeatInterval || 1,
+                repeatEndDate: formData.repeatEndDate,
+                userId: currentUser._id
+            }
 
-                const res = await fetch('/api/preventive/todo', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(todoData),
-                })
-                
-                return res.json()
+            const res = await fetch('/api/preventive/todo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(todoData),
             })
-
-            const results = await Promise.all(promises)
-            const hasError = results.some(result => !result.success)
             
-            if (hasError) {
-                setErrorMessage('Some items failed to create. Please try again.')
+            const data = await res.json()
+            
+            if(data.success === false){
+                setErrorMessage(data.message)
                 setLoading(false)
                 return
             }
             
             setOpenModalCreateToDo(false)
-            // 刷新todos列表
+            
             const fetchTodos = async () => {
                 try {
                     const res = await fetch('/api/preventive/getTodos')
                     const data = await res.json()
-                    if(data.success === false){
-                        console.log(data.message)
-                    }
                     if(res.ok){
                         setTodos(data)
                     }
@@ -228,6 +225,10 @@ const ToDoListPreventive = () => {
                 }
             }
             await fetchTodos()
+            
+            if (data.count > 1) {
+                alert(`Successfully created ${data.count} todos`)
+            }
             
         } catch (error) {
             setErrorMessage(error.message)
@@ -272,57 +273,113 @@ const ToDoListPreventive = () => {
         setTodoIdToUpdate(t._id)
         setUpdateFormData({
             date: t.date, 
-            code: t.code, 
+            selectedCodes: [t.code],
             status: t.status, 
             activity: t.activity,
-            repeatType: t.repeatType,
-            repeatEndDate: t.repeatEndDate
+            repeatType: t.repeatType || 'none',
+            repeatInterval: t.repeatInterval || 1,
+            repeatEndDate: t.repeatEndDate || '',
+            code: t.code
         })
         setOpenModalUpdateToDo(!openModalUpdateToDo)
         setErrorMessage(null)
         setLoading(false)
+        setShowCustomInterval(t.repeatType === 'custom')
     }
 
     const handleUpdateChange = (e) => {
-        if(e.target.id === 'activity'){
-        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
-        }else{
-        setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
+        const { id, value, type } = e.target;
+        
+        if (id === 'repeatType') {
+            setShowCustomInterval(value === 'custom');
+        }
+        
+        if (type === 'checkbox') {
+            const { value: checkboxValue, checked } = e.target;
+            const currentSelected = updateFormData.selectedCodes || [];
+            
+            if (checked) {
+                setUpdateFormData({
+                    ...updateFormData,
+                    selectedCodes: [...currentSelected, checkboxValue]
+                })
+            } else {
+                setUpdateFormData({
+                    ...updateFormData,
+                    selectedCodes: currentSelected.filter(code => code !== checkboxValue)
+                })
+            }
+        } else {
+            setUpdateFormData({
+                ...updateFormData, 
+                [id]: id === 'activity' ? value : value.trim()
+            })
         }
     }
 
     const handleUpdateSubmit = async (e) => {
-        e.preventDefault()
-        try {
-            const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`,{
-                method:'PUT',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify(updateFormData)
-            })
-            const data = await res.json()
-            if(data.success === false){
-                setErrorMessage(data.message)
-                setLoading(true)
-            }
-            if(res.ok){
-                setOpenModalUpdateToDo(false)
-                const fetchTodos = async () => {
-                    try {
-                        const res = await fetch('/api/preventive/getTodos')
-                        const data = await res.json()
-                        if(res.ok){
-                            setTodos(data)
-                        }
-                    } catch (error) {
-                        console.log(error.message)
-                    }
-                }
-                fetchTodos()
-            }
-        } catch (error) {
-            console.log(error.message)
-        }
+    e.preventDefault()
+    setLoading(true)
+    
+    if (!updateFormData.selectedCodes || updateFormData.selectedCodes.length === 0) {
+        setErrorMessage('Please select at least one item')
+        setLoading(false)
+        return
     }
+
+    try {
+        const updateData = {
+            date: updateFormData.date,
+            selectedCodes: updateFormData.selectedCodes,
+            activity: updateFormData.activity,
+            status: updateFormData.status,
+            repeatType: updateFormData.repeatType,
+            repeatInterval: updateFormData.repeatInterval,
+            repeatEndDate: updateFormData.repeatEndDate,
+            code: updateFormData.selectedCodes[0]
+        }
+
+        const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        })
+        
+        const data = await res.json()
+        
+        if(data.success === false){
+            setErrorMessage(data.message)
+            setLoading(false)
+            return
+        }
+        
+        setOpenModalUpdateToDo(false)
+        
+        // 刷新todos列表 - useEffect会自动更新页面
+        const fetchTodos = async () => {
+            try {
+                const res = await fetch('/api/preventive/getTodos')
+                const data = await res.json()
+                if(res.ok){
+                    setTodos(data)
+                }
+            } catch (error) {
+                console.log(error.message)
+            }
+        }
+        await fetchTodos()
+        
+        // 移除alert提示
+        // if (data.count > 1) {
+        //     alert(`Successfully updated ${data.count} todos`)
+        // }
+        
+    } catch (error) {
+        console.log(error.message)
+        setErrorMessage('An error occurred while updating the todo.')
+        setLoading(false)
+    }
+}
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value.toLowerCase())
@@ -334,7 +391,7 @@ const ToDoListPreventive = () => {
         todo.code.toLowerCase().includes(searchTerm) ||
         todo.activity.toLowerCase().includes(searchTerm) ||
         todo.repeatType.toLowerCase().includes(searchTerm) ||
-        todo.status.toLowerCase().includes(searchTerm) && todo.status.toString().toLowerCase() === searchTerm
+        todo.status.toLowerCase().includes(searchTerm)
     )
 
     const handlePageChange = (page) => {
@@ -350,52 +407,50 @@ const ToDoListPreventive = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
-    // 生成Excel报告的函数
     const generateExcelReport = () => {
-        // 准备Excel数据 - 包含所有待办事项字段
         const excelData = todos.map(todo => ({
             'Date': todo.date,
             'Item': todo.code,
-            'Description': todo.description,
+            'Activity': todo.activity,
             'Status': todo.status,
             'Repeat Type': todo.repeatType || 'None',
+            'Repeat Interval': todo.repeatInterval || 1,
             'Repeat End Date': todo.repeatEndDate || 'N/A',
+            'Is Recurring': todo.isRecurring ? 'Yes' : 'No',
+            'Is Generated': todo.isGenerated ? 'Yes' : 'No',
             'Created At': new Date(todo.createdAt).toLocaleString(),
             'Updated At': new Date(todo.updatedAt).toLocaleString()
         }))
 
-        // 创建工作簿和工作表
         const workbook = XLSX.utils.book_new()
         const worksheet = XLSX.utils.json_to_sheet(excelData)
         
-        // 设置列宽
         const colWidths = [
-            { wch: 15 }, // Date
-            { wch: 20 }, // Item
-            { wch: 30 }, // Activity
-            { wch: 12 }, // Status
-            { wch: 15 }, // Repeat Type
-            { wch: 18 }, // Repeat End Date
-            { wch: 20 }, // Created At
-            { wch: 20 }  // Updated At
+            { wch: 15 },
+            { wch: 20 },
+            { wch: 30 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 18 },
+            { wch: 12 },
+            { wch: 12 },
+            { wch: 20 },
+            { wch: 20 }
         ]
         worksheet['!cols'] = colWidths
 
-        // 添加工作表到工作簿
         XLSX.utils.book_append_sheet(workbook, worksheet, 'ToDo List Report')
         
-        // 生成Excel文件并下载
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
         const blob = new Blob([excelBuffer], { 
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
         })
         
-        // 使用当前日期作为文件名
         const date = new Date().toISOString().split('T')[0]
         saveAs(blob, `ToDo_List_Report_${date}.xlsx`)
     }
 
-    // 移动端简洁分页组件
     const MobileSimplePagination = () => (
         <div className="flex items-center justify-center space-x-4">
             <Button
@@ -407,7 +462,6 @@ const ToDoListPreventive = () => {
                 <span>‹</span>
                 <span className="ml-1">Previous</span>
             </Button>
-
             <Button
                 size="sm"
                 disabled={currentPage === totalPages}
@@ -420,7 +474,6 @@ const ToDoListPreventive = () => {
         </div>
     )
 
-    // 移动端卡片组件
     const TodoCard = ({ todo }) => (
         <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
             theme === 'light' 
@@ -445,7 +498,6 @@ const ToDoListPreventive = () => {
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.status}</p>
                 </div>
             </div>
-
             <div className="flex gap-2">
                 <Button 
                     outline 
@@ -495,7 +547,6 @@ const ToDoListPreventive = () => {
                 </div>
             </div>
 
-            {/* 桌面端表格视图 */}
             {!isMobile && (
                 <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                     <TableHead>
@@ -532,7 +583,6 @@ const ToDoListPreventive = () => {
                 </Table>
             )}
 
-            {/* 移动端卡片视图 */}
             {isMobile && (
                 <div className="space-y-4">
                     {currentTodos.map((todo) => (
@@ -546,7 +596,6 @@ const ToDoListPreventive = () => {
                     Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                 </p>
                 
-                {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
                 {isMobile ? (
                     <div className="mt-4">
                         <MobileSimplePagination />
@@ -561,7 +610,7 @@ const ToDoListPreventive = () => {
                 )}
             </div>
 
-            {/* 模态框 */}
+            {/* Create Modal */}
             <Modal show={openModalCreateToDo} onClose={handleCreateToDo} popup size="xl">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
@@ -571,7 +620,7 @@ const ToDoListPreventive = () => {
                             <div>
                                 <div className="mb-4 block">
                                 <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start Date</Label>
-                                <TextInput type='date' id="date" placeholder="Enter date" onChange={handleChange} onFocus={handleFocus} required/>
+                                <TextInput type='date' id="date" onChange={handleChange} onFocus={handleFocus} required/>
                                 </div>
                                 
                                 <div className="mb-4 block">
@@ -586,14 +635,26 @@ const ToDoListPreventive = () => {
                                     </Select>
                                 </div>
 
-                                {showCustomInterval && (
+                                {(formData.repeatType && formData.repeatType !== 'none') && (
                                     <div className="mb-4 block">
-                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Repeat Every (months)</Label>
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>
+                                            {formData.repeatType === 'custom' 
+                                                ? 'Repeat Every (months)' 
+                                                : formData.repeatType === 'daily' ? 'Repeat Every (days)'
+                                                : formData.repeatType === 'weekly' ? 'Repeat Every (weeks)'
+                                                : formData.repeatType === 'monthly' ? 'Repeat Every (months)'
+                                                : 'Repeat Every (years)'}
+                                        </Label>
                                         <TextInput 
                                             type="number" 
                                             id="repeatInterval" 
-                                            placeholder="e.g., 3 for every 3 months" 
+                                            placeholder={
+                                                formData.repeatType === 'custom' 
+                                                    ? "e.g., 3 for every 3 months" 
+                                                    : `e.g., 2 for every 2 ${formData.repeatType.replace('ly', 's')}`
+                                            }
                                             min="1"
+                                            value={formData.repeatInterval || 1}
                                             onChange={handleChange} 
                                             onFocus={handleFocus}
                                         />
@@ -607,7 +668,7 @@ const ToDoListPreventive = () => {
 
                                 <div className="mb-4 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Select Items (Multiple)</Label>
-                                    <div className="mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto">
+                                    <div className={`${theme === 'light' ? 'mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto' : 'bg-gray-900 mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto text-gray-50'}`}>
                                         {allItems.map((item) => (
                                             <div key={item._id} className="flex items-center mb-2">
                                                 <input
@@ -615,19 +676,7 @@ const ToDoListPreventive = () => {
                                                     id={`item-${item._id}`}
                                                     value={item.code}
                                                     checked={formData.selectedCodes?.includes(item.code)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setFormData({
-                                                                ...formData,
-                                                                selectedCodes: [...(formData.selectedCodes || []), item.code]
-                                                            })
-                                                        } else {
-                                                            setFormData({
-                                                                ...formData,
-                                                                selectedCodes: formData.selectedCodes?.filter(code => code !== item.code)
-                                                            })
-                                                        }
-                                                    }}
+                                                    onChange={handleChange}
                                                     className="mr-2"
                                                 />
                                                 <label htmlFor={`item-${item._id}`} className="text-sm">
@@ -637,7 +686,7 @@ const ToDoListPreventive = () => {
                                         ))}
                                     </div>
                                     {formData.selectedCodes && formData.selectedCodes.length > 0 && (
-                                        <div className="mt-2 text-sm text-gray-600">
+                                        <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                                             Selected: {formData.selectedCodes.join(', ')}
                                         </div>
                                     )}
@@ -677,6 +726,7 @@ const ToDoListPreventive = () => {
                 </ModalBody>
             </Modal>
 
+            {/* Delete Modal */}
             <Modal show={openModalDeleteToDo} size="md" onClose={() => setOpenModalDeleteToDo(!openModalDeleteToDo)} popup>
                 <ModalHeader />
                 <ModalBody>
@@ -697,7 +747,8 @@ const ToDoListPreventive = () => {
                 </ModalBody>
             </Modal>
 
-            <Modal show={openModalUpdateToDo} onClose={() => setOpenModalUpdateToDo(!openModalUpdateToDo)} popup>
+            {/* Update Modal */}
+            <Modal show={openModalUpdateToDo} onClose={() => setOpenModalUpdateToDo(!openModalUpdateToDo)} popup size="xl">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
                     <div className="space-y-6">
@@ -705,13 +756,26 @@ const ToDoListPreventive = () => {
                         <form onSubmit={handleUpdateSubmit}>
                             <div>
                                 <div className="mb-4 block">
-                                <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start Date</Label>
-                                <TextInput value={updateFormData.date || ''} type='date' id="date" placeholder="Enter date" onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                    <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start Date</Label>
+                                    <TextInput 
+                                        value={updateFormData.date || ''} 
+                                        type='date' 
+                                        id="date" 
+                                        onChange={handleUpdateChange} 
+                                        onFocus={handleFocus} 
+                                        required
+                                    />
                                 </div>
                                 
                                 <div className="mb-4 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Repeat Type</Label>
-                                    <Select value={updateFormData.repeatType || ''} id="repeatType" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus}>
+                                    <Select 
+                                        value={updateFormData.repeatType || 'none'} 
+                                        id="repeatType" 
+                                        className='mb-4' 
+                                        onChange={handleUpdateChange} 
+                                        onFocus={handleFocus}
+                                    >
                                         <option value="none">No Repeat</option>
                                         <option value="daily">Daily</option>
                                         <option value="weekly">Weekly</option>
@@ -721,14 +785,26 @@ const ToDoListPreventive = () => {
                                     </Select>
                                 </div>
 
-                                {showCustomInterval && (
+                                {(updateFormData.repeatType && updateFormData.repeatType !== 'none') && (
                                     <div className="mb-4 block">
-                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Repeat Every (months)</Label>
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>
+                                            {updateFormData.repeatType === 'custom' 
+                                                ? 'Repeat Every (months)' 
+                                                : updateFormData.repeatType === 'daily' ? 'Repeat Every (days)'
+                                                : updateFormData.repeatType === 'weekly' ? 'Repeat Every (weeks)'
+                                                : updateFormData.repeatType === 'monthly' ? 'Repeat Every (months)'
+                                                : 'Repeat Every (years)'}
+                                        </Label>
                                         <TextInput 
                                             type="number" 
                                             id="repeatInterval" 
-                                            placeholder="e.g., 3 for every 3 months" 
+                                            placeholder={
+                                                updateFormData.repeatType === 'custom' 
+                                                    ? "e.g., 3 for every 3 months" 
+                                                    : `e.g., 2 for every 2 ${updateFormData.repeatType.replace('ly', 's')}`
+                                            }
                                             min="1"
+                                            value={updateFormData.repeatInterval || 1}
                                             onChange={handleUpdateChange} 
                                             onFocus={handleFocus}
                                         />
@@ -737,30 +813,64 @@ const ToDoListPreventive = () => {
 
                                 <div className="mb-4 block">
                                     <Label htmlFor='repeatEndDate' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>End Date (Optional)</Label>
-                                    <TextInput value={updateFormData.repeatEndDate || ''} type='date' id="repeatEndDate" placeholder="Enter end date" onChange={handleUpdateChange} onFocus={handleFocus}/>
+                                    <TextInput 
+                                        value={updateFormData.repeatEndDate || ''} 
+                                        type='date' 
+                                        id="repeatEndDate" 
+                                        placeholder="Enter end date" 
+                                        onChange={handleUpdateChange} 
+                                        onFocus={handleFocus}
+                                    />
                                 </div>
 
                                 <div className="mb-4 block">
-                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Item</Label>
-                                    <Select value={updateFormData.code || ''} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
-                                        <option></option>
-                                        {extruders.map((extruder) => (
-                                        <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
-                                    ))}
-                                        {items.map((item) => (
-                                        <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
-                                    ))}
-                                    </Select>
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Select Items (Multiple)</Label>
+                                    <div className={`${theme === 'light' ? 'mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto' : 'bg-gray-900 mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto text-gray-50'}`}>
+                                        {allItems.map((item) => (
+                                            <div key={item._id} className="flex items-center mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`update-item-${item._id}`}
+                                                    value={item.code}
+                                                    checked={updateFormData.selectedCodes?.includes(item.code)}
+                                                    onChange={handleUpdateChange}
+                                                    className="mr-2"
+                                                />
+                                                <label htmlFor={`update-item-${item._id}`} className="text-sm">
+                                                    {item.displayText}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {updateFormData.selectedCodes && updateFormData.selectedCodes.length > 0 && (
+                                        <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                            Selected: {updateFormData.selectedCodes.join(', ')}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Activity</Label>
-                                <TextInput value={updateFormData.activity || ''} id="activity" placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Activity</Label>
+                                    <TextInput 
+                                        value={updateFormData.activity || ''} 
+                                        id="activity" 
+                                        placeholder='Enter activity' 
+                                        onChange={handleUpdateChange} 
+                                        onFocus={handleFocus} 
+                                        required
+                                    />
                                 </div>
 
                                 <div className="mb-4 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Status</Label>
-                                    <Select value={updateFormData.status || ''} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                                    <Select 
+                                        value={updateFormData.status || ''} 
+                                        id="status" 
+                                        className='mb-4' 
+                                        onChange={handleUpdateChange} 
+                                        onFocus={handleFocus} 
+                                        required
+                                    >
                                         <option></option>
                                         <option>Complete</option>
                                         <option>Incomplete</option>
@@ -771,18 +881,18 @@ const ToDoListPreventive = () => {
                             <div className='mb-4 block'>
                                 <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
                                     {
-                                        loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
+                                        loading ? <Spinner size='md' color='failure'/> : 'U P D A T E'
                                     }
-                                    </Button>
-                                </div>
-                            </form>
-                            {
-                                errorMessage && (
-                                    <Alert color='failure' className='mt-4 font-semibold'>
-                                        {errorMessage}
-                                    </Alert>
-                                )
-                            }
+                                </Button>
+                            </div>
+                        </form>
+                        {
+                            errorMessage && (
+                                <Alert color='failure' className='mt-4 font-semibold'>
+                                    {errorMessage}
+                                </Alert>
+                            )
+                        }
                     </div>
                 </ModalBody>
             </Modal>
