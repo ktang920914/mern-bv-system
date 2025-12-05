@@ -178,7 +178,6 @@ const Schedule = () => {
         vertical: 'middle',
         wrapText: true
       }
-      // 添加wrap text的居中样式
       const wrapTextCenterAlignment = {
         horizontal: 'center',
         vertical: 'middle',
@@ -219,39 +218,32 @@ const Schedule = () => {
         // 找出所有独立的活动（主任务，不是生成的实例）
         const mainActivities = data.filter(item => !item.isGenerated || item.parentTodo === null)
         
-        // 第一步：按活动、重复类型和间隔分组收集所有item codes
+        // 第一步：只按activity name分组
         mainActivities.forEach((activity) => {
           const activityName = activity.activity
           const repeatType = activity.repeatType || 'none'
           const repeatInterval = activity.repeatInterval || 1
+          const itemCode = activity.code
           const startDate = activity.date ? moment(activity.date) : null
           
-          if (!startDate) return
+          if (!startDate || !itemCode) return
           
           const startYear = startDate.year()
           const startMonth = startDate.month() + 1
           
           if (startYear > year) return
           
-          // 使用活动名称、重复类型和间隔作为分组键
-          const groupKey = `${activityName}_${repeatType}_${repeatInterval}`
-          
-          if (!activityGroups[groupKey]) {
-            activityGroups[groupKey] = {
+          // 只按activity name分组
+          if (!activityGroups[activityName]) {
+            activityGroups[activityName] = {
               activity: activityName,
-              repeatType: repeatType,
-              repeatInterval: repeatInterval,
-              startYear: startYear,
-              startMonth: startMonth,
-              itemCodes: new Set(), // 存储该组的所有item codes
-              monthsToDisplay: new Set() // 存储需要显示的月份
+              itemCodes: new Set(), // 存储所有item codes
+              monthsData: {} // 存储每个月对应的item codes
             }
           }
           
           // 添加item code到集合中
-          if (activity.code) {
-            activityGroups[groupKey].itemCodes.add(activity.code)
-          }
+          activityGroups[activityName].itemCodes.add(itemCode)
           
           // 计算结束月份
           let endMonth = 12
@@ -264,10 +256,11 @@ const Schedule = () => {
           }
           
           // 根据重复类型确定哪些月份需要显示
+          let monthsToAdd = new Set()
           switch (repeatType) {
             case 'none':
               if (startYear === year) {
-                activityGroups[groupKey].monthsToDisplay.add(startMonth)
+                monthsToAdd.add(startMonth)
               }
               break
               
@@ -281,14 +274,14 @@ const Schedule = () => {
                 }
                 
                 for (let month = displayStartMonth; month <= endMonth; month++) {
-                  activityGroups[groupKey].monthsToDisplay.add(month)
+                  monthsToAdd.add(month)
                 }
               }
               break
               
             case 'yearly':
               if (startYear <= year) {
-                activityGroups[groupKey].monthsToDisplay.add(startMonth)
+                monthsToAdd.add(startMonth)
               }
               break
               
@@ -310,45 +303,45 @@ const Schedule = () => {
                 
                 for (let month = currentMonth; month <= endMonth; month += customInterval) {
                   if (month > 0 && month <= 12) {
-                    activityGroups[groupKey].monthsToDisplay.add(month)
+                    monthsToAdd.add(month)
                   }
                 }
               }
               break
           }
+          
+          // 为每个月份添加item code
+          monthsToAdd.forEach(month => {
+            if (!activityGroups[activityName].monthsData[month]) {
+              activityGroups[activityName].monthsData[month] = new Set()
+            }
+            activityGroups[activityName].monthsData[month].add(itemCode)
+          })
         })
         
         // 第二步：转换为输出格式
         const activitiesArray = []
         Object.values(activityGroups).forEach((group) => {
-          if (group.itemCodes.size > 0 && group.monthsToDisplay.size > 0) {
+          if (group.itemCodes.size > 0 && Object.keys(group.monthsData).length > 0) {
             // 对item codes进行排序
             const sortedCodes = Array.from(group.itemCodes).sort()
             const itemCodesStr = sortedCodes.join(', ')
             
             // 为每个需要显示的月份填充数据
             const monthsData = {}
-            Array.from(group.monthsToDisplay).sort((a, b) => a - b).forEach(month => {
-              monthsData[month] = itemCodesStr
+            Object.keys(group.monthsData).forEach(month => {
+              const monthNum = parseInt(month)
+              const monthItems = Array.from(group.monthsData[monthNum] || new Set())
+              monthsData[monthNum] = monthItems.sort().join(', ')
             })
             
-            // 计算频率显示文本
-            const getFrequencyText = (type, interval) => {
-              switch (type) {
-                case 'none': return 'Once'
-                case 'daily': return 'Daily'
-                case 'weekly': return 'Weekly'
-                case 'monthly': return 'Monthly'
-                case 'yearly': return 'Yearly'
-                case 'custom': return `${interval} Months`
-                default: return type
-              }
-            }
-            
+            // 对于合并的活动，频率显示为"Multiple"或显示第一个活动的频率
+            // 由于可能包含不同频率，我们显示"Various"
             activitiesArray.push({
               activity: group.activity,
-              frequency: getFrequencyText(group.repeatType, group.repeatInterval),
-              months: monthsData
+              frequency: 'Various', // 或者保持第一个活动的频率
+              months: monthsData,
+              itemCodes: sortedCodes
             })
           }
         })
@@ -357,7 +350,7 @@ const Schedule = () => {
         return activitiesArray
           .sort((a, b) => a.activity.localeCompare(b.activity))
           .map((item, index) => ({
-            no: index + 1, // 确保序号是连续的 1, 2, 3...
+            no: index + 1,
             ...item
           }))
       }
@@ -383,7 +376,6 @@ const Schedule = () => {
 
         row.getCell(3).value = item.frequency || ''
         row.getCell(3).font = defaultFont
-        // C列（频率列）设置为自动换行
         row.getCell(3).alignment = wrapTextCenterAlignment
         row.getCell(3).border = borderStyle
 
@@ -393,7 +385,6 @@ const Schedule = () => {
           const monthData = item.months && item.months[month] ? item.months[month] : ''
           row.getCell(columnIndex).value = monthData
           row.getCell(columnIndex).font = defaultFont
-          // 使用wrapTextCenterAlignment而不是centerAlignment
           row.getCell(columnIndex).alignment = wrapTextCenterAlignment
           row.getCell(columnIndex).border = borderStyle
         }
@@ -411,14 +402,12 @@ const Schedule = () => {
           if (col === 1) {
             cell.value = rowIndex - 2
             cell.font = defaultFont
-            // C列设置为自动换行
             cell.alignment = wrapTextCenterAlignment
           } else if (col === 2) {
             cell.value = ''
             cell.alignment = wrapTextAlignment
           } else if (col >= 3 && col <= 15) {
             cell.value = ''
-            // D-O列设置为自动换行
             cell.alignment = wrapTextCenterAlignment
           }
           cell.border = borderStyle
@@ -671,20 +660,15 @@ const Schedule = () => {
       const firstDayOfMonth = currentDate.clone().startOf('month')
       const lastDayOfMonth = currentDate.clone().endOf('month')
       
-      // 计算日历应该从哪一天开始（当月第一个星期天）
       const startDay = firstDayOfMonth.clone().startOf('week')
-      
-      // 计算日历应该到哪一天结束（当月最后一个星期六）
       const endDay = lastDayOfMonth.clone().endOf('week')
       
       const calendar = []
       let day = startDay.clone()
       
-      // 生成周数
       while (day.isBefore(endDay) || day.isSame(endDay, 'day')) {
         const week = []
         
-        // 生成一周的日期
         for (let i = 0; i < 7; i++) {
           week.push(day.clone())
           day = day.add(1, 'day')
@@ -698,10 +682,6 @@ const Schedule = () => {
 
     const calendar = generateCalendar()
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-    // 验证日期
-    const testDate = moment('2025-12-05')
-    console.log(`Test: 2025-12-05 is ${testDate.format('dddd')}`)
 
     return (
       <>
