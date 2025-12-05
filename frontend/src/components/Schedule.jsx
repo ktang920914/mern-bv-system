@@ -161,7 +161,7 @@ const Schedule = () => {
 
       const calibri9Font = { name: 'Calibri', size: 9, bold: true }
       const arialBlack18Font = { name: 'Arial Black', size: 18, bold: true }
-      const defaultFont = { name: 'Calibri', size: 9 }
+      const defaultFont = { name: 'Calibri', size: 11 }
       const headerFont = { name: 'Calibri', size: 9, bold: true }
       
       const borderStyle = {
