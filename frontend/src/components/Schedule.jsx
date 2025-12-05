@@ -581,23 +581,6 @@ const Schedule = () => {
     setCurrentDate(moment())
   }
 
-  const generateCalendar = () => {
-    const startDay = currentDate.clone().startOf('month').startOf('week')
-    const endDay = currentDate.clone().endOf('month').endOf('week')
-    const calendar = []
-    const day = startDay.clone()
-
-    while (day.isBefore(endDay, 'day')) {
-      calendar.push(
-        Array(7)
-          .fill(0)
-          .map(() => day.add(1, 'day').clone())
-      )
-    }
-
-    return calendar
-  }
-
   const getEventsForDay = (day) => {
     return events.filter(event => 
       moment(event.start).isSame(day, 'day')
@@ -669,8 +652,41 @@ const Schedule = () => {
   }
 
   const MobileCalendar = () => {
+    const generateCalendar = () => {
+      const firstDayOfMonth = currentDate.clone().startOf('month')
+      const lastDayOfMonth = currentDate.clone().endOf('month')
+      
+      // 计算日历应该从哪一天开始（当月第一个星期天）
+      const startDay = firstDayOfMonth.clone().startOf('week')
+      
+      // 计算日历应该到哪一天结束（当月最后一个星期六）
+      const endDay = lastDayOfMonth.clone().endOf('week')
+      
+      const calendar = []
+      let day = startDay.clone()
+      
+      // 生成周数
+      while (day.isBefore(endDay) || day.isSame(endDay, 'day')) {
+        const week = []
+        
+        // 生成一周的日期
+        for (let i = 0; i < 7; i++) {
+          week.push(day.clone())
+          day = day.add(1, 'day')
+        }
+        
+        calendar.push(week)
+      }
+      
+      return calendar
+    }
+
     const calendar = generateCalendar()
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+    // 验证日期
+    const testDate = moment('2025-12-05')
+    console.log(`Test: 2025-12-05 is ${testDate.format('dddd')}`)
 
     return (
       <>
@@ -681,7 +697,7 @@ const Schedule = () => {
                 ‹
               </Button>
               <div className="text-center flex-1">
-                <span className="text-lg font-semibold text-gray-900">
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {currentDate.format('MMMM YYYY')}
                 </span>
               </div>
@@ -697,8 +713,8 @@ const Schedule = () => {
           </div>
 
           <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-            {weekDays.map(day => (
-              <div key={day} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+            {weekDays.map((day, index) => (
+              <div key={index} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
                 {day}
               </div>
             ))}
@@ -714,7 +730,7 @@ const Schedule = () => {
 
                   return (
                     <div
-                      key={dayIndex}
+                      key={`${weekIndex}-${dayIndex}`}
                       className={`min-h-[80px] p-1 border-r border-gray-200 dark:border-gray-600 relative ${
                         !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800 text-gray-400' : ''
                       } ${isToday ? 'bg-blue-50 dark:bg-blue-900' : ''} ${
@@ -722,7 +738,11 @@ const Schedule = () => {
                       }`}
                     >
                       <div className={`text-xs text-center mb-1 ${
-                        isToday ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
+                        isToday 
+                          ? 'font-bold text-blue-600 dark:text-blue-400' 
+                          : isCurrentMonth 
+                            ? 'text-gray-700 dark:text-gray-300'
+                            : 'text-gray-400 dark:text-gray-500'
                       }`}>
                         {day.format('D')}
                       </div>
