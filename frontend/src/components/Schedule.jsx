@@ -178,6 +178,12 @@ const Schedule = () => {
         vertical: 'middle',
         wrapText: true
       }
+      // 添加wrap text的居中样式
+      const wrapTextCenterAlignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+        wrapText: true
+      }
 
       const row1 = worksheet.getRow(1)
       row1.height = 35.2
@@ -206,7 +212,7 @@ const Schedule = () => {
         cell.border = borderStyle
       })
 
-      // =================== 修改的数据处理函数 START ===================
+      // =================== 修正的数据处理函数 START ===================
       const processDataForExcel = (data, year) => {
         const activityGroups = {}
         
@@ -313,8 +319,8 @@ const Schedule = () => {
         })
         
         // 第二步：转换为输出格式
-        const activitiesMap = {}
-        Object.values(activityGroups).forEach((group, index) => {
+        const activitiesArray = []
+        Object.values(activityGroups).forEach((group) => {
           if (group.itemCodes.size > 0 && group.monthsToDisplay.size > 0) {
             // 对item codes进行排序
             const sortedCodes = Array.from(group.itemCodes).sort()
@@ -339,20 +345,23 @@ const Schedule = () => {
               }
             }
             
-            activitiesMap[`${group.activity}_${index}`] = {
-              no: Object.keys(activitiesMap).length + 1,
+            activitiesArray.push({
               activity: group.activity,
               frequency: getFrequencyText(group.repeatType, group.repeatInterval),
               months: monthsData
-            }
+            })
           }
         })
         
-        return Object.values(activitiesMap).sort((a, b) => 
-          a.activity.localeCompare(b.activity)
-        )
+        // 第三步：排序并分配序号
+        return activitiesArray
+          .sort((a, b) => a.activity.localeCompare(b.activity))
+          .map((item, index) => ({
+            no: index + 1, // 确保序号是连续的 1, 2, 3...
+            ...item
+          }))
       }
-      // =================== 修改的数据处理函数 END ===================
+      // =================== 修正的数据处理函数 END ===================
 
       const scheduleData = processDataForExcel(preventiveData, reportYear)
       const dataToUse = scheduleData.length > 0 ? scheduleData : []
@@ -374,21 +383,25 @@ const Schedule = () => {
 
         row.getCell(3).value = item.frequency || ''
         row.getCell(3).font = defaultFont
-        row.getCell(3).alignment = centerAlignment
+        // C列（频率列）设置为自动换行
+        row.getCell(3).alignment = wrapTextCenterAlignment
         row.getCell(3).border = borderStyle
 
+        // D-O列（月份列）设置为自动换行
         for (let month = 1; month <= 12; month++) {
           const columnIndex = month + 3
           const monthData = item.months && item.months[month] ? item.months[month] : ''
           row.getCell(columnIndex).value = monthData
           row.getCell(columnIndex).font = defaultFont
-          row.getCell(columnIndex).alignment = centerAlignment
+          // 使用wrapTextCenterAlignment而不是centerAlignment
+          row.getCell(columnIndex).alignment = wrapTextCenterAlignment
           row.getCell(columnIndex).border = borderStyle
         }
 
         rowIndex++
       })
 
+      // 填充空白行（3-21行）
       while (rowIndex <= 21) {
         const row = worksheet.getRow(rowIndex)
         row.height = 44.1
@@ -398,13 +411,15 @@ const Schedule = () => {
           if (col === 1) {
             cell.value = rowIndex - 2
             cell.font = defaultFont
-            cell.alignment = centerAlignment
+            // C列设置为自动换行
+            cell.alignment = wrapTextCenterAlignment
           } else if (col === 2) {
             cell.value = ''
             cell.alignment = wrapTextAlignment
           } else if (col >= 3 && col <= 15) {
             cell.value = ''
-            cell.alignment = centerAlignment
+            // D-O列设置为自动换行
+            cell.alignment = wrapTextCenterAlignment
           }
           cell.border = borderStyle
         }
