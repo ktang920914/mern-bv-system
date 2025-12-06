@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
@@ -495,12 +495,12 @@ const Suppliers = () => {
                             
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
-                            <TextInput id="description" className='mb-4' placeholder='Enter description' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                            <Textarea id="description" className='mb-4' placeholder='Enter description' onChange={handleChange} onFocus={handleFocus} required></Textarea>
                         </div>
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
-                            <TextInput id="address" className='mb-4' placeholder='Enter address' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+                            <Textarea id="address" className='mb-4' placeholder='Enter address' onChange={handleChange} onFocus={handleFocus} required></Textarea>
                         </div>
 
                         <div className="mb-4 block">
@@ -581,12 +581,12 @@ const Suppliers = () => {
                             
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Description</Label>
-                            <TextInput value={updateFormData.description || ''} id="description" className='mb-4' placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                            <Textarea value={updateFormData.description || ''} id="description" className='mb-4' placeholder='Enter description' onChange={handleUpdateChange} onFocus={handleFocus} required></Textarea>
                         </div>
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Address</Label>
-                            <TextInput value={updateFormData.address} id="address" className='mb-4' placeholder='Enter address' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                            <Textarea value={updateFormData.address} id="address" className='mb-4' placeholder='Enter address' onChange={handleUpdateChange} onFocus={handleFocus} required></Textarea>
                         </div>
 
                         <div className="mb-4 block">

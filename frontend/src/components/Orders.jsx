@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -546,7 +546,7 @@ const Orders = () => {
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
-                            <TextInput id="item" placeholder="Enter item" onChange={handleChange} onFocus={handleFocus} required/>
+                            <Textarea id="item" placeholder="Enter item" onChange={handleChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">
@@ -663,7 +663,7 @@ const Orders = () => {
 
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
-                            <TextInput value={updateFormData.item || ''} id="item" placeholder="Enter item" onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            <Textarea value={updateFormData.item || ''} id="item" placeholder="Enter item" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                         </div>
 
                         <div className="mb-4 block">

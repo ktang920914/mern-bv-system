@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
@@ -1253,17 +1253,17 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Problem</Label>
-                <TextInput id="problem" placeholder='Enter problem' onChange={handleChange} onFocus={handleFocus} required/>
+                <Textarea id="problem" placeholder='Enter problem' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job detail</Label>
-                <TextInput id="jobdetail" placeholder='Enter job detail' onChange={handleChange} onFocus={handleFocus} required/>
+                <Textarea id="jobdetail" placeholder='Enter job detail' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Root cause</Label>
-                <TextInput id="rootcause" placeholder='Enter root cause' onChange={handleChange} onFocus={handleFocus} required/>
+                <Textarea id="rootcause" placeholder='Enter root cause' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -1373,17 +1373,17 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Problem</Label>
-                <TextInput value={updateFormData.problem} id="problem" placeholder='Enter problem' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <Textarea value={updateFormData.problem} id="problem" placeholder='Enter problem' onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job detail</Label>
-                <TextInput value={updateFormData.jobdetail} id="jobdetail" placeholder='Enter job detail' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <Textarea value={updateFormData.jobdetail} id="jobdetail" placeholder='Enter job detail' onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Root cause</Label>
-                <TextInput value={updateFormData.rootcause} id="rootcause" placeholder='Enter root cause' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <Textarea value={updateFormData.rootcause} id="rootcause" placeholder='Enter root cause' onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">

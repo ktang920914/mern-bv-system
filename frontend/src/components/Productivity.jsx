@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useState, useEffect } from 'react'
 import useUserstore from '../store'
 import useThemeStore from '../themeStore'
@@ -592,7 +592,7 @@ const Productivity = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cause</Label>
-                                <TextInput value={formData.cause}  id="cause" placeholder='Enter reject cause' onChange={handleChange} onFocus={handleFocus}/>
+                                <Textarea value={formData.cause}  id="cause" placeholder='Enter reject cause' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
 
                             <div className="mb-4 block">
@@ -617,12 +617,12 @@ const Productivity = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Reason</Label>
-                                <TextInput value={formData.reason} id="reason" placeholder='Enter downtime reason' onChange={handleChange} onFocus={handleFocus}/>
+                                <Textarea value={formData.reason} id="reason" placeholder='Enter downtime reason' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Wash resin</Label>
-                                <TextInput value={formData.washresin} id="washresin" placeholder='Enter wash resin' onChange={handleChange} onFocus={handleFocus}/>
+                                <Textarea value={formData.washresin} id="washresin" placeholder='Enter wash resin' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
 
                             <div className="mb-4 block">
@@ -682,7 +682,7 @@ const Productivity = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Operator</Label>
-                                <TextInput value={formData.operator || ''} id="operator" placeholder='Enter operator' onChange={handleChange} onFocus={handleFocus}/>
+                                <Textarea value={formData.operator || ''} id="operator" placeholder='Enter operator' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
                                 
                             <div className='mb-4 block'>

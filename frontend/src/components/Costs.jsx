@@ -338,6 +338,28 @@ const Costs = () => {
         return costs.filter(cost => selectedCategories.includes(cost.type));
     }
 
+    // 辅助函数：将长标签分割成多行
+    const wrapLabelText = (text, maxLineLength = 20) => {
+        if (!text || text.length <= maxLineLength || !text.includes('+')) {
+            return text;
+        }
+        
+        const parts = text.split('+').map(part => part.trim());
+        let lines = [];
+        let currentLine = '';
+        
+        for (const part of parts) {
+            if (currentLine.length + part.length + 1 > maxLineLength) {
+                if (currentLine) lines.push(currentLine);
+                currentLine = part;
+            } else {
+                currentLine = currentLine ? `${currentLine}+${part}` : part;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+        return lines.join('\n');
+    };
+
     // 准备图表数据 - 支持比较模式
     const prepareChartData = () => {
         if (costs.length === 0) {
@@ -457,7 +479,7 @@ const Costs = () => {
             } else {
                 // 如果选择多个类别，使用缩写组合
                 const shortNames = selectedCategories.map(cat => getCategoryShortName(cat));
-                label = shortNames.join(' + ');
+                label = shortNames.join('/ ');
             }
 
             chartData = {
@@ -472,7 +494,7 @@ const Costs = () => {
                                 '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
                                 '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
                               ]
-                            : 'rgba(54, 162, 235, 0.5)', // 更改为蓝色，更容易区分
+                            : 'rgba(54, 162, 235, 0.5)',
                         borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 2,
                         fill: selectedChartType === 'line',
@@ -516,14 +538,14 @@ const Costs = () => {
                     font: {
                         size: 11
                     },
-                    // 为图例也使用简称
+                    // 为图例也使用简称，并添加自动换行
                     generateLabels: function(chart) {
                         const data = chart.data;
                         if (data.labels.length && data.datasets.length) {
                             return data.labels.map((label, i) => {
-                                const fullLabel = getCategoryFullName(label);
+                                const displayText = wrapLabelText(label);
                                 return {
-                                    text: `${label} (${fullLabel})`, // 显示简称和全称
+                                    text: displayText,
                                     fillStyle: data.datasets[0].backgroundColor[i],
                                     strokeStyle: data.datasets[0].borderColor,
                                     lineWidth: 2,
@@ -558,7 +580,7 @@ const Costs = () => {
 
         const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
-        // 图表配置
+        // 图表配置 - 添加自动换行
         const options = {
             responsive: true,
             maintainAspectRatio: false,
@@ -571,23 +593,26 @@ const Costs = () => {
                         font: {
                             size: comparisonMode && selectedData.length > 6 ? 10 : 12
                         },
-                        // 为非饼图也添加全称显示
+                        // 添加自动换行功能
                         generateLabels: selectedChartType !== 'pie' ? function(chart) {
                             const data = chart.data;
                             if (data.datasets.length) {
                                 return data.datasets.map((dataset, i) => {
                                     const label = dataset.label || '';
-                                    let fullLabel = label;
+                                    let displayLabel = label;
                                     
                                     // 如果是单个类别或比较模式中的单个数据集，获取全称
                                     if (!comparisonMode && selectedCategories.length === 1) {
-                                        fullLabel = getCategoryFullName(label);
+                                        displayLabel = getCategoryFullName(label);
                                     } else if (comparisonMode) {
-                                        fullLabel = getCategoryFullName(label);
+                                        displayLabel = getCategoryFullName(label);
                                     }
                                     
+                                    // 将长标签分割成多行
+                                    displayLabel = wrapLabelText(displayLabel);
+                                    
                                     return {
-                                        text: fullLabel,
+                                        text: displayLabel,
                                         fillStyle: dataset.backgroundColor,
                                         strokeStyle: dataset.borderColor,
                                         lineWidth: 2,
