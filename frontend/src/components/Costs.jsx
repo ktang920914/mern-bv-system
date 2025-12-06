@@ -357,7 +357,7 @@ const Costs = () => {
                 return null;
             }
         } else {
-            // 普通模式：显示选中类别的总和
+            // 普通模式：显示选中类别的总和 - 使用简称
             const categoriesToShow = selectedCategories.length > 0 ? selectedCategories : costCategories.map(cat => cat.name);
             
             // 创建汇总数据
@@ -439,15 +439,26 @@ const Costs = () => {
                 datasets
             };
         } else {
-            // 普通模式：单个数据集（汇总数据）
+            // 普通模式：单个数据集（汇总数据） - 使用简称
             const singleData = Array.isArray(selectedData) ? selectedData[0] : selectedData;
             const data = monthFields.map(month => {
                 const value = singleData[month.key];
                 return formatNumber(value);
             });
 
-            // 对于汇总数据，保持完整名称
-            const label = singleData.type;
+            // 普通模式也使用简称或缩写
+            let label;
+            if (selectedCategories.length === 0) {
+                // 如果是全部类别，使用 "All (Total)"
+                label = 'All (Total)';
+            } else if (selectedCategories.length === 1) {
+                // 如果只选择一个类别，使用该类别的简称
+                label = getCategoryShortName(selectedCategories[0]);
+            } else {
+                // 如果选择多个类别，使用缩写组合
+                const shortNames = selectedCategories.map(cat => getCategoryShortName(cat));
+                label = shortNames.join(' + ');
+            }
 
             chartData = {
                 labels,
@@ -461,14 +472,38 @@ const Costs = () => {
                                 '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
                                 '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
                               ]
-                            : 'rgba(255, 99, 132, 0.5)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
+                            : 'rgba(54, 162, 235, 0.5)', // 更改为蓝色，更容易区分
+                        borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 2,
                         fill: selectedChartType === 'line',
                         tension: selectedChartType === 'line' ? 0.1 : undefined
                     },
                 ],
             };
+        }
+
+        // 更新工具提示显示全称
+        const getChartTooltip = (context) => {
+            if (context.dataset && context.dataset.data) {
+                const label = context.label || '';
+                const fullLabel = getCategoryFullName(label);
+                const value = context.raw || 0;
+                const roundedValue = formatNumber(value);
+                
+                // 对于普通模式的汇总数据
+                if (!comparisonMode && selectedCategories.length === 0) {
+                    return `Total: ${roundedValue}`;
+                } else if (!comparisonMode && selectedCategories.length > 0) {
+                    if (selectedCategories.length === 1) {
+                        return `${fullLabel}: ${roundedValue}`;
+                    } else {
+                        return `Total of ${selectedCategories.length} categories: ${roundedValue}`;
+                    }
+                }
+                
+                return `${fullLabel}: ${roundedValue}`;
+            }
+            return label;
         }
 
         // 饼图插件配置
@@ -480,18 +515,41 @@ const Costs = () => {
                     padding: 15,
                     font: {
                         size: 11
+                    },
+                    // 为图例也使用简称
+                    generateLabels: function(chart) {
+                        const data = chart.data;
+                        if (data.labels.length && data.datasets.length) {
+                            return data.labels.map((label, i) => {
+                                const fullLabel = getCategoryFullName(label);
+                                return {
+                                    text: `${label} (${fullLabel})`, // 显示简称和全称
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    strokeStyle: data.datasets[0].borderColor,
+                                    lineWidth: 2,
+                                    hidden: false,
+                                    index: i
+                                };
+                            });
+                        }
+                        return [];
                     }
                 }
             },
             tooltip: {
                 callbacks: {
                     label: function(context) {
-                        const shortLabel = context.label || '';
-                        const fullLabel = getCategoryFullName(shortLabel);
+                        const label = context.label || '';
+                        const fullLabel = getCategoryFullName(label);
                         const value = context.raw || 0;
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const roundedValue = formatNumber(value);
                         const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
+                        
+                        if (!comparisonMode && selectedCategories.length === 0) {
+                            return `Total: ${roundedValue} (${percentage.toFixed(1)}%)`;
+                        }
+                        
                         return `${fullLabel}: ${roundedValue} (${percentage.toFixed(1)}%)`;
                     }
                 }
@@ -512,16 +570,50 @@ const Costs = () => {
                         boxWidth: 10,
                         font: {
                             size: comparisonMode && selectedData.length > 6 ? 10 : 12
-                        }
+                        },
+                        // 为非饼图也添加全称显示
+                        generateLabels: selectedChartType !== 'pie' ? function(chart) {
+                            const data = chart.data;
+                            if (data.datasets.length) {
+                                return data.datasets.map((dataset, i) => {
+                                    const label = dataset.label || '';
+                                    let fullLabel = label;
+                                    
+                                    // 如果是单个类别或比较模式中的单个数据集，获取全称
+                                    if (!comparisonMode && selectedCategories.length === 1) {
+                                        fullLabel = getCategoryFullName(label);
+                                    } else if (comparisonMode) {
+                                        fullLabel = getCategoryFullName(label);
+                                    }
+                                    
+                                    return {
+                                        text: fullLabel,
+                                        fillStyle: dataset.backgroundColor,
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: 2,
+                                        hidden: dataset.hidden || false,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        } : undefined
                     }
                 },
                 title: {
                     display: true,
                     text: comparisonMode 
                         ? `Cost Comparison - ${displayYear} (${selectedData.length} Categories)`
-                        : `${selectedData[0]?.type || 'All Costs'} - ${displayYear}`,
+                        : `${selectedCategories.length === 0 ? 'All Costs' : (selectedCategories.length === 1 ? getCategoryFullName(selectedCategories[0]) : selectedCategories.length + ' Categories')} - ${displayYear}`,
                     font: {
                         size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return getChartTooltip(context);
+                        }
                     }
                 },
                 ...(selectedChartType === 'pie' && {
