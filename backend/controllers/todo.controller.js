@@ -148,7 +148,7 @@ export const todo = async (req, res, next) => {
     const newActivity = new Activity({
       date: currentDate,
       activity: 'Create todo',
-      detail: `${req.user.username} created ${createdTodos.length} todo(s): ${activity}`
+      detail: `${req.user.username}`
     });
     await newActivity.save();
 
@@ -236,7 +236,7 @@ export const deleteTodo = async (req, res, next) => {
     const newActivity = new Activity({
       date: currentDate,
       activity: 'Delete todo',
-      detail: `${req.user.username} deleted todo: ${todo.activity}`
+      detail: `${req.user.username}`
     });
     await newActivity.save();
     
@@ -305,7 +305,7 @@ export const updateTodo = async (req, res, next) => {
       const newActivity = new Activity({
         date: currentDate,
         activity: 'Update todo',
-        detail: `${req.user.username} updated todo to multiple items: ${updateData.activity || todo.activity}`
+        detail: `${req.user.username}`
       });
       await newActivity.save();
       
@@ -349,7 +349,7 @@ export const updateTodo = async (req, res, next) => {
       const newActivity = new Activity({
         date: currentDate,
         activity: 'Update todo',
-        detail: `${req.user.username} updated todo: ${updatedTodo.activity}`
+        detail: `${req.user.username}`
       });
       await newActivity.save();
 
