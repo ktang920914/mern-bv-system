@@ -31,6 +31,7 @@ const ToDoListPreventive = () => {
     const [itemsPage] = useState(10)
     const [showCustomInterval, setShowCustomInterval] = useState(false)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [sortOrder, setSortOrder] = useState('desc') // 'asc' for oldest, 'desc' for newest
 
     useEffect(() => {
         const handleResize = () => {
@@ -386,13 +387,31 @@ const ToDoListPreventive = () => {
         setCurrentPage(1)
     }
 
-    const filteredTodos = todos.filter(todo => 
-        todo.date.toLowerCase().includes(searchTerm) || 
-        todo.code.toLowerCase().includes(searchTerm) ||
-        todo.activity.toLowerCase().includes(searchTerm) ||
-        todo.repeatType.toLowerCase().includes(searchTerm) ||
-        todo.status.toLowerCase().includes(searchTerm)
-    )
+    // 日期解析函数
+    const parseDate = (dateStr) => {
+        if (!dateStr) return new Date(0)
+        return new Date(dateStr)
+    }
+
+    // 过滤和排序todos
+    const filteredAndSortedTodos = todos
+        .filter(todo => 
+            todo.date.toLowerCase().includes(searchTerm) || 
+            todo.code.toLowerCase().includes(searchTerm) ||
+            todo.activity.toLowerCase().includes(searchTerm) ||
+            todo.repeatType.toLowerCase().includes(searchTerm) ||
+            todo.status.toLowerCase().includes(searchTerm) && todo.status.toString().toLowerCase() === searchTerm
+        )
+        .sort((a, b) => {
+            const dateA = parseDate(a.date)
+            const dateB = parseDate(b.date)
+            
+            if (sortOrder === 'asc') {
+                return dateA - dateB  // Oldest first
+            } else {
+                return dateB - dateA  // Newest first
+            }
+        })
 
     const handlePageChange = (page) => {
         setCurrentPage(page)
@@ -401,8 +420,8 @@ const ToDoListPreventive = () => {
 
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
-    const currentTodos = filteredTodos.slice(indexOfFirstItem, indexOfLastItem)
-    const totalEntries = filteredTodos.length
+    const currentTodos = filteredAndSortedTodos.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredAndSortedTodos.length
     const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
@@ -474,6 +493,16 @@ const ToDoListPreventive = () => {
         </div>
     )
 
+    // 根据状态获取颜色类名
+const getStatusColorClass = (status) => {
+    if (status === 'Complete') {
+        return 'text-green-500' // 青色
+    } else if (status === 'Incomplete') {
+        return 'text-red-500' // 红色
+    }
+    return ''
+}
+
     const TodoCard = ({ todo }) => (
         <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
             theme === 'light' 
@@ -488,16 +517,18 @@ const ToDoListPreventive = () => {
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Item</p>
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.code}</p>
-                </div>
-                <div>
+                </div>              
+            </div>
+                <div className='mb-3'>
                     <p className="text-sm font-semibold text-gray-500">Activity</p>
                     <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.activity}</p>
                 </div>
-                <div>
+                <div className='mb-3'>
                     <p className="text-sm font-semibold text-gray-500">Status</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{todo.status}</p>
+                    <p className={`${getStatusColorClass(todo.status)} font-medium`}>
+                        {todo.status}
+                    </p>
                 </div>
-            </div>
             <div className="flex gap-2">
                 <Button 
                     outline 
@@ -523,8 +554,10 @@ const ToDoListPreventive = () => {
 
     return (
         <div className='min-h-screen'>
+            {/* 修改头部布局 - 将排序控件移到按钮组旁边 */}
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>ToDos</h1>
+                
                 <div className='w-full sm:w-auto'>
                     <TextInput 
                         placeholder='Enter searching' 
@@ -533,17 +566,33 @@ const ToDoListPreventive = () => {
                         className='w-full'
                     />
                 </div>
-                <div className='flex gap-2 w-full sm:w-auto'> 
-                    <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateToDo}>
-                        Create ToDo
-                    </Button>
-                    <Button 
-                        color='green' 
-                        className='cursor-pointer flex-1 sm:flex-none' 
-                        onClick={generateExcelReport}
-                    >
-                        Report
-                    </Button>
+                
+                {/* 按钮组和排序控件放在一起 */}
+                <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
+                    {/* 排序控件 */}
+                    <div className='w-full sm:w-40'>
+                        <Select 
+                            value={sortOrder} 
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className='w-full'
+                        >
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </Select>
+                    </div>
+                    
+                    <div className='flex gap-2 w-full sm:w-auto'>
+                        <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateToDo}>
+                            Create ToDo
+                        </Button>
+                        <Button 
+                            color='green' 
+                            className='cursor-pointer flex-1 sm:flex-none' 
+                            onClick={generateExcelReport}
+                        >
+                            Report
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -565,7 +614,11 @@ const ToDoListPreventive = () => {
                                 <TableCell className="align-middle">{todo.date}</TableCell>
                                 <TableCell className="align-middle">{todo.code}</TableCell>
                                 <TableCell className="align-middle">{todo.activity}</TableCell>
-                                <TableCell className="align-middle">{todo.status}</TableCell>
+                                <TableCell className="align-middle">
+                                    <span className={`font-medium ${getStatusColorClass(todo.status)}`}>
+                                        {todo.status}
+                                    </span>
+                                </TableCell>
                                 <TableCell className="align-middle">
                                     <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(todo)}}>
                                         Edit
