@@ -341,48 +341,76 @@ const Schedule = () => {
             
             // 根据重复类型显示正确的频率
             let frequency = ''
+            let sortOrder = 0 // 添加排序值
+            
             switch (group.repeatType) {
               case 'none':
                 frequency = 'No Repeat'
+                sortOrder = 0
                 break
               case 'daily':
                 frequency = 'Daily'
+                sortOrder = 1
                 break
               case 'weekly':
                 frequency = 'Weekly'
+                sortOrder = 2
                 break
               case 'monthly':
                 frequency = 'Monthly'
+                sortOrder = 3
                 break
               case 'yearly':
                 frequency = 'Yearly'
+                sortOrder = 5
                 break
               case 'custom':
                 if (group.repeatInterval > 0) {
                   frequency = `${group.repeatInterval} Month${group.repeatInterval > 1 ? 's' : ''}`
+                  sortOrder = 4 // 放在monthly和yearly之间
                 } else {
                   frequency = 'Custom'
+                  sortOrder = 6
                 }
                 break
               default:
                 frequency = group.repeatType
+                sortOrder = 7
             }
             
             activitiesArray.push({
               activity: group.activity,
               frequency: frequency,
               months: monthsData,
-              itemCodes: sortedCodes
+              itemCodes: sortedCodes,
+              sortOrder: sortOrder, // 添加排序字段
+              repeatInterval: group.repeatInterval // 用于自定义间隔排序
             })
           }
         })
         
-        // 第三步：排序并分配序号
+        // 第三步：按照频率从短到长排序
         return activitiesArray
-          .sort((a, b) => a.activity.localeCompare(b.activity))
+          .sort((a, b) => {
+            // 首先按排序值排序（频率从短到长）
+            if (a.sortOrder !== b.sortOrder) {
+              return a.sortOrder - b.sortOrder
+            }
+            
+            // 如果都是custom类型，按间隔从小到大排序
+            if (a.sortOrder === 4 && b.sortOrder === 4) {
+              return a.repeatInterval - b.repeatInterval
+            }
+            
+            // 最后按活动名称字母顺序排序
+            return a.activity.localeCompare(b.activity)
+          })
           .map((item, index) => ({
             no: index + 1,
-            ...item
+            activity: item.activity,
+            frequency: item.frequency,
+            months: item.months,
+            itemCodes: item.itemCodes
           }))
       }
       // =================== 修正的数据处理函数 END ===================
