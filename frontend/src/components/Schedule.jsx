@@ -211,14 +211,11 @@ const Schedule = () => {
         cell.border = borderStyle
       })
 
-      // =================== 修正的数据处理函数 START ===================
       const processDataForExcel = (data, year) => {
         const activityGroups = {}
         
-        // 找出所有独立的活动（主任务，不是生成的实例）
         const mainActivities = data.filter(item => !item.isGenerated || item.parentTodo === null)
         
-        // 第一步：按activity name和频率分组
         mainActivities.forEach((activity) => {
           const activityName = activity.activity
           const repeatType = activity.repeatType || 'none'
@@ -233,7 +230,6 @@ const Schedule = () => {
           
           if (startYear > year) return
           
-          // 创建分组的键，包含活动名称和频率信息
           const groupKey = `${activityName}_${repeatType}_${repeatInterval}`
           
           if (!activityGroups[groupKey]) {
@@ -241,15 +237,13 @@ const Schedule = () => {
               activity: activityName,
               repeatType: repeatType,
               repeatInterval: repeatInterval,
-              itemCodes: new Set(), // 存储所有item codes
-              monthsData: {} // 存储每个月对应的item codes
+              itemCodes: new Set(),
+              monthsData: {}
             }
           }
           
-          // 添加item code到集合中
           activityGroups[groupKey].itemCodes.add(itemCode)
           
-          // 计算结束月份
           let endMonth = 12
           if (activity.repeatEndDate) {
             const endDate = moment(activity.repeatEndDate)
@@ -259,7 +253,6 @@ const Schedule = () => {
             }
           }
           
-          // 根据重复类型确定哪些月份需要显示
           let monthsToAdd = new Set()
           switch (repeatType) {
             case 'none':
@@ -314,7 +307,6 @@ const Schedule = () => {
               break
           }
           
-          // 为每个月份添加item code
           monthsToAdd.forEach(month => {
             if (!activityGroups[groupKey].monthsData[month]) {
               activityGroups[groupKey].monthsData[month] = new Set()
@@ -323,15 +315,11 @@ const Schedule = () => {
           })
         })
         
-        // 第二步：转换为输出格式
         const activitiesArray = []
         Object.values(activityGroups).forEach((group) => {
           if (group.itemCodes.size > 0 && Object.keys(group.monthsData).length > 0) {
-            // 对item codes进行排序
             const sortedCodes = Array.from(group.itemCodes).sort()
-            const itemCodesStr = sortedCodes.join(', ')
             
-            // 为每个需要显示的月份填充数据
             const monthsData = {}
             Object.keys(group.monthsData).forEach(month => {
               const monthNum = parseInt(month)
@@ -339,9 +327,8 @@ const Schedule = () => {
               monthsData[monthNum] = monthItems.sort().join(', ')
             })
             
-            // 根据重复类型显示正确的频率
             let frequency = ''
-            let sortOrder = 0 // 添加排序值
+            let sortOrder = 0
             
             switch (group.repeatType) {
               case 'none':
@@ -367,7 +354,7 @@ const Schedule = () => {
               case 'custom':
                 if (group.repeatInterval > 0) {
                   frequency = `${group.repeatInterval} Month${group.repeatInterval > 1 ? 's' : ''}`
-                  sortOrder = 4 // 放在monthly和yearly之间
+                  sortOrder = 4
                 } else {
                   frequency = 'Custom'
                   sortOrder = 6
@@ -383,26 +370,22 @@ const Schedule = () => {
               frequency: frequency,
               months: monthsData,
               itemCodes: sortedCodes,
-              sortOrder: sortOrder, // 添加排序字段
-              repeatInterval: group.repeatInterval // 用于自定义间隔排序
+              sortOrder: sortOrder,
+              repeatInterval: group.repeatInterval
             })
           }
         })
         
-        // 第三步：按照频率从短到长排序
         return activitiesArray
           .sort((a, b) => {
-            // 首先按排序值排序（频率从短到长）
             if (a.sortOrder !== b.sortOrder) {
               return a.sortOrder - b.sortOrder
             }
             
-            // 如果都是custom类型，按间隔从小到大排序
             if (a.sortOrder === 4 && b.sortOrder === 4) {
               return a.repeatInterval - b.repeatInterval
             }
             
-            // 最后按活动名称字母顺序排序
             return a.activity.localeCompare(b.activity)
           })
           .map((item, index) => ({
@@ -413,7 +396,6 @@ const Schedule = () => {
             itemCodes: item.itemCodes
           }))
       }
-      // =================== 修正的数据处理函数 END ===================
 
       const scheduleData = processDataForExcel(preventiveData, reportYear)
       const dataToUse = scheduleData.length > 0 ? scheduleData : []
@@ -438,7 +420,6 @@ const Schedule = () => {
         row.getCell(3).alignment = wrapTextCenterAlignment
         row.getCell(3).border = borderStyle
 
-        // D-O列（月份列）设置为自动换行
         for (let month = 1; month <= 12; month++) {
           const columnIndex = month + 3
           const monthData = item.months && item.months[month] ? item.months[month] : ''
@@ -451,7 +432,6 @@ const Schedule = () => {
         rowIndex++
       })
 
-      // 填充空白行（3-21行）
       while (rowIndex <= 21) {
         const row = worksheet.getRow(rowIndex)
         row.height = 44.1
@@ -584,6 +564,18 @@ const Schedule = () => {
       onNavigate('TODAY')
     }
 
+    const goToPrevYear = () => {
+      const newDate = moment(date).subtract(1, 'year')
+      setCalendarYear(newDate.year())
+      setCurrentDate(newDate)
+    }
+
+    const goToNextYear = () => {
+      const newDate = moment(date).add(1, 'year')
+      setCalendarYear(newDate.year())
+      setCurrentDate(newDate)
+    }
+
     useEffect(() => {
       setCalendarYear(moment(date).year())
     }, [date])
@@ -603,12 +595,21 @@ const Schedule = () => {
         </div>
         
         <div className="flex-1 text-center">
-          <span className="text-lg font-semibold">
-            {moment(date).format('MMMM YYYY')}
-          </span>
+          <div className="flex justify-center items-center space-x-4">
+            <Button size="xs" className='cursor-pointer' onClick={goToPrevYear} color="gray">
+              «
+            </Button>
+            <span className="text-lg font-semibold">
+              {moment(date).format('MMMM YYYY')}
+            </span>
+            <Button size="xs" className='cursor-pointer' onClick={goToNextYear} color="gray">
+              »
+            </Button>
+          </div>
         </div>
         
-        <div className="w-20">
+        <div className="w-20 text-sm font-medium text-blue-600 dark:text-blue-400">
+          {calendarYear}
         </div>
       </div>
     )
@@ -642,6 +643,18 @@ const Schedule = () => {
 
   const goToToday = () => {
     setCurrentDate(moment())
+  }
+
+  const goToPrevYear = () => {
+    const newDate = currentDate.clone().subtract(1, 'year')
+    setCalendarYear(newDate.year())
+    setCurrentDate(newDate)
+  }
+
+  const goToNextYear = () => {
+    const newDate = currentDate.clone().add(1, 'year')
+    setCalendarYear(newDate.year())
+    setCurrentDate(newDate)
   }
 
   const getEventsForDay = (day) => {
@@ -747,21 +760,44 @@ const Schedule = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <div className="flex justify-between items-center mb-2">
-              <Button size="sm" onClick={goToPrevMonth} color="gray" className="px-2">
-                ‹
-              </Button>
+              {/* 年份切换按钮 - 左侧 */}
+              <div className="flex space-x-1">
+                <Button size="xs" className='cursor-pointer px-2' onClick={goToPrevYear} color="gray">
+                  «
+                </Button>
+                <Button size="sm" className='cursor-pointer px-2' onClick={goToPrevMonth} color="gray">
+                  ‹
+                </Button>
+              </div>
+              
               <div className="text-center flex-1">
                 <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {currentDate.format('MMMM YYYY')}
                 </span>
               </div>
-              <Button size="sm" onClick={goToNextMonth} color="gray" className="px-2">
-                ›
-              </Button>
+              
+              {/* 年份切换按钮 - 右侧 */}
+              <div className="flex space-x-1">
+                <Button size="sm" className='cursor-pointer px-2' onClick={goToNextMonth} color="gray">
+                  ›
+                </Button>
+                <Button size="xs" className='cursor-pointer px-2' onClick={goToNextYear} color="gray">
+                  »
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-center">
-              <Button size="sm" onClick={goToToday} color="blue" className="px-3">
+            
+            <div className="flex justify-center space-x-2 mt-2">
+              <Button size="sm" onClick={goToToday} color="blue" className="px-3 flex-1">
                 Today
+              </Button>
+              <Button 
+                size="sm"
+                color="green" 
+                className='cursor-pointer flex-1'
+                onClick={generateScheduleReport}
+              >
+                Report
               </Button>
             </div>
           </div>
@@ -861,22 +897,63 @@ const Schedule = () => {
   )
 
   const StatsCards = () => {
-    const totalTasks = preventiveData.length
-    const completedTasks = preventiveData.filter(e => e.status === 'Complete').length
+    const yearlyData = preventiveData.filter(todo => {
+      const todoDate = moment(todo.date);
+      return todoDate.year() === calendarYear;
+    });
+    
+    const totalTasks = yearlyData.length;
+    const completedTasks = yearlyData.filter(e => e.status === 'Complete').length;
+    const pendingTasks = totalTasks - completedTasks;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     return (
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {totalTasks}
-          </div>
-          <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Tasks</div>
+      <div className="mt-4">
+        <div className="mb-2 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-900">Statistics for {calendarYear}</h3>
+          <Badge color="blue" size="sm">
+            Year {calendarYear}
+          </Badge>
         </div>
-        <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg shadow">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {completedTasks}
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+              {totalTasks}
+            </div>
+            <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Tasks</div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              All scheduled tasks
+            </div>
           </div>
-          <div className="text-sm text-green-600 dark:text-green-400 font-medium">Completed</div>
+          
+          <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+              {completedTasks}
+            </div>
+            <div className="text-sm text-green-600 dark:text-green-400 font-medium">Completed</div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {pendingTasks} pending
+            </div>
+          </div>
+          
+          <div className="text-center p-4 bg-purple-50 dark:bg-purple-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+              {completionRate}%
+            </div>
+            <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Completion Rate</div>
+            
+            <div className="mt-3 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+              <div 
+                className="bg-purple-600 h-2.5 rounded-full transition-all duration-500" 
+                style={{ width: `${completionRate}%` }}
+              />
+            </div>
+            
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {completedTasks} of {totalTasks} tasks
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -936,6 +1013,10 @@ const Schedule = () => {
                 eventPropGetter={eventStyleGetter}
                 views={['month']}
                 defaultView="month"
+                date={currentDate.toDate()}
+                onNavigate={(newDate) => {
+                  setCurrentDate(moment(newDate))
+                }}
                 components={{
                   toolbar: CustomToolbar,
                   event: CustomEvent
