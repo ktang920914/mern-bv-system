@@ -787,17 +787,9 @@ const Schedule = () => {
               </div>
             </div>
             
-            <div className="flex justify-center space-x-2 mt-2">
-              <Button size="sm" onClick={goToToday} color="blue" className="px-3 flex-1">
+            <div className="flex justify-center">
+              <Button size="sm" onClick={goToToday} color="blue">
                 Today
-              </Button>
-              <Button 
-                size="sm"
-                color="green" 
-                className='cursor-pointer flex-1'
-                onClick={generateScheduleReport}
-              >
-                Report
               </Button>
             </div>
           </div>
