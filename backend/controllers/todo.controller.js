@@ -264,14 +264,12 @@ export const updateTodo = async (req, res, next) => {
     });
 
     if (updateType === 'instance' && todo.isGenerated) {
-      console.log('Updating instance only');
+      console.log('Updating instance only - limited fields');
       
       const updatedTodo = await Todo.findByIdAndUpdate(req.params.todoId, {
         $set: {
           date: updateData.date || todo.date,
-          status: updateData.status || todo.status,
-          code: updateData.code || todo.code,
-          activity: updateData.activity || todo.activity
+          status: updateData.status || todo.status
         }
       }, { new: true });
 
@@ -279,14 +277,14 @@ export const updateTodo = async (req, res, next) => {
       const newActivity = new Activity({
         date: currentDate,
         activity: 'Update todo instance',
-        detail: `${req.user.username} updated instance: ${req.params.todoId}`
+        detail: `${req.user.username} updated instance date/status: ${req.params.todoId}`
       });
       await newActivity.save();
 
       return res.status(200).json({
         success: true,
         todo: updatedTodo,
-        message: 'Todo instance updated successfully'
+        message: 'Todo instance updated (only date and status changed)'
       });
     }
     
@@ -338,7 +336,7 @@ export const updateTodo = async (req, res, next) => {
     const newActivity = new Activity({
       date: currentDate,
       activity: 'Update todo',
-      detail: `${req.user.username} updated todo: ${req.params.todoId}`
+      detail: `${req.user.username} updated main todo: ${req.params.todoId}`
     });
     await newActivity.save();
     

@@ -214,7 +214,6 @@ const ToDoListPreventive = () => {
             
             setOpenModalCreateToDo(false)
             
-            // 刷新todos列表
             const fetchTodos = async () => {
                 try {
                     const res = await fetch('/api/preventive/getTodos')
@@ -227,11 +226,6 @@ const ToDoListPreventive = () => {
                 }
             }
             await fetchTodos()
-            
-            // 移除alert
-            // if (data.count > 1) {
-            //     alert(`Successfully created ${data.count} todos`)
-            // }
             
         } catch (error) {
             setErrorMessage(error.message)
@@ -308,13 +302,64 @@ const ToDoListPreventive = () => {
         e.preventDefault()
         setLoading(true)
         
-        if (!updateFormData.code || !updateFormData.date || !updateFormData.activity || !updateFormData.status) {
-            setErrorMessage('Please fill in all required fields')
-            setLoading(false)
-            return
-        }
+        // 如果是生成的实例，只验证date和status
+        if (updateFormData.isGenerated) {
+            if (!updateFormData.date || !updateFormData.status) {
+                setErrorMessage('Date and status are required')
+                setLoading(false)
+                return
+            }
 
-        try {
+            const updateData = {
+                date: updateFormData.date,
+                status: updateFormData.status,
+                action: 'updateOnly',
+                updateType: 'instance'
+            }
+
+            try {
+                const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                })
+                
+                const data = await res.json()
+                
+                if(data.success === false){
+                    setErrorMessage(data.message)
+                    setLoading(false)
+                    return
+                }
+                
+                setOpenModalUpdateToDo(false)
+                
+                const fetchTodos = async () => {
+                    try {
+                        const res = await fetch('/api/preventive/getTodos')
+                        const data = await res.json()
+                        if(res.ok){
+                            setTodos(data)
+                        }
+                    } catch (error) {
+                        console.log(error.message)
+                    }
+                }
+                await fetchTodos()
+                
+            } catch (error) {
+                console.log(error.message)
+                setErrorMessage('An error occurred while updating the todo.')
+                setLoading(false)
+            }
+        } else {
+            // 如果是主任务，验证所有字段
+            if (!updateFormData.date || !updateFormData.code || !updateFormData.activity || !updateFormData.status) {
+                setErrorMessage('Please fill in all required fields')
+                setLoading(false)
+                return
+            }
+
             const updateData = {
                 date: updateFormData.date,
                 code: updateFormData.code,
@@ -324,45 +369,44 @@ const ToDoListPreventive = () => {
                 repeatInterval: updateFormData.repeatInterval || 1,
                 repeatEndDate: updateFormData.repeatEndDate || '',
                 action: 'updateOnly',
-                updateType: updateFormData.isGenerated ? 'instance' : 'main'
+                updateType: 'main'
             }
 
-            const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            })
-            
-            const data = await res.json()
-            
-            if(data.success === false){
-                setErrorMessage(data.message)
-                setLoading(false)
-                return
-            }
-            
-            setOpenModalUpdateToDo(false)
-            
-            // 刷新todos列表 - useEffect会自动更新页面
-            const fetchTodos = async () => {
-                try {
-                    const res = await fetch('/api/preventive/getTodos')
-                    const data = await res.json()
-                    if(res.ok){
-                        setTodos(data)
-                    }
-                } catch (error) {
-                    console.log(error.message)
+            try {
+                const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                })
+                
+                const data = await res.json()
+                
+                if(data.success === false){
+                    setErrorMessage(data.message)
+                    setLoading(false)
+                    return
                 }
+                
+                setOpenModalUpdateToDo(false)
+                
+                const fetchTodos = async () => {
+                    try {
+                        const res = await fetch('/api/preventive/getTodos')
+                        const data = await res.json()
+                        if(res.ok){
+                            setTodos(data)
+                        }
+                    } catch (error) {
+                        console.log(error.message)
+                    }
+                }
+                await fetchTodos()
+                
+            } catch (error) {
+                console.log(error.message)
+                setErrorMessage('An error occurred while updating the todo.')
+                setLoading(false)
             }
-            await fetchTodos()
-            
-            // 移除alert提示
-            
-        } catch (error) {
-            console.log(error.message)
-            setErrorMessage('An error occurred while updating the todo.')
-            setLoading(false)
         }
     }
 
@@ -780,11 +824,13 @@ const ToDoListPreventive = () => {
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
                     <div className="space-y-6">
-                        <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update ToDo</h3>
+                        <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>
+                            {updateFormData.isGenerated ? 'Update Instance' : 'Update ToDo'}
+                        </h3>
                         {updateFormData.isGenerated && (
                             <Alert color="info" className="mb-4">
                                 <span className="font-medium">Note:</span> This is a recurring task instance. 
-                                Changing the date or status will only affect this instance.
+                                You can only change the date and status. Other fields are locked.
                             </Alert>
                         )}
                         <form onSubmit={handleUpdateSubmit}>
@@ -802,11 +848,12 @@ const ToDoListPreventive = () => {
                                 </div>
                                 
                                 <div className="mb-4 block">
-                                    <Label htmlFor='code' className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Select Item</Label>
+                                    <Label htmlFor='code' className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Item</Label>
                                     <Select 
                                         id="code" 
                                         value={updateFormData.code || ''}
                                         onChange={handleUpdateChange}
+                                        disabled={updateFormData.isGenerated}
                                         required
                                     >
                                         <option value="">-- Select an item --</option>
@@ -816,64 +863,71 @@ const ToDoListPreventive = () => {
                                             </option>
                                         ))}
                                     </Select>
+                                    {updateFormData.isGenerated && (
+                                        <p className="text-xs text-gray-500 mt-1">Item is locked for recurring instances</p>
+                                    )}
                                 </div>
                                 
-                                <div className="mb-4 block">
-                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Repeat Type</Label>
-                                    <Select 
-                                        value={updateFormData.repeatType || 'none'} 
-                                        id="repeatType" 
-                                        className='mb-4' 
-                                        onChange={handleUpdateChange} 
-                                        onFocus={handleFocus}
-                                    >
-                                        <option value="none">No Repeat</option>
-                                        <option value="daily">Daily</option>
-                                        <option value="weekly">Weekly</option>
-                                        <option value="monthly">Monthly</option>
-                                        <option value="yearly">Yearly</option>
-                                        <option value="custom">Custom</option>
-                                    </Select>
-                                </div>
+                                {!updateFormData.isGenerated && (
+                                    <>
+                                        <div className="mb-4 block">
+                                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Repeat Type</Label>
+                                            <Select 
+                                                value={updateFormData.repeatType || 'none'} 
+                                                id="repeatType" 
+                                                className='mb-4' 
+                                                onChange={handleUpdateChange} 
+                                                onFocus={handleFocus}
+                                            >
+                                                <option value="none">No Repeat</option>
+                                                <option value="daily">Daily</option>
+                                                <option value="weekly">Weekly</option>
+                                                <option value="monthly">Monthly</option>
+                                                <option value="yearly">Yearly</option>
+                                                <option value="custom">Custom</option>
+                                            </Select>
+                                        </div>
 
-                                {(updateFormData.repeatType && updateFormData.repeatType !== 'none') && (
-                                    <div className="mb-4 block">
-                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>
-                                            {updateFormData.repeatType === 'custom' 
-                                                ? 'Repeat Every (months)' 
-                                                : updateFormData.repeatType === 'daily' ? 'Repeat Every (days)'
-                                                : updateFormData.repeatType === 'weekly' ? 'Repeat Every (weeks)'
-                                                : updateFormData.repeatType === 'monthly' ? 'Repeat Every (months)'
-                                                : 'Repeat Every (years)'}
-                                        </Label>
-                                        <TextInput 
-                                            type="number" 
-                                            id="repeatInterval" 
-                                            placeholder={
-                                                updateFormData.repeatType === 'custom' 
-                                                    ? "e.g., 3 for every 3 months" 
-                                                    : `e.g., 2 for every 2 ${updateFormData.repeatType.replace('ly', 's')}`
-                                            }
-                                            min="1"
-                                            value={updateFormData.repeatInterval || 1}
-                                            onChange={handleUpdateChange} 
-                                            onFocus={handleFocus}
-                                        />
-                                    </div>
+                                        {(updateFormData.repeatType && updateFormData.repeatType !== 'none') && (
+                                            <div className="mb-4 block">
+                                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>
+                                                    {updateFormData.repeatType === 'custom' 
+                                                        ? 'Repeat Every (months)' 
+                                                        : updateFormData.repeatType === 'daily' ? 'Repeat Every (days)'
+                                                        : updateFormData.repeatType === 'weekly' ? 'Repeat Every (weeks)'
+                                                        : updateFormData.repeatType === 'monthly' ? 'Repeat Every (months)'
+                                                        : 'Repeat Every (years)'}
+                                                </Label>
+                                                <TextInput 
+                                                    type="number" 
+                                                    id="repeatInterval" 
+                                                    placeholder={
+                                                        updateFormData.repeatType === 'custom' 
+                                                            ? "e.g., 3 for every 3 months" 
+                                                            : `e.g., 2 for every 2 ${updateFormData.repeatType.replace('ly', 's')}`
+                                                    }
+                                                    min="1"
+                                                    value={updateFormData.repeatInterval || 1}
+                                                    onChange={handleUpdateChange} 
+                                                    onFocus={handleFocus}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="mb-4 block">
+                                            <Label htmlFor='repeatEndDate' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>End Date (Optional)</Label>
+                                            <TextInput 
+                                                value={updateFormData.repeatEndDate || ''} 
+                                                type='date' 
+                                                id="repeatEndDate" 
+                                                placeholder="Enter end date" 
+                                                onChange={handleUpdateChange} 
+                                                onFocus={handleFocus}
+                                            />
+                                        </div>
+                                    </>
                                 )}
-
-                                <div className="mb-4 block">
-                                    <Label htmlFor='repeatEndDate' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>End Date (Optional)</Label>
-                                    <TextInput 
-                                        value={updateFormData.repeatEndDate || ''} 
-                                        type='date' 
-                                        id="repeatEndDate" 
-                                        placeholder="Enter end date" 
-                                        onChange={handleUpdateChange} 
-                                        onFocus={handleFocus}
-                                    />
-                                </div>
-
+                                
                                 <div className="mb-4 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Activity</Label>
                                     <TextInput 
@@ -882,8 +936,12 @@ const ToDoListPreventive = () => {
                                         placeholder='Enter activity' 
                                         onChange={handleUpdateChange} 
                                         onFocus={handleFocus} 
+                                        disabled={updateFormData.isGenerated}
                                         required
                                     />
+                                    {updateFormData.isGenerated && (
+                                        <p className="text-xs text-gray-500 mt-1">Activity is locked for recurring instances</p>
+                                    )}
                                 </div>
 
                                 <div className="mb-4 block">
