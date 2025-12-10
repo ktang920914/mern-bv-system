@@ -31,7 +31,7 @@ const ToDoListPreventive = () => {
     const [itemsPage] = useState(10)
     const [showCustomInterval, setShowCustomInterval] = useState(false)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-    const [sortOrder, setSortOrder] = useState('desc') // 'asc' for oldest, 'desc' for newest
+    const [sortOrder, setSortOrder] = useState('desc')
 
     useEffect(() => {
         const handleResize = () => {
@@ -214,6 +214,7 @@ const ToDoListPreventive = () => {
             
             setOpenModalCreateToDo(false)
             
+            // 刷新todos列表
             const fetchTodos = async () => {
                 try {
                     const res = await fetch('/api/preventive/getTodos')
@@ -227,9 +228,10 @@ const ToDoListPreventive = () => {
             }
             await fetchTodos()
             
-            if (data.count > 1) {
-                alert(`Successfully created ${data.count} todos`)
-            }
+            // 移除alert
+            // if (data.count > 1) {
+            //     alert(`Successfully created ${data.count} todos`)
+            // }
             
         } catch (error) {
             setErrorMessage(error.message)
@@ -274,13 +276,14 @@ const ToDoListPreventive = () => {
         setTodoIdToUpdate(t._id)
         setUpdateFormData({
             date: t.date, 
-            selectedCodes: [t.code],
+            code: t.code,
             status: t.status, 
             activity: t.activity,
             repeatType: t.repeatType || 'none',
             repeatInterval: t.repeatInterval || 1,
             repeatEndDate: t.repeatEndDate || '',
-            code: t.code
+            isGenerated: t.isGenerated || false,
+            parentTodo: t.parentTodo || null
         })
         setOpenModalUpdateToDo(!openModalUpdateToDo)
         setErrorMessage(null)
@@ -295,105 +298,84 @@ const ToDoListPreventive = () => {
             setShowCustomInterval(value === 'custom');
         }
         
-        if (type === 'checkbox') {
-            const { value: checkboxValue, checked } = e.target;
-            const currentSelected = updateFormData.selectedCodes || [];
-            
-            if (checked) {
-                setUpdateFormData({
-                    ...updateFormData,
-                    selectedCodes: [...currentSelected, checkboxValue]
-                })
-            } else {
-                setUpdateFormData({
-                    ...updateFormData,
-                    selectedCodes: currentSelected.filter(code => code !== checkboxValue)
-                })
-            }
-        } else {
-            setUpdateFormData({
-                ...updateFormData, 
-                [id]: id === 'activity' ? value : value.trim()
-            })
-        }
+        setUpdateFormData({
+            ...updateFormData, 
+            [id]: value
+        })
     }
 
     const handleUpdateSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    
-    if (!updateFormData.selectedCodes || updateFormData.selectedCodes.length === 0) {
-        setErrorMessage('Please select at least one item')
-        setLoading(false)
-        return
-    }
-
-    try {
-        const updateData = {
-            date: updateFormData.date,
-            selectedCodes: updateFormData.selectedCodes,
-            activity: updateFormData.activity,
-            status: updateFormData.status,
-            repeatType: updateFormData.repeatType,
-            repeatInterval: updateFormData.repeatInterval,
-            repeatEndDate: updateFormData.repeatEndDate,
-            code: updateFormData.selectedCodes[0]
-        }
-
-        const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updateData)
-        })
+        e.preventDefault()
+        setLoading(true)
         
-        const data = await res.json()
-        
-        if(data.success === false){
-            setErrorMessage(data.message)
+        if (!updateFormData.code || !updateFormData.date || !updateFormData.activity || !updateFormData.status) {
+            setErrorMessage('Please fill in all required fields')
             setLoading(false)
             return
         }
-        
-        setOpenModalUpdateToDo(false)
-        
-        // 刷新todos列表 - useEffect会自动更新页面
-        const fetchTodos = async () => {
-            try {
-                const res = await fetch('/api/preventive/getTodos')
-                const data = await res.json()
-                if(res.ok){
-                    setTodos(data)
-                }
-            } catch (error) {
-                console.log(error.message)
+
+        try {
+            const updateData = {
+                date: updateFormData.date,
+                code: updateFormData.code,
+                activity: updateFormData.activity,
+                status: updateFormData.status,
+                repeatType: updateFormData.repeatType || 'none',
+                repeatInterval: updateFormData.repeatInterval || 1,
+                repeatEndDate: updateFormData.repeatEndDate || '',
+                action: 'updateOnly',
+                updateType: updateFormData.isGenerated ? 'instance' : 'main'
             }
+
+            const res = await fetch(`/api/preventive/update/${todoIdToUpdate}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            })
+            
+            const data = await res.json()
+            
+            if(data.success === false){
+                setErrorMessage(data.message)
+                setLoading(false)
+                return
+            }
+            
+            setOpenModalUpdateToDo(false)
+            
+            // 刷新todos列表 - useEffect会自动更新页面
+            const fetchTodos = async () => {
+                try {
+                    const res = await fetch('/api/preventive/getTodos')
+                    const data = await res.json()
+                    if(res.ok){
+                        setTodos(data)
+                    }
+                } catch (error) {
+                    console.log(error.message)
+                }
+            }
+            await fetchTodos()
+            
+            // 移除alert提示
+            
+        } catch (error) {
+            console.log(error.message)
+            setErrorMessage('An error occurred while updating the todo.')
+            setLoading(false)
         }
-        await fetchTodos()
-        
-        // 移除alert提示
-        // if (data.count > 1) {
-        //     alert(`Successfully updated ${data.count} todos`)
-        // }
-        
-    } catch (error) {
-        console.log(error.message)
-        setErrorMessage('An error occurred while updating the todo.')
-        setLoading(false)
     }
-}
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value.toLowerCase())
         setCurrentPage(1)
     }
 
-    // 日期解析函数
     const parseDate = (dateStr) => {
         if (!dateStr) return new Date(0)
         return new Date(dateStr)
     }
 
-    // 过滤和排序todos
     const filteredAndSortedTodos = todos
         .filter(todo => 
             todo.date.toLowerCase().includes(searchTerm) || 
@@ -407,9 +389,9 @@ const ToDoListPreventive = () => {
             const dateB = parseDate(b.date)
             
             if (sortOrder === 'asc') {
-                return dateA - dateB  // Oldest first
+                return dateA - dateB
             } else {
-                return dateB - dateA  // Newest first
+                return dateB - dateA
             }
         })
 
@@ -493,15 +475,14 @@ const ToDoListPreventive = () => {
         </div>
     )
 
-    // 根据状态获取颜色类名
-const getStatusColorClass = (status) => {
-    if (status === 'Complete') {
-        return 'text-green-500' // 青色
-    } else if (status === 'Incomplete') {
-        return 'text-red-500' // 红色
+    const getStatusColorClass = (status) => {
+        if (status === 'Complete') {
+            return 'text-green-500'
+        } else if (status === 'Incomplete') {
+            return 'text-red-500'
+        }
+        return ''
     }
-    return ''
-}
 
     const TodoCard = ({ todo }) => (
         <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
@@ -554,7 +535,6 @@ const getStatusColorClass = (status) => {
 
     return (
         <div className='min-h-screen'>
-            {/* 修改头部布局 - 将排序控件移到按钮组旁边 */}
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>ToDos</h1>
                 
@@ -567,9 +547,7 @@ const getStatusColorClass = (status) => {
                     />
                 </div>
                 
-                {/* 按钮组和排序控件放在一起 */}
                 <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
-                    {/* 排序控件 */}
                     <div className='w-full sm:w-40'>
                         <Select 
                             value={sortOrder} 
@@ -663,7 +641,6 @@ const getStatusColorClass = (status) => {
                 )}
             </div>
 
-            {/* Create Modal */}
             <Modal show={openModalCreateToDo} onClose={handleCreateToDo} popup size="xl">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
@@ -779,7 +756,6 @@ const getStatusColorClass = (status) => {
                 </ModalBody>
             </Modal>
 
-            {/* Delete Modal */}
             <Modal show={openModalDeleteToDo} size="md" onClose={() => setOpenModalDeleteToDo(!openModalDeleteToDo)} popup>
                 <ModalHeader />
                 <ModalBody>
@@ -800,16 +776,21 @@ const getStatusColorClass = (status) => {
                 </ModalBody>
             </Modal>
 
-            {/* Update Modal */}
             <Modal show={openModalUpdateToDo} onClose={() => setOpenModalUpdateToDo(!openModalUpdateToDo)} popup size="xl">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
                     <div className="space-y-6">
                         <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update ToDo</h3>
+                        {updateFormData.isGenerated && (
+                            <Alert color="info" className="mb-4">
+                                <span className="font-medium">Note:</span> This is a recurring task instance. 
+                                Changing the date or status will only affect this instance.
+                            </Alert>
+                        )}
                         <form onSubmit={handleUpdateSubmit}>
                             <div>
                                 <div className="mb-4 block">
-                                    <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start Date</Label>
+                                    <Label htmlFor='date' className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Date</Label>
                                     <TextInput 
                                         value={updateFormData.date || ''} 
                                         type='date' 
@@ -818,6 +799,23 @@ const getStatusColorClass = (status) => {
                                         onFocus={handleFocus} 
                                         required
                                     />
+                                </div>
+                                
+                                <div className="mb-4 block">
+                                    <Label htmlFor='code' className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Select Item</Label>
+                                    <Select 
+                                        id="code" 
+                                        value={updateFormData.code || ''}
+                                        onChange={handleUpdateChange}
+                                        required
+                                    >
+                                        <option value="">-- Select an item --</option>
+                                        {allItems.map((item) => (
+                                            <option key={item._id} value={item.code}>
+                                                {item.displayText}
+                                            </option>
+                                        ))}
+                                    </Select>
                                 </div>
                                 
                                 <div className="mb-4 block">
@@ -877,32 +875,6 @@ const getStatusColorClass = (status) => {
                                 </div>
 
                                 <div className="mb-4 block">
-                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Select Items (Multiple)</Label>
-                                    <div className={`${theme === 'light' ? 'mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto' : 'bg-gray-900 mt-2 p-2 border border-gray-300 rounded-lg max-h-60 overflow-y-auto text-gray-50'}`}>
-                                        {allItems.map((item) => (
-                                            <div key={item._id} className="flex items-center mb-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id={`update-item-${item._id}`}
-                                                    value={item.code}
-                                                    checked={updateFormData.selectedCodes?.includes(item.code)}
-                                                    onChange={handleUpdateChange}
-                                                    className="mr-2"
-                                                />
-                                                <label htmlFor={`update-item-${item._id}`} className="text-sm">
-                                                    {item.displayText}
-                                                </label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {updateFormData.selectedCodes && updateFormData.selectedCodes.length > 0 && (
-                                        <div className={`${theme === 'light' ? 'mt-2 text-sm' : 'text-gray-50 mt-2 text-sm'}`}>
-                                            Selected: {updateFormData.selectedCodes.join(', ')}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mb-4 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Activity</Label>
                                     <TextInput 
                                         value={updateFormData.activity || ''} 
@@ -924,9 +896,9 @@ const getStatusColorClass = (status) => {
                                         onFocus={handleFocus} 
                                         required
                                     >
-                                        <option></option>
-                                        <option>Complete</option>
-                                        <option>Incomplete</option>
+                                        <option value="">-- Select status --</option>
+                                        <option value="Complete">Complete</option>
+                                        <option value="Incomplete">Incomplete</option>
                                     </Select>
                                 </div>
                             </div>
@@ -934,7 +906,7 @@ const getStatusColorClass = (status) => {
                             <div className='mb-4 block'>
                                 <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
                                     {
-                                        loading ? <Spinner size='md' color='failure'/> : 'U P D A T E'
+                                        loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'
                                     }
                                 </Button>
                             </div>

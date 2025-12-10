@@ -2,7 +2,6 @@ import Activity from "../models/activity.model.js";
 import Todo from "../models/todo.model.js";
 import { errorHandler } from "../utils/error.js";
 
-// 工具函数 - 生成重复待办事项
 async function generateRecurringTodos(mainTodo) {
   try {
     const { _id, date, code, activity, repeatType, repeatInterval = 1, repeatEndDate, userId } = mainTodo;
@@ -37,7 +36,6 @@ async function generateRecurringTodos(mainTodo) {
   }
 }
 
-// 计算重复日期
 function calculateRecurringDates(startDate, endDate, repeatType, interval = 1) {
   const dates = [];
   let currentDate = new Date(startDate);
@@ -89,7 +87,6 @@ function calculateRecurringDates(startDate, endDate, repeatType, interval = 1) {
   return dates;
 }
 
-// 创建待办事项 - 支持多选
 export const todo = async (req, res, next) => {
   try {
     const {
@@ -107,7 +104,6 @@ export const todo = async (req, res, next) => {
       return next(errorHandler(400, 'Date and activity are required'));
     }
 
-    // 确定要创建的codes
     const codesToCreate = selectedCodes && Array.isArray(selectedCodes) && selectedCodes.length > 0 
       ? selectedCodes 
       : (code ? [code] : []);
@@ -116,7 +112,6 @@ export const todo = async (req, res, next) => {
       return next(errorHandler(400, 'Please select at least one item'));
     }
 
-    // 批量创建todos
     const todosToCreate = codesToCreate.map(codeItem => ({
       date,
       code: codeItem,
@@ -133,7 +128,6 @@ export const todo = async (req, res, next) => {
 
     const createdTodos = await Todo.insertMany(todosToCreate);
 
-    // 如果设置了重复，为每个todo生成重复实例
     if (repeatType !== 'none') {
       for (const todoItem of createdTodos) {
         try {
@@ -163,7 +157,6 @@ export const todo = async (req, res, next) => {
   }
 };
 
-// 获取所有待办事项
 export const getTodos = async (req, res, next) => {
   try {
     const todos = await Todo.find().sort({updatedAt:-1});
@@ -173,7 +166,6 @@ export const getTodos = async (req, res, next) => {
   }
 };
 
-// 获取日历待办事项
 export const getCalendarTodos = async (req, res, next) => {
   try {
     const { start, end } = req.query;
@@ -202,7 +194,6 @@ export const getCalendarTodos = async (req, res, next) => {
   }
 };
 
-// 删除待办事项
 export const deleteTodo = async (req, res, next) => {
   try {
     const todo = await Todo.findById(req.params.todoId);
@@ -211,11 +202,9 @@ export const deleteTodo = async (req, res, next) => {
       return next(errorHandler(404, 'Todo not found'));
     }
 
-    // 如果是重复的主todo，删除所有相关todo
     if (todo.isRecurring) {
       await Todo.deleteMany({ parentTodo: req.params.todoId });
     }
-    // 如果是生成的子todo，检查父todo是否需要更新
     else if (todo.parentTodo) {
       const childCount = await Todo.countDocuments({ 
         parentTodo: todo.parentTodo, 
@@ -250,7 +239,6 @@ export const deleteTodo = async (req, res, next) => {
   }
 };
 
-// 更新待办事项 - 支持多选
 export const updateTodo = async (req, res, next) => {
   try {
     const todo = await Todo.findById(req.params.todoId);
@@ -259,108 +247,109 @@ export const updateTodo = async (req, res, next) => {
       return next(errorHandler(404, 'Todo not found'));
     }
 
-    const { selectedCodes, ...updateData } = req.body;
+    const { 
+      action = 'updateOnly',
+      updateType = 'main',
+      selectedCodes,
+      ...updateData 
+    } = req.body;
     
-    // 如果提供了多选的codes
-    if (selectedCodes && Array.isArray(selectedCodes) && selectedCodes.length > 0) {
-      // 删除原有的todo（如果是重复的，也删除所有生成的todo）
-      if (todo.isRecurring) {
-        await Todo.deleteMany({ parentTodo: req.params.todoId });
-      }
-      
-      // 删除当前todo
-      await Todo.findByIdAndDelete(req.params.todoId);
-      
-      // 为每个选中的item code创建新的todo
-      const todosToCreate = selectedCodes.map(code => ({
-        date: updateData.date || todo.date,
-        code: code,
-        activity: updateData.activity || todo.activity,
-        status: updateData.status || todo.status,
-        repeatType: updateData.repeatType || todo.repeatType,
-        repeatInterval: updateData.repeatInterval || todo.repeatInterval,
-        repeatEndDate: updateData.repeatEndDate || todo.repeatEndDate,
-        isRecurring: (updateData.repeatType || todo.repeatType) !== 'none',
-        isGenerated: false,
-        parentTodo: null,
-        userId: req.user.id
-      }));
-      
-      // 批量创建新的todos
-      const createdTodos = await Todo.insertMany(todosToCreate);
-      
-      // 如果设置了重复，为每个新的todo生成重复实例
-      if (updateData.repeatType && updateData.repeatType !== 'none') {
-        for (const newTodo of createdTodos) {
-          try {
-            await generateRecurringTodos(newTodo);
-          } catch (error) {
-            console.error('Error generating recurring todos for todo:', newTodo._id, error);
-          }
-        }
-      }
-      
-      // 记录活动日志
-      const currentDate = new Date().toLocaleString();
-      const newActivity = new Activity({
-        date: currentDate,
-        activity: 'Update todo',
-        detail: `${req.user.username}`
-      });
-      await newActivity.save();
-      
-      return res.status(200).json({
-        success: true,
-        message: 'Todo updated to multiple items',
-        todos: createdTodos,
-        count: createdTodos.length
-      });
-      
-    } else {
-      // 原有逻辑：单个todo更新
-      const shouldRegenerate = updateData.repeatType && updateData.repeatType !== todo.repeatType;
-      
-      if (shouldRegenerate && todo.isRecurring) {
-        await Todo.deleteMany({ parentTodo: req.params.todoId });
-      }
+    console.log('Updating todo:', {
+      todoId: req.params.todoId,
+      action,
+      updateType,
+      isGenerated: todo.isGenerated,
+      parentTodo: todo.parentTodo,
+      updateData
+    });
 
+    if (updateType === 'instance' && todo.isGenerated) {
+      console.log('Updating instance only');
+      
       const updatedTodo = await Todo.findByIdAndUpdate(req.params.todoId, {
         $set: {
           date: updateData.date || todo.date,
-          code: updateData.code || todo.code,
-          activity: updateData.activity || todo.activity,
           status: updateData.status || todo.status,
-          repeatType: updateData.repeatType || todo.repeatType,
-          repeatInterval: updateData.repeatInterval || todo.repeatInterval,
-          repeatEndDate: updateData.repeatEndDate || todo.repeatEndDate,
-          isRecurring: (updateData.repeatType || todo.repeatType) !== 'none'
-        },
-      }, { new: true });
-
-      if (shouldRegenerate && updateData.repeatType && updateData.repeatType !== 'none') {
-        try {
-          await generateRecurringTodos(updatedTodo);
-        } catch (error) {
-          console.error('Error regenerating recurring todos:', error);
+          code: updateData.code || todo.code,
+          activity: updateData.activity || todo.activity
         }
-      }
+      }, { new: true });
 
       const currentDate = new Date().toLocaleString();
       const newActivity = new Activity({
         date: currentDate,
-        activity: 'Update todo',
-        detail: `${req.user.username}`
+        activity: 'Update todo instance',
+        detail: `${req.user.username} updated instance: ${req.params.todoId}`
       });
       await newActivity.save();
 
       return res.status(200).json({
         success: true,
         todo: updatedTodo,
-        message: 'Todo updated successfully'
+        message: 'Todo instance updated successfully'
       });
     }
+    
+    const repeatTypeChanged = updateData.repeatType && updateData.repeatType !== todo.repeatType;
+    const repeatIntervalChanged = updateData.repeatInterval && updateData.repeatInterval !== todo.repeatInterval;
+    const repeatEndDateChanged = updateData.repeatEndDate !== todo.repeatEndDate;
+    
+    const shouldRegenerate = repeatTypeChanged || repeatIntervalChanged || repeatEndDateChanged;
+    
+    console.log('Repeat settings changed:', {
+      repeatTypeChanged,
+      repeatIntervalChanged,
+      repeatEndDateChanged,
+      shouldRegenerate,
+      oldRepeatType: todo.repeatType,
+      newRepeatType: updateData.repeatType
+    });
+    
+    if (shouldRegenerate && todo.isRecurring) {
+      console.log('Deleting old recurring instances');
+      await Todo.deleteMany({ parentTodo: req.params.todoId });
+    }
+    
+    const updatedTodo = await Todo.findByIdAndUpdate(req.params.todoId, {
+      $set: {
+        date: updateData.date || todo.date,
+        code: updateData.code || todo.code,
+        activity: updateData.activity || todo.activity,
+        status: updateData.status || todo.status,
+        repeatType: updateData.repeatType || todo.repeatType,
+        repeatInterval: updateData.repeatInterval || todo.repeatInterval,
+        repeatEndDate: updateData.repeatEndDate || todo.repeatEndDate,
+        isRecurring: (updateData.repeatType || todo.repeatType) !== 'none'
+      }
+    }, { new: true });
+    
+    console.log('Main todo updated:', updatedTodo._id);
+    
+    if (shouldRegenerate && updatedTodo.isRecurring) {
+      console.log('Regenerating recurring todos');
+      try {
+        await generateRecurringTodos(updatedTodo);
+      } catch (error) {
+        console.error('Error regenerating recurring todos:', error);
+      }
+    }
+    
+    const currentDate = new Date().toLocaleString();
+    const newActivity = new Activity({
+      date: currentDate,
+      activity: 'Update todo',
+      detail: `${req.user.username} updated todo: ${req.params.todoId}`
+    });
+    await newActivity.save();
+    
+    return res.status(200).json({
+      success: true,
+      todo: updatedTodo,
+      message: 'Todo updated successfully'
+    });
 
   } catch (error) {
+    console.error('Error in updateTodo:', error);
     next(error);
   }
 };
