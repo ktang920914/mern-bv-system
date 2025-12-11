@@ -26,12 +26,9 @@ async function generateRecurringTodos(mainTodo) {
     }));
 
     await Todo.insertMany(recurringTodos);
-    console.log(`Generated ${recurringTodos.length} recurring todos for activity: ${activity}`);
-    
     await Todo.findByIdAndUpdate(_id, { isRecurring: true });
     
   } catch (error) {
-    console.error('Error generating recurring todos:', error);
     throw error;
   }
 }
@@ -253,18 +250,8 @@ export const updateTodo = async (req, res, next) => {
       selectedCodes,
       ...updateData 
     } = req.body;
-    
-    console.log('Updating todo:', {
-      todoId: req.params.todoId,
-      action,
-      updateType,
-      isGenerated: todo.isGenerated,
-      parentTodo: todo.parentTodo,
-      updateData
-    });
 
     if (updateType === 'instance' && todo.isGenerated) {
-      console.log('Updating instance only - limited fields');
       
       const updatedTodo = await Todo.findByIdAndUpdate(req.params.todoId, {
         $set: {
@@ -294,17 +281,9 @@ export const updateTodo = async (req, res, next) => {
     
     const shouldRegenerate = repeatTypeChanged || repeatIntervalChanged || repeatEndDateChanged;
     
-    console.log('Repeat settings changed:', {
-      repeatTypeChanged,
-      repeatIntervalChanged,
-      repeatEndDateChanged,
-      shouldRegenerate,
-      oldRepeatType: todo.repeatType,
-      newRepeatType: updateData.repeatType
-    });
+    
     
     if (shouldRegenerate && todo.isRecurring) {
-      console.log('Deleting old recurring instances');
       await Todo.deleteMany({ parentTodo: req.params.todoId });
     }
     
@@ -321,10 +300,8 @@ export const updateTodo = async (req, res, next) => {
       }
     }, { new: true });
     
-    console.log('Main todo updated:', updatedTodo._id);
     
     if (shouldRegenerate && updatedTodo.isRecurring) {
-      console.log('Regenerating recurring todos');
       try {
         await generateRecurringTodos(updatedTodo);
       } catch (error) {
