@@ -73,6 +73,9 @@ export const calculateOutputs = async (req, res, next) => {
         // 计算平均值的数据类型
         const isAverage = averageDataTypes.includes(data);
         
+        // 特殊处理 wastage：只累加正值
+        const isWastage = data === 'wastage';
+        
         // 初始化计数器和总和（用于计算平均值）
         const monthlyCounts = {
             jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0,
@@ -96,12 +99,19 @@ export const calculateOutputs = async (req, res, next) => {
                 value = 0;
             }
             
-            if (isAverage) {
+            // 如果是 wastage，只累加正值
+            if (isWastage) {
+                // 只累加大于 0 的值
+                if (value > 0) {
+                    monthlyData[monthKey] += value;
+                }
+                // 如果 value <= 0，直接忽略（不累加）
+            } else if (isAverage) {
                 // 对于平均值数据类型，累加值和计数
                 monthlyData[monthKey] += value;
                 monthlyCounts[monthKey]++;
             } else {
-                // 对于总和数据类型，直接累加
+                // 对于其他总和数据类型，直接累加
                 monthlyData[monthKey] += value;
             }
         });
