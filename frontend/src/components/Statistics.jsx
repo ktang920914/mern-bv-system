@@ -1351,7 +1351,7 @@ const Statistics = () => {
             color="blue"
             className='cursor-pointer'
           >
-            Go to Jobs
+            Go Jobs
           </Button>
           <Button 
             onClick={generateJobReport}
