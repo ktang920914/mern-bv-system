@@ -718,6 +718,17 @@ const Statistics = () => {
     const totalOrder = yearlyData.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
     const totalDowntime = yearlyData.reduce((sum, job) => sum + (Number(job.downtime) || 0), 0)
     
+    // 修改：只相加 positive wastage 值
+    const totalWastage = yearlyData.reduce((sum, job) => {
+      const wastage = Number(job.wastage) || 0
+      // 只相加正值，忽略负值
+      return sum + (wastage > 0 ? wastage : 0)
+    }, 0)
+    
+    const totalOutput = yearlyData.reduce((sum, job) => sum + (Number(job.totaloutput) || 0), 0)
+    const totalScrewOut = yearlyData.reduce((sum, job) => sum + (Number(job.screwout) || 0), 0)
+    const totalProdLeadTime = yearlyData.reduce((sum, job) => sum + (Number(job.prodleadtime) || 0), 0)
+    
     // 统计跨天工作数量
     const multiDayJobs = events.filter(event => event.resource.isMultiDay).length
     
@@ -738,7 +749,7 @@ const Statistics = () => {
       ? yearlyData.reduce((sum, job) => sum + (Number(job.oee) || 0), 0) / yearlyData.length
       : 0
 
-    // 按 Job Code 分组统计
+    // 按 Job Code 分组统计 - 增强版
     const jobsByCode = {}
     yearlyData.forEach(job => {
       const code = job.code || 'Unknown'
@@ -747,22 +758,61 @@ const Statistics = () => {
           count: 0,
           totalOrder: 0,
           totalDuration: 0,
-          multiDayCount: 0
+          totalOutput: 0,
+          totalWastage: 0,
+          totalScrewOut: 0,
+          totalProdLeadTime: 0,
+          multiDayCount: 0,
+          avgAvailability: 0,
+          avgPerformance: 0,
+          avgQuality: 0,
+          avgOEE: 0,
+          availabilitySum: 0,
+          performanceSum: 0,
+          qualitySum: 0,
+          oeeSum: 0
         }
       }
-      jobsByCode[code].count++
-      jobsByCode[code].totalOrder += Number(job.totalorder) || 0
+      
+      const jobData = jobsByCode[code]
+      jobData.count++
+      jobData.totalOrder += Number(job.totalorder) || 0
+      jobData.totalOutput += Number(job.totaloutput) || 0
+      
+      // 修改：只相加 positive wastage 值
+      const wastage = Number(job.wastage) || 0
+      jobData.totalWastage += (wastage > 0 ? wastage : 0)
+      
+      jobData.totalScrewOut += Number(job.screwout) || 0
+      jobData.totalProdLeadTime += Number(job.prodleadtime) || 0
       
       if (job.starttime && job.endtime) {
         const start = moment(job.starttime)
         const end = moment(job.endtime)
         const duration = end.diff(start, 'hours', true)
-        jobsByCode[code].totalDuration += duration
+        jobData.totalDuration += duration
         
         // 统计跨天工作
         if (!start.isSame(end, 'day')) {
-          jobsByCode[code].multiDayCount++
+          jobData.multiDayCount++
         }
+      }
+      
+      // 累计性能指标用于计算平均值
+      jobData.availabilitySum += Number(job.availability) || 0
+      jobData.performanceSum += Number(job.performance) || 0
+      jobData.qualitySum += Number(job.quality) || 0
+      jobData.oeeSum += Number(job.oee) || 0
+    })
+
+    // 计算每个 Job Code 的平均值
+    Object.keys(jobsByCode).forEach(code => {
+      const jobData = jobsByCode[code]
+      if (jobData.count > 0) {
+        jobData.avgAvailability = (jobData.availabilitySum / jobData.count) * 100
+        jobData.avgPerformance = (jobData.performanceSum / jobData.count) * 100
+        jobData.avgQuality = (jobData.qualitySum / jobData.count) * 100
+        jobData.avgOEE = (jobData.oeeSum / jobData.count) * 100
       }
     })
 
@@ -775,6 +825,11 @@ const Statistics = () => {
         busiestCode = code
       }
     })
+
+    // 计算废品率（使用 positive wastage）
+    const wastageRate = totalOutput > 0 
+      ? ((totalWastage / totalOutput) * 100).toFixed(2)
+      : '0.00'
 
     return (
       <div className="mt-4">
@@ -823,7 +878,50 @@ const Statistics = () => {
             </div>
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Downtime (mins)</div>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Avg: {(totalDowntime / totalJobs).toFixed(1)}m/job
+              Avg: {totalJobs > 0 ? (totalDowntime / totalJobs).toFixed(1) : 0}m/job
+            </div>
+          </div>
+        </div>
+        
+        {/* 新增统计卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="text-center p-4 bg-indigo-50 dark:bg-indigo-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+              {totalOutput.toLocaleString()}
+            </div>
+            <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Total Output</div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Avg: {totalJobs > 0 ? Math.round(totalOutput / totalJobs) : 0}/job
+            </div>
+          </div>
+          
+          <div className="text-center p-4 bg-teal-50 dark:bg-teal-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-teal-600 dark:text-teal-400">
+              {totalWastage.toLocaleString()}
+            </div>
+            <div className="text-sm text-teal-600 dark:text-teal-400 font-medium">Total Wastage</div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Rate: {wastageRate}%
+            </div>
+          </div>
+          
+          <div className="text-center p-4 bg-orange-50 dark:bg-orange-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+              {totalScrewOut.toLocaleString()}
+            </div>
+            <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">Total Screw Out</div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Avg: {totalJobs > 0 ? Math.round(totalScrewOut / totalJobs) : 0}/job
+            </div>
+          </div>
+          
+          <div className="text-center p-4 bg-cyan-50 dark:bg-cyan-900 rounded-lg shadow">
+            <div className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
+              {totalProdLeadTime.toFixed(1)}
+            </div>
+            <div className="text-sm text-cyan-600 dark:text-cyan-400 font-medium">Prod Lead Time</div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Avg: {(totalProdLeadTime / totalJobs).toFixed(1)} days/job
             </div>
           </div>
         </div>
@@ -887,11 +985,16 @@ const Statistics = () => {
           </div>
         </div>
         
-        {/* Job Code 分布 */}
+        {/* Job Code 分布 - 增强版 */}
         {Object.keys(jobsByCode).length > 0 && (
           <div className="mt-4">
-            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">Jobs by Code</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-md font-semibold text-gray-900 dark:text-white">Jobs by Code</h4>
+              <Badge color="gray" size="sm">
+                {Object.keys(jobsByCode).length} Job Codes
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {Object.entries(jobsByCode).map(([code, data]) => {
                 const percentage = (data.count / totalJobs * 100).toFixed(1)
                 const colorMap = {
@@ -907,25 +1010,112 @@ const Statistics = () => {
                 }
                 const bgClass = colorMap[code] || 'border-gray-500 bg-gray-50 dark:bg-gray-900'
                 
+                // 计算废品率（使用 positive wastage）
+                const wastageRate = data.totalOutput > 0 
+                  ? ((data.totalWastage / data.totalOutput) * 100).toFixed(2)
+                  : '0.00'
+                
+                // 计算平均生产前置时间
+                const avgProdLeadTime = data.count > 0 
+                  ? (data.totalProdLeadTime / data.count).toFixed(1)
+                  : '0.0'
+                
                 return (
                   <div 
                     key={code} 
                     className={`p-3 rounded-lg border-l-4 ${bgClass}`}
                   >
-                    <div className="text-lg font-bold">{code}</div>
-                    <div className="text-sm">{data.count} jobs</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {percentage}% • {data.totalDuration.toFixed(1)}h
-                      {data.multiDayCount > 0 && (
-                        <div className="text-blue-500 mt-1">
-                          {data.multiDayCount} multi-day
+                    {/* 头部信息 */}
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-lg font-bold text-gray-900">{code}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {data.count} jobs • {percentage}%
                         </div>
-                      )}
+                      </div>
+                      <Badge color="info" size="sm">
+                        {data.totalDuration.toFixed(1)}h
+                      </Badge>
                     </div>
+                    
+                    {/* 产量信息 */}
+                    <div className="space-y-1 text-xs mb-3">
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="font-medium text-green-600 dark:text-green-400">Order:</div>
+                        <div className="text-green-600 dark:text-green-400">{data.totalOrder.toLocaleString()}</div>
+                        
+                        <div className="font-medium text-green-600 dark:text-green-400">Output:</div>
+                        <div className="text-green-600 dark:text-green-400">{data.totalOutput.toLocaleString()}</div>
+                        
+                        <div className="font-medium text-red-600 dark:text-red-400">Wastage:</div>
+                        <div className="text-red-600 dark:text-red-400">
+                          {data.totalWastage.toLocaleString()} ({wastageRate}%)
+                        </div>
+                        
+                        <div className="font-medium text-red-600 dark:text-red-400">Screw Out:</div>
+                        <div className="text-red-600 dark:text-red-400">{data.totalScrewOut.toLocaleString()}</div>
+                        
+                        <div className="font-medium text-gray-800">Lead Time:</div>
+                        <div className='text-gray-800'>{avgProdLeadTime} days</div>
+                      </div>
+                    </div>
+                    
+                    {/* 性能指标 */}
+                    <div className="space-y-1 text-xs">
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="font-medium text-yellow-600">OEE:</div>
+                        <div className="text-yellow-600 dark:text-yellow-400">{data.avgOEE.toFixed(1)}%</div>
+                        
+                        <div className="font-medium text-blue-600">Avail:</div>
+                        <div className="text-blue-600 dark:text-blue-400">{data.avgAvailability.toFixed(1)}%</div>
+                        
+                        <div className="font-medium text-green-600">Perf:</div>
+                        <div className="text-green-600 dark:text-green-400">{data.avgPerformance.toFixed(1)}%</div>
+                        
+                        <div className="font-medium text-purple-600">Quality:</div>
+                        <div className="text-purple-600 dark:text-purple-400">{data.avgQuality.toFixed(1)}%</div>
+                      </div>
+                    </div>
+                    
+                    {/* 底部信息 */}
+                    {data.multiDayCount > 0 && (
+                      <div className="mt-2 text-xs">
+                        <Badge color="blue" size="xs">
+                          {data.multiDayCount} multi-day
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
+            
+            {/* 汇总信息 */}
+            {Object.keys(jobsByCode).length > 1 && (
+              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="text-sm font-semibold mb-2">Summary by Job Code</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <div className="font-medium">Total Output:</div>
+                    <div className="text-green-600 dark:text-green-400">{totalOutput.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium">Total Wastage (Positive):</div>
+                    <div className="text-red-600 dark:text-red-400">
+                      {totalWastage.toLocaleString()} ({wastageRate}%)
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-medium">Total Screw Out:</div>
+                    <div>{totalScrewOut.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium">Avg Lead Time:</div>
+                    <div>{(totalProdLeadTime / totalJobs).toFixed(1)} days</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1104,10 +1294,16 @@ const Statistics = () => {
                   <span className="font-medium">Operating Time:</span> {selectedJob.operatingtime || 0} mins
                 </div>
                 <div>
-                  <span className="font-medium">ARR:</span> {selectedJob.arr || 0}
+                  <span className="font-medium">Output:</span> {selectedJob.totaloutput || 0}
                 </div>
                 <div>
                   <span className="font-medium">Wastage:</span> {selectedJob.wastage || 0}
+                </div>
+                <div>
+                  <span className="font-medium">Screw Out:</span> {selectedJob.screwout || 0}
+                </div>
+                <div>
+                  <span className="font-medium">ARR:</span> {selectedJob.arr || 0}
                 </div>
               </div>
             </div>
@@ -1210,4 +1406,3 @@ const Statistics = () => {
 }
 
 export default Statistics
-
