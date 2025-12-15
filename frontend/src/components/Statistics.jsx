@@ -405,203 +405,6 @@ const Statistics = () => {
     )
   }
 
-  const goToPrevMonth = () => {
-    setCurrentDate(currentDate.clone().subtract(1, 'month'))
-  }
-
-  const goToNextMonth = () => {
-    setCurrentDate(currentDate.clone().add(1, 'month'))
-  }
-
-  const goToToday = () => {
-    setCurrentDate(moment())
-  }
-
-  const goToPrevYear = () => {
-    const newDate = currentDate.clone().subtract(1, 'year')
-    setCalendarYear(newDate.year())
-    setCurrentDate(newDate)
-  }
-
-  const goToNextYear = () => {
-    const newDate = currentDate.clone().add(1, 'year')
-    setCalendarYear(newDate.year())
-    setCurrentDate(newDate)
-  }
-
-  const getEventsForDay = (day) => {
-    return events.filter(event => 
-      moment(event.start).isSame(day, 'day')
-    )
-  }
-
-  const handleDayClick = (day, dayEvents) => {
-    if (dayEvents.length > 0) {
-      setSelectedDay({
-        date: day,
-        events: dayEvents
-      })
-      setShowDayEvents(true)
-    }
-  }
-
-  const DayEventsModal = () => {
-    if (!selectedDay) return null
-
-    return (
-      <Modal show={showDayEvents} onClose={() => setShowDayEvents(false)} size="md">
-        <ModalHeader>
-          Jobs on {selectedDay.date.format('MMMM D, YYYY')}
-        </ModalHeader>
-        <ModalBody>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {selectedDay.events.map((event, index) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border ${
-                  theme === 'light' 
-                    ? 'bg-white border-gray-200' 
-                    : 'bg-gray-800 border-gray-700 text-white'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="font-semibold text-sm">{event.resource.code} - {event.resource.lotno}</div>
-                  <Badge 
-                    color="info"
-                    size="sm"
-                  >
-                    {event.resource.duration || 0}h
-                  </Badge>
-                </div>
-                
-                <div className={`grid grid-cols-2 gap-2 text-xs mb-2 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div>
-                    <span className="font-medium">Start:</span> {moment(event.start).format('HH:mm')}
-                  </div>
-                  <div>
-                    <span className="font-medium">End:</span> {moment(event.end).format('HH:mm')}
-                  </div>
-                </div>
-                
-                <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div><span className="font-medium">Material:</span> {event.resource.material}</div>
-                  <div><span className="font-medium">Order:</span> {event.resource.totalorder}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="gray" className='cursor-pointer' onClick={() => setShowDayEvents(false)}>
-            Close
-          </Button>
-        </ModalFooter>
-      </Modal>
-    )
-  }
-
-  const JobDetailsModal = () => {
-    if (!selectedJob) return null
-
-    return (
-      <Modal show={showJobDetails} onClose={() => setShowJobDetails(false)} size="lg">
-        <ModalHeader>
-          Job Details - {selectedJob.code} / {selectedJob.lotno}
-        </ModalHeader>
-        <ModalBody>
-          <div className={`space-y-4 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Production Information</h4>
-                <div className="space-y-1 text-sm">
-                  <div><span className="font-medium">Code:</span> {selectedJob.code}</div>
-                  <div><span className="font-medium">Lot No:</span> {selectedJob.lotno}</div>
-                  <div><span className="font-medium">Material:</span> {selectedJob.material}</div>
-                  <div><span className="font-medium">Color Code:</span> {selectedJob.colourcode}</div>
-                  <div><span className="font-medium">Total Order:</span> {selectedJob.totalorder}</div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold mb-2">Time Information</h4>
-                <div className="space-y-1 text-sm">
-                  <div><span className="font-medium">Start:</span> {selectedJob.starttime}</div>
-                  <div><span className="font-medium">End:</span> {selectedJob.endtime}</div>
-                  <div><span className="font-medium">Order Date:</span> {selectedJob.orderdate}</div>
-                  <div><span className="font-medium">Duration:</span> {selectedJob.duration || 0} hours</div>
-                  <div><span className="font-medium">Prod Lead Time:</span> {selectedJob.prodleadtime || 0} days</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-2">Performance Metrics</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {selectedJob.availability ? (selectedJob.availability * 100).toFixed(1) : 0}%
-                  </div>
-                  <div className="text-sm text-blue-600 dark:text-blue-400">Availability</div>
-                </div>
-                
-                <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {selectedJob.performance ? (selectedJob.performance * 100).toFixed(1) : 0}%
-                  </div>
-                  <div className="text-sm text-green-600 dark:text-green-400">Performance</div>
-                </div>
-                
-                <div className="text-center p-3 bg-purple-50 dark:bg-purple-900 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {selectedJob.quality ? (selectedJob.quality * 100).toFixed(1) : 0}%
-                  </div>
-                  <div className="text-sm text-purple-600 dark:text-purple-400">Quality</div>
-                </div>
-                
-                <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                    {selectedJob.oee ? (selectedJob.oee * 100).toFixed(1) : 0}%
-                  </div>
-                  <div className="text-sm text-yellow-600 dark:text-yellow-400">OEE</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-2">Additional Information</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Downtime:</span> {selectedJob.downtime || 0} mins
-                </div>
-                <div>
-                  <span className="font-medium">Operating Time:</span> {selectedJob.operatingtime || 0} mins
-                </div>
-                <div>
-                  <span className="font-medium">ARR:</span> {selectedJob.arr || 0}
-                </div>
-                <div>
-                  <span className="font-medium">Wastage:</span> {selectedJob.wastage || 0}
-                </div>
-              </div>
-            </div>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="gray" className='cursor-pointer' onClick={() => setShowJobDetails(false)}>
-            Close
-          </Button>
-          <Button 
-            color="blue" 
-            className='cursor-pointer'
-            onClick={() => window.location.href = '/?tab=Jobs'}
-          >
-            Go to Jobs
-          </Button>
-        </ModalFooter>
-      </Modal>
-    )
-  }
-
   const MobileCalendar = () => {
     const generateCalendar = () => {
       const firstDayOfMonth = currentDate.clone().startOf('month')
@@ -637,10 +440,14 @@ const Statistics = () => {
             <div className="flex justify-between items-center mb-2">
               {/* 年份切换按钮 - 左侧 */}
               <div className="flex space-x-1">
-                <Button size="xs" className='cursor-pointer px-2' onClick={goToPrevYear} color="gray">
+                <Button size="xs" className='cursor-pointer px-2' onClick={() => {
+                  const newDate = currentDate.clone().subtract(1, 'year')
+                  setCalendarYear(newDate.year())
+                  setCurrentDate(newDate)
+                }} color="gray">
                   «
                 </Button>
-                <Button size="sm" className='cursor-pointer px-2' onClick={goToPrevMonth} color="gray">
+                <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().subtract(1, 'month'))} color="gray">
                   ‹
                 </Button>
               </div>
@@ -653,17 +460,21 @@ const Statistics = () => {
               
               {/* 年份切换按钮 - 右侧 */}
               <div className="flex space-x-1">
-                <Button size="sm" className='cursor-pointer px-2' onClick={goToNextMonth} color="gray">
+                <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().add(1, 'month'))} color="gray">
                   ›
                 </Button>
-                <Button size="xs" className='cursor-pointer px-2' onClick={goToNextYear} color="gray">
+                <Button size="xs" className='cursor-pointer px-2' onClick={() => {
+                  const newDate = currentDate.clone().add(1, 'year')
+                  setCalendarYear(newDate.year())
+                  setCurrentDate(newDate)
+                }} color="gray">
                   »
                 </Button>
               </div>
             </div>
             
             <div className="flex justify-center">
-              <Button size="sm" onClick={goToToday} color="blue">
+              <Button size="sm" onClick={() => setCurrentDate(moment())} color="blue">
                 Today
               </Button>
             </div>
@@ -683,7 +494,9 @@ const Statistics = () => {
                 {week.map((day, dayIndex) => {
                   const isCurrentMonth = day.month() === currentDate.month()
                   const isToday = day.isSame(moment(), 'day')
-                  const dayEvents = getEventsForDay(day)
+                  const dayEvents = events.filter(event => 
+                    moment(event.start).isSame(day, 'day')
+                  )
 
                   return (
                     <div
@@ -734,7 +547,15 @@ const Statistics = () => {
                         {dayEvents.length > 2 && (
                           <div 
                             className="text-[10px] text-blue-500 text-center bg-blue-50 dark:bg-blue-900 rounded p-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
-                            onClick={() => handleDayClick(day, dayEvents)}
+                            onClick={() => {
+                              if (dayEvents.length > 0) {
+                                setSelectedDay({
+                                  date: day,
+                                  events: dayEvents
+                                })
+                                setShowDayEvents(true)
+                              }
+                            }}
                           >
                             +{dayEvents.length - 2} more
                           </div>
@@ -744,7 +565,15 @@ const Statistics = () => {
                       {dayEvents.length > 0 && (
                         <div 
                           className="absolute inset-0 cursor-pointer"
-                          onClick={() => handleDayClick(day, dayEvents)}
+                          onClick={() => {
+                            if (dayEvents.length > 0) {
+                              setSelectedDay({
+                                date: day,
+                                events: dayEvents
+                              })
+                              setShowDayEvents(true)
+                            }
+                          }}
                         />
                       )}
                     </div>
@@ -1008,6 +837,163 @@ const Statistics = () => {
     )
   }
 
+  const DayEventsModal = () => {
+    if (!selectedDay) return null
+
+    return (
+      <Modal show={showDayEvents} onClose={() => setShowDayEvents(false)} size="md">
+        <ModalHeader>
+          Jobs on {selectedDay.date.format('MMMM D, YYYY')}
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {selectedDay.events.map((event, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border ${
+                  theme === 'light' 
+                    ? 'bg-white border-gray-200' 
+                    : 'bg-gray-800 border-gray-700 text-white'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="font-semibold text-sm">{event.resource.code} - {event.resource.lotno}</div>
+                  <Badge 
+                    color="info"
+                    size="sm"
+                  >
+                    {event.resource.duration || 0}h
+                  </Badge>
+                </div>
+                
+                <div className={`grid grid-cols-2 gap-2 text-xs mb-2 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                  <div>
+                    <span className="font-medium">Start:</span> {moment(event.start).format('HH:mm')}
+                  </div>
+                  <div>
+                    <span className="font-medium">End:</span> {moment(event.end).format('HH:mm')}
+                  </div>
+                </div>
+                
+                <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                  <div><span className="font-medium">Material:</span> {event.resource.material}</div>
+                  <div><span className="font-medium">Order:</span> {event.resource.totalorder}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="gray" className='cursor-pointer' onClick={() => setShowDayEvents(false)}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
+    )
+  }
+
+  const JobDetailsModal = () => {
+    if (!selectedJob) return null
+
+    return (
+      <Modal show={showJobDetails} onClose={() => setShowJobDetails(false)} size="lg">
+        <ModalHeader>
+          Job Details - {selectedJob.code} / {selectedJob.lotno}
+        </ModalHeader>
+        <ModalBody>
+          <div className={`space-y-4 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold mb-2">Production Information</h4>
+                <div className="space-y-1 text-sm">
+                  <div><span className="font-medium">Code:</span> {selectedJob.code}</div>
+                  <div><span className="font-medium">Lot No:</span> {selectedJob.lotno}</div>
+                  <div><span className="font-medium">Material:</span> {selectedJob.material}</div>
+                  <div><span className="font-medium">Color Code:</span> {selectedJob.colourcode}</div>
+                  <div><span className="font-medium">Total Order:</span> {selectedJob.totalorder}</div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-2">Time Information</h4>
+                <div className="space-y-1 text-sm">
+                  <div><span className="font-medium">Start:</span> {selectedJob.starttime}</div>
+                  <div><span className="font-medium">End:</span> {selectedJob.endtime}</div>
+                  <div><span className="font-medium">Order Date:</span> {selectedJob.orderdate}</div>
+                  <div><span className="font-medium">Duration:</span> {selectedJob.duration || 0} hours</div>
+                  <div><span className="font-medium">Prod Lead Time:</span> {selectedJob.prodleadtime || 0} days</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-2">Performance Metrics</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {selectedJob.availability ? (selectedJob.availability * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-sm text-blue-600 dark:text-blue-400">Availability</div>
+                </div>
+                
+                <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {selectedJob.performance ? (selectedJob.performance * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400">Performance</div>
+                </div>
+                
+                <div className="text-center p-3 bg-purple-50 dark:bg-purple-900 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {selectedJob.quality ? (selectedJob.quality * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-sm text-purple-600 dark:text-purple-400">Quality</div>
+                </div>
+                
+                <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                    {selectedJob.oee ? (selectedJob.oee * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-sm text-yellow-600 dark:text-yellow-400">OEE</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-2">Additional Information</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Downtime:</span> {selectedJob.downtime || 0} mins
+                </div>
+                <div>
+                  <span className="font-medium">Operating Time:</span> {selectedJob.operatingtime || 0} mins
+                </div>
+                <div>
+                  <span className="font-medium">ARR:</span> {selectedJob.arr || 0}
+                </div>
+                <div>
+                  <span className="font-medium">Wastage:</span> {selectedJob.wastage || 0}
+                </div>
+              </div>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="gray" className='cursor-pointer' onClick={() => setShowJobDetails(false)}>
+            Close
+          </Button>
+          <Button 
+            color="blue" 
+            className='cursor-pointer'
+            onClick={() => window.location.href = '/?tab=Jobs'}
+          >
+            Go to Jobs
+          </Button>
+        </ModalFooter>
+      </Modal>
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1060,7 +1046,7 @@ const Statistics = () => {
                 startAccessor="start"
                 endAccessor="end"
                 eventPropGetter={eventStyleGetter}
-                views={['month', 'week', 'day']}
+                views={['month']}
                 defaultView="month"
                 date={currentDate.toDate()}
                 onNavigate={(newDate) => {
