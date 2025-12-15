@@ -1318,7 +1318,7 @@ const Statistics = () => {
             className='cursor-pointer'
             onClick={() => window.location.href = '/?tab=Jobs'}
           >
-            Go to Jobs
+            Go Jobs
           </Button>
         </ModalFooter>
       </Modal>
