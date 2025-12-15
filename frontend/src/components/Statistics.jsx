@@ -210,7 +210,7 @@ const Statistics = () => {
         .sort((a, b) => {
           const timeA = a.starttime ? new Date(a.starttime).getTime() : 0
           const timeB = b.starttime ? new Date(b.starttime).getTime() : 0
-          return timeA - timeB
+          return timeB - timeA
         })
 
       // 数据行
@@ -335,7 +335,7 @@ const Statistics = () => {
       .sort((a, b) => {
         const timeA = new Date(a.resource.starttime).getTime()
         const timeB = new Date(b.resource.starttime).getTime()
-        return timeA - timeB // 最早的在前
+        return timeB - timeA // 最早的在前
       })
     
     if (dayEvents.length > 0) {
