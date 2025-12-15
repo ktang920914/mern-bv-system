@@ -55,24 +55,46 @@ const Statistics = () => {
         
         setJobsData(sortedData)
         
-        // 转换 Job 数据为日历事件
+        // ⭐ 重点：改进的事件生成逻辑（解决跨天显示问题）
         const calendarEvents = sortedData.map(job => {
-          // 处理日期格式
-          const startDate = job.starttime ? new Date(job.starttime) : new Date()
-          const endDate = job.endtime ? new Date(job.endtime) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // 默认2小时
-          
-          // 计算持续时间（小时）
-          const duration = (endDate - startDate) / (1000 * 60 * 60)
-          
+          // 确保有默认值
+          const start = job.starttime
+            ? moment(job.starttime)
+            : moment().startOf('day').add(8, 'hours') // 默认8AM开始
+
+          const end = job.endtime
+            ? moment(job.endtime)
+            : start.clone().add(2, 'hours') // 默认2小时
+
+          // 确保 end 时间不早于 start
+          const adjustedEnd = end.isBefore(start) 
+            ? start.clone().add(2, 'hours')
+            : end
+
+          const isMultiDay = !start.isSame(adjustedEnd, 'day')
+          const duration = adjustedEnd.diff(start, 'hours', true).toFixed(1)
+
           return {
             id: job._id,
-            title: `${job.code} - ${job.lotno}`,
-            start: startDate,
-            end: endDate,
-            allDay: false,
+            title: `${job.code || 'N/A'} - ${job.lotno || 'No Lot'}`,
+            
+            // ⭐ 关键：日历事件时间处理
+            start: start.toDate(),
+            
+            // 跨天事件：显示为全天事件（占满整行）
+            // 非跨天：显示实际时间段
+            end: isMultiDay
+              ? adjustedEnd.clone().add(1, 'day').startOf('day').toDate()
+              : adjustedEnd.toDate(),
+            
+            allDay: isMultiDay,
+            
             resource: {
               ...job,
-              duration: duration.toFixed(1)
+              duration: duration,
+              actualStart: start.toISOString(),
+              actualEnd: adjustedEnd.toISOString(),
+              isMultiDay: isMultiDay
             }
           }
         })
@@ -210,7 +232,7 @@ const Statistics = () => {
         .sort((a, b) => {
           const timeA = a.starttime ? new Date(a.starttime).getTime() : 0
           const timeB = b.starttime ? new Date(b.starttime).getTime() : 0
-          return timeB - timeA
+          return timeB - timeA // 最新的在前
         })
 
       // 数据行
@@ -301,6 +323,9 @@ const Statistics = () => {
 
     const backgroundColor = colorMap[jobCode] || '#6B7280' // 默认灰色
 
+    // 跨天事件使用不同的样式
+    const isMultiDay = event.resource.isMultiDay
+    
     return {
       style: {
         backgroundColor,
@@ -308,26 +333,37 @@ const Statistics = () => {
         opacity: 0.9,
         color: 'white',
         border: '0px',
-        fontSize: '11px',
-        padding: '1px 3px',
-        fontWeight: '500',
+        fontSize: isMultiDay ? '10px' : '11px',
+        padding: isMultiDay ? '2px 4px' : '1px 3px',
+        fontWeight: isMultiDay ? 'normal' : '500',
         margin: '1px 0',
-        height: '20px',
+        height: isMultiDay ? '18px' : '20px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        // 跨天事件添加虚线边框以示区别
+        borderStyle: isMultiDay ? 'dashed' : 'none',
+        borderWidth: isMultiDay ? '1px' : '0'
       }
     }
   }
 
   const handleSelectEvent = (event) => {
-    setSelectedJob(event.resource)
+    // 使用实际时间而非日历调整后的时间
+    const actualStart = event.resource.actualStart || event.resource.starttime
+    const actualEnd = event.resource.actualEnd || event.resource.endtime
+    
+    setSelectedJob({
+      ...event.resource,
+      starttime: actualStart,
+      endtime: actualEnd
+    })
     setShowJobDetails(true)
   }
 
   const handleSelectSlot = (slotInfo) => {
-    // 获取当天的事件并按 starttime 排序
+    // 获取当天的事件并按 starttime 排序（最早的在前）
     const dayEvents = events
       .filter(event => 
         moment(event.start).isSame(slotInfo.start, 'day')
@@ -335,7 +371,7 @@ const Statistics = () => {
       .sort((a, b) => {
         const timeA = new Date(a.resource.starttime).getTime()
         const timeB = new Date(b.resource.starttime).getTime()
-        return timeB - timeA // 最早的在前
+        return timeA - timeB // 最早的在前
       })
     
     if (dayEvents.length > 0) {
@@ -413,15 +449,23 @@ const Statistics = () => {
 
   const CustomEvent = ({ event }) => {
     const duration = event.resource.duration || 0
+    const isMultiDay = event.resource.isMultiDay
     
     return (
       <div className="text-xs p-0.5">
-        <div className="font-semibold truncate" title={event.title}>
+        <div className={`font-semibold truncate ${isMultiDay ? 'text-[10px]' : ''}`} title={event.title}>
           {event.resource.code} - {event.resource.lotno}
         </div>
-        <div className="text-[10px] opacity-90">
-          {duration}h
-        </div>
+        {!isMultiDay && (
+          <div className="text-[10px] opacity-90">
+            {duration}h
+          </div>
+        )}
+        {isMultiDay && (
+          <div className="text-[9px] opacity-80 italic">
+            {moment(event.resource.actualStart).format('MM/DD HH:mm')} → {moment(event.resource.actualEnd).format('MM/DD HH:mm')}
+          </div>
+        )}
       </div>
     )
   }
@@ -516,7 +560,7 @@ const Statistics = () => {
                   const isCurrentMonth = day.month() === currentDate.month()
                   const isToday = day.isSame(moment(), 'day')
                   
-                  // 获取当天事件并按 starttime 排序
+                  // 获取当天事件并按 starttime 排序（最早的在前）
                   const dayEvents = events
                     .filter(event => 
                       moment(event.start).isSame(day, 'day')
@@ -549,6 +593,7 @@ const Statistics = () => {
                       <div className="space-y-1">
                         {dayEvents.slice(0, 2).map((event, eventIndex) => {
                           const jobCode = event.resource.code || 'L1'
+                          const isMultiDay = event.resource.isMultiDay
                           const colorMap = {
                             'L1': 'bg-blue-500',
                             'L2': 'bg-green-500',
@@ -561,15 +606,17 @@ const Statistics = () => {
                             'L12': 'bg-orange-500'
                           }
                           const bgColor = colorMap[jobCode] || 'bg-gray-500'
+                          const borderClass = isMultiDay ? 'border-dashed border border-white' : ''
                           
                           return (
                             <div
                               key={eventIndex}
-                              className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor}`}
-                              title={`${event.resource.code} - ${event.resource.lotno} (${moment(event.resource.starttime).format('HH:mm')})`}
+                              className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor} ${borderClass} ${isMultiDay ? 'italic' : ''}`}
+                              title={`${event.resource.code} - ${event.resource.lotno} ${isMultiDay ? '(Multi-day)' : ''}`}
                               onClick={() => handleSelectEvent(event)}
                             >
                               {event.resource.code}
+                              {isMultiDay && ' ↗'}
                             </div>
                           )
                         })}
@@ -642,6 +689,10 @@ const Statistics = () => {
             <span className="text-sm text-gray-700 dark:text-gray-300">{code}</span>
           </div>
         ))}
+        <div className="flex items-center space-x-2 ml-auto">
+          <div className="w-3 h-3 rounded border-dashed border border-gray-400" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">Multi-day</span>
+        </div>
       </div>
     )
   }
@@ -666,6 +717,9 @@ const Statistics = () => {
     
     const totalOrder = yearlyData.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
     const totalDowntime = yearlyData.reduce((sum, job) => sum + (Number(job.downtime) || 0), 0)
+    
+    // 统计跨天工作数量
+    const multiDayJobs = events.filter(event => event.resource.isMultiDay).length
     
     // 性能指标平均
     const avgAvailability = yearlyData.length > 0 
@@ -692,7 +746,8 @@ const Statistics = () => {
         jobsByCode[code] = {
           count: 0,
           totalOrder: 0,
-          totalDuration: 0
+          totalDuration: 0,
+          multiDayCount: 0
         }
       }
       jobsByCode[code].count++
@@ -701,7 +756,13 @@ const Statistics = () => {
       if (job.starttime && job.endtime) {
         const start = moment(job.starttime)
         const end = moment(job.endtime)
-        jobsByCode[code].totalDuration += end.diff(start, 'hours', true)
+        const duration = end.diff(start, 'hours', true)
+        jobsByCode[code].totalDuration += duration
+        
+        // 统计跨天工作
+        if (!start.isSame(end, 'day')) {
+          jobsByCode[code].multiDayCount++
+        }
       }
     })
 
@@ -732,7 +793,7 @@ const Statistics = () => {
             </div>
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Jobs</div>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {busiestCode} ({maxJobs} jobs)
+              {multiDayJobs} multi-day • {busiestCode} ({maxJobs} jobs)
             </div>
           </div>
           
@@ -742,7 +803,7 @@ const Statistics = () => {
             </div>
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Total Hours</div>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Avg: {(totalDuration / totalJobs).toFixed(1)}h/job
+              Avg: {totalJobs > 0 ? (totalDuration / totalJobs).toFixed(1) : 0}h/job
             </div>
           </div>
           
@@ -855,6 +916,11 @@ const Statistics = () => {
                     <div className="text-sm">{data.count} jobs</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {percentage}% • {data.totalDuration.toFixed(1)}h
+                      {data.multiDayCount > 0 && (
+                        <div className="text-blue-500 mt-1">
+                          {data.multiDayCount} multi-day
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -869,7 +935,7 @@ const Statistics = () => {
   const DayEventsModal = () => {
     if (!selectedDay) return null
 
-    // 确保事件按 starttime 排序
+    // 确保事件按 starttime 排序（最早的在前）
     const sortedEvents = [...selectedDay.events].sort((a, b) => {
       const timeA = new Date(a.resource.starttime).getTime()
       const timeB = new Date(b.resource.starttime).getTime()
@@ -883,55 +949,66 @@ const Statistics = () => {
         </ModalHeader>
         <ModalBody>
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {sortedEvents.map((event, index) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border ${
-                  theme === 'light' 
-                    ? 'bg-white border-gray-200' 
-                    : 'bg-gray-800 border-gray-700 text-white'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-semibold text-sm">
-                      {index + 1}. {event.resource.code} - {event.resource.lotno}
+            {sortedEvents.map((event, index) => {
+              const isMultiDay = event.resource.isMultiDay
+              const actualStart = event.resource.actualStart || event.resource.starttime
+              const actualEnd = event.resource.actualEnd || event.resource.endtime
+              
+              return (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg border ${
+                    theme === 'light' 
+                      ? 'bg-white border-gray-200' 
+                      : 'bg-gray-800 border-gray-700 text-white'
+                  } ${isMultiDay ? 'border-dashed' : ''}`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-semibold text-sm">
+                        {index + 1}. {event.resource.code} - {event.resource.lotno}
+                        {isMultiDay && (
+                          <Badge color="blue" size="xs" className="ml-2">
+                            Multi-day
+                          </Badge>
+                        )}
+                      </div>
+                      <div className={`text-xs mt-1 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                        Start: {moment(actualStart).format('MM/DD HH:mm')} 
+                        {actualEnd && 
+                          ` → End: ${moment(actualEnd).format('MM/DD HH:mm')}`
+                        }
+                      </div>
                     </div>
-                    <div className={`text-xs mt-1 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                      Start: {moment(event.resource.starttime).format('HH:mm')} 
-                      {event.resource.endtime && 
-                        ` → End: ${moment(event.resource.endtime).format('HH:mm')}`
-                      }
+                    <Badge 
+                      color="info"
+                      size="sm"
+                    >
+                      {event.resource.duration || 0}h
+                    </Badge>
+                  </div>
+                  
+                  <div className={`grid grid-cols-2 gap-2 text-xs mb-2 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                    <div>
+                      <span className="font-medium">Time:</span> 
+                      {moment(actualStart).format('HH:mm')} - {moment(actualEnd).format('HH:mm')}
+                    </div>
+                    <div>
+                      <span className="font-medium">Order:</span> {event.resource.totalorder}
                     </div>
                   </div>
-                  <Badge 
-                    color="info"
-                    size="sm"
-                  >
-                    {event.resource.duration || 0}h
-                  </Badge>
-                </div>
-                
-                <div className={`grid grid-cols-2 gap-2 text-xs mb-2 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div>
-                    <span className="font-medium">Time:</span> 
-                    {moment(event.start).format('HH:mm')} - {moment(event.end).format('HH:mm')}
-                  </div>
-                  <div>
-                    <span className="font-medium">Order:</span> {event.resource.totalorder}
+                  
+                  <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                    <div>
+                      <span className="font-medium">Material:</span> {event.resource.material}
+                    </div>
+                    <div>
+                      <span className="font-medium">Color Code:</span> {event.resource.colourcode}
+                    </div>
                   </div>
                 </div>
-                
-                <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div>
-                    <span className="font-medium">Material:</span> {event.resource.material}
-                  </div>
-                  <div>
-                    <span className="font-medium">Color Code:</span> {event.resource.colourcode}
-                  </div>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </ModalBody>
         <ModalFooter>
@@ -946,13 +1023,20 @@ const Statistics = () => {
   const JobDetailsModal = () => {
     if (!selectedJob) return null
 
+    const isMultiDay = selectedJob.isMultiDay
+
     return (
       <Modal show={showJobDetails} onClose={() => setShowJobDetails(false)} size="lg">
         <ModalHeader>
           Job Details - {selectedJob.code} / {selectedJob.lotno}
+          {isMultiDay && (
+            <Badge color="blue" size="sm" className="ml-2">
+              Multi-day Job
+            </Badge>
+          )}
         </ModalHeader>
         <ModalBody>
-          <div className={`space-y-4 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+          <div className={`space-y-4 rounded-lg p-1 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="font-semibold mb-2">Production Information</h4>
@@ -968,8 +1052,8 @@ const Statistics = () => {
               <div>
                 <h4 className="font-semibold mb-2">Time Information</h4>
                 <div className="space-y-1 text-sm">
-                  <div><span className="font-medium">Start:</span> {selectedJob.starttime}</div>
-                  <div><span className="font-medium">End:</span> {selectedJob.endtime}</div>
+                  <div><span className="font-medium">Start:</span> {moment(selectedJob.starttime).format('YYYY-MM-DD HH:mm')}</div>
+                  <div><span className="font-medium">End:</span> {moment(selectedJob.endtime).format('YYYY-MM-DD HH:mm')}</div>
                   <div><span className="font-medium">Order Date:</span> {selectedJob.orderdate}</div>
                   <div><span className="font-medium">Duration:</span> {selectedJob.duration || 0} hours</div>
                   <div><span className="font-medium">Prod Lead Time:</span> {selectedJob.prodleadtime || 0} days</div>
@@ -1126,3 +1210,4 @@ const Statistics = () => {
 }
 
 export default Statistics
+
