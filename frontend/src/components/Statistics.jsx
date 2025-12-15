@@ -1090,7 +1090,7 @@ const Statistics = () => {
               })}
             </div>
             
-            {/* 汇总信息 */}
+            {/* 汇总信息 
             {Object.keys(jobsByCode).length > 1 && (
               <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="text-sm font-semibold mb-2">Summary by Job Code</div>
@@ -1115,7 +1115,7 @@ const Statistics = () => {
                   </div>
                 </div>
               </div>
-            )}
+            )}*/}
           </div>
         )}
       </div>
