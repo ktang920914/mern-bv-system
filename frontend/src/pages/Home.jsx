@@ -25,6 +25,7 @@ import Extruders from "../components/Extruders"
 import ToDoListPreventive from "../components/ToDoListPreventive"
 import Schedule from "../components/Schedule"
 import Spareparts from "../components/Spareparts"
+import Statistics from "../components/Statistics"
 
 const Home = () => {
   const { theme } = useThemeStore()
@@ -68,6 +69,7 @@ const Home = () => {
           {tab === 'Planning' && <Planning/>}
           {tab === 'Oee' && <Oee/>}
           {tab === 'Outputs' && <Outputs/>}
+          {tab === 'Statistics' && <Statistics/>}
           {tab === 'Suppliers' && <Suppliers/>}
           {tab === 'Orders' && <Orders/>}
           {tab === 'Costs' && <Costs/>}

@@ -168,6 +168,16 @@ const DashSidebar = () => {
                     Outputs
                   </SidebarItem>
                 </Link>
+                <Link to='/?tab=Statistics'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Statistics'} 
+                    as='div'
+                    className={tab === 'Statistics' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Statistics
+                  </SidebarItem>
+                </Link>
               </SidebarCollapse>
               
               <SidebarCollapse 
