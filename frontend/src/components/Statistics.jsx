@@ -45,10 +45,18 @@ const Statistics = () => {
         }
         
         const data = await res.json()
-        setJobsData(data)
+        
+        // 按 starttime 排序（最早的在前）
+        const sortedData = data.sort((a, b) => {
+          const timeA = a.starttime ? new Date(a.starttime).getTime() : 0
+          const timeB = b.starttime ? new Date(b.starttime).getTime() : 0
+          return timeA - timeB
+        })
+        
+        setJobsData(sortedData)
         
         // 转换 Job 数据为日历事件
-        const calendarEvents = data.map(job => {
+        const calendarEvents = sortedData.map(job => {
           // 处理日期格式
           const startDate = job.starttime ? new Date(job.starttime) : new Date()
           const endDate = job.endtime ? new Date(job.endtime) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // 默认2小时
@@ -193,11 +201,17 @@ const Statistics = () => {
         }
       })
 
-      // 过滤当前年份的数据
-      const yearJobs = jobsData.filter(job => {
-        const jobDate = job.starttime ? new Date(job.starttime) : null
-        return jobDate && jobDate.getFullYear() === reportYear
-      })
+      // 过滤当前年份的数据并排序
+      const yearJobs = jobsData
+        .filter(job => {
+          const jobDate = job.starttime ? new Date(job.starttime) : null
+          return jobDate && jobDate.getFullYear() === reportYear
+        })
+        .sort((a, b) => {
+          const timeA = a.starttime ? new Date(a.starttime).getTime() : 0
+          const timeB = b.starttime ? new Date(b.starttime).getTime() : 0
+          return timeA - timeB
+        })
 
       // 数据行
       let rowIndex = 3
@@ -313,9 +327,16 @@ const Statistics = () => {
   }
 
   const handleSelectSlot = (slotInfo) => {
-    const dayEvents = events.filter(event => 
-      moment(event.start).isSame(slotInfo.start, 'day')
-    )
+    // 获取当天的事件并按 starttime 排序
+    const dayEvents = events
+      .filter(event => 
+        moment(event.start).isSame(slotInfo.start, 'day')
+      )
+      .sort((a, b) => {
+        const timeA = new Date(a.resource.starttime).getTime()
+        const timeB = new Date(b.resource.starttime).getTime()
+        return timeA - timeB // 最早的在前
+      })
     
     if (dayEvents.length > 0) {
       setSelectedDay({
@@ -494,9 +515,17 @@ const Statistics = () => {
                 {week.map((day, dayIndex) => {
                   const isCurrentMonth = day.month() === currentDate.month()
                   const isToday = day.isSame(moment(), 'day')
-                  const dayEvents = events.filter(event => 
-                    moment(event.start).isSame(day, 'day')
-                  )
+                  
+                  // 获取当天事件并按 starttime 排序
+                  const dayEvents = events
+                    .filter(event => 
+                      moment(event.start).isSame(day, 'day')
+                    )
+                    .sort((a, b) => {
+                      const timeA = new Date(a.resource.starttime).getTime()
+                      const timeB = new Date(b.resource.starttime).getTime()
+                      return timeA - timeB
+                    })
 
                   return (
                     <div
@@ -537,7 +566,7 @@ const Statistics = () => {
                             <div
                               key={eventIndex}
                               className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor}`}
-                              title={`${event.resource.code} - ${event.resource.lotno}`}
+                              title={`${event.resource.code} - ${event.resource.lotno} (${moment(event.resource.starttime).format('HH:mm')})`}
                               onClick={() => handleSelectEvent(event)}
                             >
                               {event.resource.code}
@@ -840,6 +869,13 @@ const Statistics = () => {
   const DayEventsModal = () => {
     if (!selectedDay) return null
 
+    // 确保事件按 starttime 排序
+    const sortedEvents = [...selectedDay.events].sort((a, b) => {
+      const timeA = new Date(a.resource.starttime).getTime()
+      const timeB = new Date(b.resource.starttime).getTime()
+      return timeA - timeB
+    })
+
     return (
       <Modal show={showDayEvents} onClose={() => setShowDayEvents(false)} size="md">
         <ModalHeader>
@@ -847,7 +883,7 @@ const Statistics = () => {
         </ModalHeader>
         <ModalBody>
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {selectedDay.events.map((event, index) => (
+            {sortedEvents.map((event, index) => (
               <div
                 key={index}
                 className={`p-3 rounded-lg border ${
@@ -857,7 +893,17 @@ const Statistics = () => {
                 }`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <div className="font-semibold text-sm">{event.resource.code} - {event.resource.lotno}</div>
+                  <div>
+                    <div className="font-semibold text-sm">
+                      {index + 1}. {event.resource.code} - {event.resource.lotno}
+                    </div>
+                    <div className={`text-xs mt-1 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                      Start: {moment(event.resource.starttime).format('HH:mm')} 
+                      {event.resource.endtime && 
+                        ` → End: ${moment(event.resource.endtime).format('HH:mm')}`
+                      }
+                    </div>
+                  </div>
                   <Badge 
                     color="info"
                     size="sm"
@@ -868,16 +914,21 @@ const Statistics = () => {
                 
                 <div className={`grid grid-cols-2 gap-2 text-xs mb-2 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                   <div>
-                    <span className="font-medium">Start:</span> {moment(event.start).format('HH:mm')}
+                    <span className="font-medium">Time:</span> 
+                    {moment(event.start).format('HH:mm')} - {moment(event.end).format('HH:mm')}
                   </div>
                   <div>
-                    <span className="font-medium">End:</span> {moment(event.end).format('HH:mm')}
+                    <span className="font-medium">Order:</span> {event.resource.totalorder}
                   </div>
                 </div>
                 
                 <div className={`text-xs ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-                  <div><span className="font-medium">Material:</span> {event.resource.material}</div>
-                  <div><span className="font-medium">Order:</span> {event.resource.totalorder}</div>
+                  <div>
+                    <span className="font-medium">Material:</span> {event.resource.material}
+                  </div>
+                  <div>
+                    <span className="font-medium">Color Code:</span> {event.resource.colourcode}
+                  </div>
                 </div>
               </div>
             ))}
