@@ -22,7 +22,7 @@ const Planning = () => {
     const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate', 'updatedAt'
     const [sortOrder, setSortOrder] = useState('desc') // 'asc', 'desc'
 
-    // 监听窗口大小变化
+    // Listen for window size changes
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth < 768)
@@ -32,18 +32,18 @@ const Planning = () => {
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
-    // 当页码或搜索词变化时更新 URL
+    // Update URL when page number or search term changes
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
         
-        // 处理页码参数
+        // Handle page number parameter
         if (currentPage === 1) {
             params.delete('page')
         } else {
             params.set('page', currentPage.toString())
         }
         
-        // 处理搜索参数
+        // Handle search parameter
         if (searchTerm === '') {
             params.delete('search')
         } else {
@@ -88,7 +88,10 @@ const Planning = () => {
 
     const handleUpdate = (planning) => {
         setPlanningIdToUpdate(planning._id)
-        setFormData({irr:planning.irr,ipqc:planning.ipqc,setup:planning.setup
+        // Only IRR is manually entered, IPQC and Setup are automatically calculated
+        setFormData({
+            irr: planning.irr,
+            setup: planning.setup
         })
         setOpenModalUpdatePlanning(!openModalUpdatePlanning)
         setErrorMessage(null)
@@ -133,20 +136,20 @@ const Planning = () => {
         setCurrentPage(1)
     }
 
-    // 日期解析函数 - 更新以支持 updatedAt
+    // Date parsing function - updated to support updatedAt
     const parseDateTime = (dateTimeStr) => {
         if (!dateTimeStr) return new Date(0)
         
-        // 如果是 ISO 格式（updatedAt），直接创建 Date 对象
+        // If it's ISO format (updatedAt), create Date object directly
         if (dateTimeStr.includes('T') && dateTimeStr.includes('Z')) {
             return new Date(dateTimeStr)
         }
         
-        // 处理 "YYYY-MM-DD HH:mm:ss" 格式
+        // Handle "YYYY-MM-DD HH:mm:ss" format
         return new Date(dateTimeStr.replace(' ', 'T'))
     }
 
-    // 排序和过滤 plannings
+    // Sort and filter plannings
     const filteredAndSortedPlannings = plannings
         .filter(planning => 
             planning.lotno.toLowerCase().includes(searchTerm) ||
@@ -166,10 +169,11 @@ const Planning = () => {
             planning.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
             planning.planprodtime.toString().toLowerCase().includes(searchTerm) ||
             planning.operatingtime.toString().toLowerCase().includes(searchTerm) ||
+            planning.setup.toString().toLowerCase().includes(searchTerm) || // Add setup to search
             planning.code.toLowerCase().includes(searchTerm) && planning.code.toString().toLowerCase() === searchTerm
         )
         .sort((a, b) => {
-            // 针对 updatedAt 使用 ISO 字符串，其他使用自定义解析
+            // Use ISO string for updatedAt, custom parsing for others
             const dateA = sortBy === 'updatedAt' ? 
                 new Date(a.updatedAt) : 
                 parseDateTime(a[sortBy])
@@ -197,14 +201,14 @@ const Planning = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
-    // 格式化 updated date 用于显示
+    // Format updated date for display
     const formatUpdatedDate = (updatedAt) => {
         if (!updatedAt) return '-'
         const date = new Date(updatedAt)
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
 
-    // 移动端简洁分页组件 - 只显示 Previous/Next
+    // Mobile simple pagination component - only shows Previous/Next
     const MobileSimplePagination = () => (
         <div className="flex items-center justify-center space-x-4">
             <Button
@@ -229,7 +233,7 @@ const Planning = () => {
         </div>
     )
 
-    // 移动端卡片组件 - 添加 updated date 信息
+    // Mobile card component - add IPQC and Setup information
     const PlanningCard = ({ planning }) => (
         <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
             theme === 'light' 
@@ -296,6 +300,59 @@ const Planning = () => {
                     </Popover>
                 </div>
                 <div>
+                    <p className="text-sm font-semibold text-gray-500">IPQC</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">IPQC Calculation:</p>
+                                <p className="text-xs mb-1">Based on colourcode: {planning.colourcode}</p>
+                                <p className="text-xs mb-1">Based on material: {planning.material}</p>
+                                <p className="text-xs mb-1">• Material check: {planning.ipqc === 0 && /natural|transparent|smoke|pearl|gold|strong|stubborn|metallic/i.test(planning.material) ? 'Contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic' : 'No special keyword'}</p>
+                                <p className="text-xs mb-1">• Previous job check: {planning.ipqc === 0 && 'Same colour code' || 'Different colour code'}</p>
+                                <p className="text-xs mb-1">• 5th digit check: {planning.ipqc === 0 && '0' || planning.ipqc === 60 && '2' || planning.ipqc === 200 && '3' || 'N/A'}</p>
+                                <p className="text-xs">IPQC = {planning.ipqc} (Auto)</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="top"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+                        }`}>
+                            {planning.ipqc} (Auto)
+                        </span>
+                    </Popover>
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Setup</p>
+                    <Popover 
+                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                        content={
+                            <div className="p-3 max-w-xs">
+                                <p className="font-semibold text-sm">Setup Calculation:</p>
+                                <p className="text-xs mb-1">Based on previous job comparison</p>
+                                <p className="text-xs mb-1">• If same colour code: 0</p>
+                                <p className="text-xs mb-1">• If material has natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 180</p>
+                                <p className="text-xs mb-1">• If grey/black to grey/black: 25</p>
+                                <p className="text-xs mb-1">• If light to dark, dark to dark, or different material (non grey/black): 60</p>
+                                <p className="text-xs">• Other cases (dark to light or other colors): 120</p>
+                                <p className="text-xs mt-2 font-semibold">Setup = {planning.setup} (Auto)</p>
+                            </div>
+                        }
+                        trigger='hover'
+                        placement="top"
+                        arrow={false}
+                    >
+                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+                        }`}>
+                            {planning.setup} (Auto)
+                        </span>
+                    </Popover>
+                </div>
+                <div>
                     <p className="text-sm font-semibold text-gray-500">ARR</p>
                     <Popover 
                         className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
@@ -343,7 +400,7 @@ const Planning = () => {
                         className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
                         content={
                             <div className="p-3 max-w-xs">
-                                <p className="font-semibold text-sm">{`(Total order / IRR) + IPQC + Setup  = Plan Prodtime`}</p>
+                                <p className="font-semibold text-sm">{`(Total order / IRR) + IPQC + Setup = Plan Prodtime`}</p>
                                 <p className="text-xs mb-2">{`(${planning.totalorder} / ${planning.irr}) + ${planning.ipqc} + ${planning.setup} = ${planning.planprodtime}`}</p>
                             </div>
                         }
@@ -398,7 +455,7 @@ const Planning = () => {
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Plannings</h1>
                 <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
-                    {/* 排序控件 - 增加 updatedAt 选项 */}
+                    {/* Sort controls - add updatedAt option */}
                     <div className='flex gap-2'>
                         <Select 
                             value={sortBy} 
@@ -430,14 +487,16 @@ const Planning = () => {
                 </div>
             </div>
 
-            {/* 桌面端表格视图 - 增加 Updated 列 */}
+            {/* Desktop table view - add IPQC and Setup columns */}
             {!isMobile && (
                 <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                     <TableHead>
                         <TableRow>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Irr</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>IRR</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>IPQC</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Setup</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Arr</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod leadtime</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Plan prodtime</TableHeadCell>
@@ -499,6 +558,51 @@ const Planning = () => {
                                 <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
+                                            <p className="font-semibold text-sm">IPQC Calculation:</p>
+                                            <p className="text-xs mb-1">Based on colourcode: {planning.colourcode}</p>
+                                            <p className="text-xs mb-1">Based on material: {planning.material}</p>
+                                            <p className="text-xs mb-1">• Material check: {planning.ipqc === 0 && /natural|transparent|smoke|pearl|gold|strong|stubborn|metallic/i.test(planning.material) ? 'Contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic' : 'No special keyword'}</p>
+                                            <p className="text-xs mb-1">• Previous job check: {planning.ipqc === 0 && 'Same colour code' || 'Different colour code'}</p>
+                                            <p className="text-xs mb-1">• 5th digit check: {planning.ipqc === 0 && '0' || planning.ipqc === 60 && '2' || planning.ipqc === 200 && '3' || 'N/A'}</p>
+                                            <p className="text-xs">IPQC = {planning.ipqc} (Auto)</p>
+                                        </div>
+                                    }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {planning.ipqc} (Auto)
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                    content={
+                                        <div className="p-3 max-w-xs">
+                                            <p className="font-semibold text-sm">Setup Calculation:</p>
+                                            <p className="text-xs mb-1">Based on previous job comparison</p>
+                                            <p className="text-xs mb-1">• If same colour code: 0</p>
+                                            <p className="text-xs mb-1">• If material has natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 180</p>
+                                            <p className="text-xs mb-1">• If grey/black to grey/black: 25</p>
+                                            <p className="text-xs mb-1">• If light to dark, dark to dark, or different material (non grey/black): 60</p>
+                                            <p className="text-xs">• Other cases (dark to light or other colors): 120</p>
+                                            <p className="text-xs mt-2 font-semibold">Setup = {planning.setup} (Auto)</p>
+                                        </div>
+                                    }
+                                        trigger='hover'
+                                        placement="top"
+                                        arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {planning.setup} (Auto)
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle">
+                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                    content={
+                                        <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) = ARR`}</p>
                                             <p className="text-xs mb-2">{`(${planning.totaloutput} / ${planning.operatingtime}) = ${planning.arr}`}</p>
                                         </div>
@@ -533,7 +637,7 @@ const Planning = () => {
                                 <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                                     content={
                                         <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">{`(Total order / IRR) + IPQC + Setup  = Plan Prodtime`}</p>
+                                            <p className="font-semibold text-sm">{`(Total order / IRR) + IPQC + Setup = Plan Prodtime`}</p>
                                             <p className="text-xs mb-2">{`(${planning.totalorder} / ${planning.irr}) + ${planning.ipqc} + ${planning.setup} = ${planning.planprodtime}`}</p>
                                         </div>
                                     }
@@ -572,7 +676,7 @@ const Planning = () => {
                 </Table>
             )}
 
-            {/* 移动端卡片视图 */}
+            {/* Mobile card view */}
             {isMobile && (
                 <div className="space-y-4">
                     {currentPlannings.map((planning) => (
@@ -586,7 +690,7 @@ const Planning = () => {
                     Showing {showingFrom} to {showingTo} of {totalEntries} Entries
                 </p>
                 
-                {/* 分页：手机模式用简洁版，桌面模式用完整版 */}
+                {/* Pagination: simple version for mobile, full version for desktop */}
                 {isMobile ? (
                     <div className="mt-4">
                         <MobileSimplePagination />
@@ -614,25 +718,57 @@ const Planning = () => {
                             </div>
 
                             <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IPQC</Label>
-                                <Select value={formData.ipqc} id="ipqc" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                                    <option></option>
-                                    <option>0</option>
-                                    <option>60</option>
-                                    <option>200</option>
-                                </Select>
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IPQC (Auto-calculated)</Label>
+                                <div className={`p-2 rounded ${theme === 'light' ? 'bg-gray-100' : 'bg-gray-700'}`}>
+                                    <span className="text-sm">
+                                        IPQC is auto-calculated based on:
+                                        <br/>
+                                        • If material contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 0
+                                        <br/>
+                                        • If same colour code as previous job: 0
+                                        <br/>
+                                        • If starts with letters: 0
+                                        <br/>
+                                        • If 5th digit = 0: 0
+                                        <br/>
+                                        • If 5th digit = 2: 60
+                                        <br/>
+                                        • If 5th digit = 3: 200
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Setup</Label>
-                                <Select value={formData.setup} id="setup" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                                    <option></option>
-                                    <option>0</option>
-                                    <option>25</option>
-                                    <option>60</option>
-                                    <option>120</option>
-                                    <option>180</option>
-                                </Select>
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Setup (Auto-calculated)</Label>
+                                <div className={`p-2 rounded ${theme === 'light' ? 'bg-gray-100' : 'bg-gray-700'}`}>
+                                    <span className="text-sm">
+                                        Setup is auto-calculated based on:
+                                        <br/>
+                                        • If same colour code as previous job: 0
+                                        <br/>
+                                        • If material contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 180
+                                        <br/>
+                                        • If grey/black to grey/black: 25
+                                        <br/>
+                                        • If light to dark, dark to dark, or different material (non grey/black): 60
+                                        <br/>
+                                        • Other cases (dark to light or other colors): 120
+                                    </span>
+                                </div>
+                                <div className={`mt-2 p-2 rounded ${theme === 'light' ? 'bg-blue-50' : 'bg-blue-900'}`}>
+                                    <span className="text-sm font-semibold">Auto-calculated Setup: {formData.setup}</span>
+                                </div>
+                                <TextInput 
+                                    value={formData.setup} 
+                                    type='number' 
+                                    min='0' 
+                                    max='180' 
+                                    step='1'
+                                    id="setup" 
+                                    placeholder='Enter Setup to override auto-calculation (Optional)'
+                                    onChange={handleChange} 
+                                    onFocus={handleFocus}
+                                />
                             </div>
                                 
                             <div className='mb-4 block'>
