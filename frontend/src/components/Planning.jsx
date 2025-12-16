@@ -169,6 +169,7 @@ const Planning = () => {
             planning.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
             planning.planprodtime.toString().toLowerCase().includes(searchTerm) ||
             planning.operatingtime.toString().toLowerCase().includes(searchTerm) ||
+            planning.ipqc.toString().toLowerCase().includes(searchTerm) || // Add setup to search
             planning.setup.toString().toLowerCase().includes(searchTerm) || // Add setup to search
             planning.code.toLowerCase().includes(searchTerm) && planning.code.toString().toLowerCase() === searchTerm
         )
