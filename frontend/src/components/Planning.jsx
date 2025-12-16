@@ -301,56 +301,11 @@ const Planning = () => {
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">IPQC</p>
-                    <Popover 
-                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-                        content={
-                            <div className="p-3 max-w-xs">
-                                <p className="font-semibold text-sm">IPQC Calculation:</p>
-                                <p className="text-xs mb-1">Based on colourcode: {planning.colourcode}</p>
-                                <p className="text-xs mb-1">Based on material: {planning.material}</p>
-                                <p className="text-xs mb-1">• Material check: {planning.ipqc === 0 && /natural|transparent|smoke|pearl|gold|strong|stubborn|metallic/i.test(planning.material) ? 'Contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic' : 'No special keyword'}</p>
-                                <p className="text-xs mb-1">• Previous job check: {planning.ipqc === 0 && 'Same colour code' || 'Different colour code'}</p>
-                                <p className="text-xs mb-1">• 5th digit check: {planning.ipqc === 0 && '0' || planning.ipqc === 60 && '2' || planning.ipqc === 200 && '3' || 'N/A'}</p>
-                                <p className="text-xs">IPQC = {planning.ipqc} (Auto)</p>
-                            </div>
-                        }
-                        trigger='hover'
-                        placement="top"
-                        arrow={false}
-                    >
-                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-                            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-                        }`}>
-                            {planning.ipqc} (Auto)
-                        </span>
-                    </Popover>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{planning.ipqc}</p>
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">Setup</p>
-                    <Popover 
-                        className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-                        content={
-                            <div className="p-3 max-w-xs">
-                                <p className="font-semibold text-sm">Setup Calculation:</p>
-                                <p className="text-xs mb-1">Based on previous job comparison</p>
-                                <p className="text-xs mb-1">• If same colour code: 0</p>
-                                <p className="text-xs mb-1">• If material has natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 180</p>
-                                <p className="text-xs mb-1">• If grey/black to grey/black: 25</p>
-                                <p className="text-xs mb-1">• If light to dark, dark to dark, or different material (non grey/black): 60</p>
-                                <p className="text-xs">• Other cases (dark to light or other colors): 120</p>
-                                <p className="text-xs mt-2 font-semibold">Setup = {planning.setup} (Auto)</p>
-                            </div>
-                        }
-                        trigger='hover'
-                        placement="top"
-                        arrow={false}
-                    >
-                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-                            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-                        }`}>
-                            {planning.setup} (Auto)
-                        </span>
-                    </Popover>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{planning.setup}</p>
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-gray-500">ARR</p>
@@ -555,49 +510,10 @@ const Planning = () => {
                                     </Popover>
                                 </TableCell>
                                 <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">IPQC Calculation:</p>
-                                            <p className="text-xs mb-1">Based on colourcode: {planning.colourcode}</p>
-                                            <p className="text-xs mb-1">Based on material: {planning.material}</p>
-                                            <p className="text-xs mb-1">• Material check: {planning.ipqc === 0 && /natural|transparent|smoke|pearl|gold|strong|stubborn|metallic/i.test(planning.material) ? 'Contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic' : 'No special keyword'}</p>
-                                            <p className="text-xs mb-1">• Previous job check: {planning.ipqc === 0 && 'Same colour code' || 'Different colour code'}</p>
-                                            <p className="text-xs mb-1">• 5th digit check: {planning.ipqc === 0 && '0' || planning.ipqc === 60 && '2' || planning.ipqc === 200 && '3' || 'N/A'}</p>
-                                            <p className="text-xs">IPQC = {planning.ipqc} (Auto)</p>
-                                        </div>
-                                    }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
-                                    >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {planning.ipqc} (Auto)
-                                        </span>
-                                    </Popover>
+                                {planning.ipqc}
                                 </TableCell>
                                 <TableCell className="align-middle">
-                                <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                    content={
-                                        <div className="p-3 max-w-xs">
-                                            <p className="font-semibold text-sm">Setup Calculation:</p>
-                                            <p className="text-xs mb-1">Based on previous job comparison</p>
-                                            <p className="text-xs mb-1">• If same colour code: 0</p>
-                                            <p className="text-xs mb-1">• If material has natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 180</p>
-                                            <p className="text-xs mb-1">• If grey/black to grey/black: 25</p>
-                                            <p className="text-xs mb-1">• If light to dark, dark to dark, or different material (non grey/black): 60</p>
-                                            <p className="text-xs">• Other cases (dark to light or other colors): 120</p>
-                                            <p className="text-xs mt-2 font-semibold">Setup = {planning.setup} (Auto)</p>
-                                        </div>
-                                    }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
-                                    >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {planning.setup} (Auto)
-                                        </span>
-                                    </Popover>
+                                {planning.setup}
                                 </TableCell>
                                 <TableCell className="align-middle">
                                 <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
@@ -717,7 +633,7 @@ const Planning = () => {
                                 <TextInput value={formData.irr} type='number' min='0.1' max='6.0' step='any'id="irr" placeholder='Enter IRR'  onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
 
-                            <div className="mb-4 block">
+                            {/*<div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IPQC (Auto-calculated)</Label>
                                 <div className={`p-2 rounded ${theme === 'light' ? 'bg-gray-100' : 'bg-gray-700'}`}>
                                     <span className="text-sm">
@@ -736,9 +652,9 @@ const Planning = () => {
                                         • If 5th digit = 3: 200
                                     </span>
                                 </div>
-                            </div>
+                            </div>*/}
 
-                            <div className="mb-4 block">
+                            {/*<div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Setup (Auto-calculated)</Label>
                                 <div className={`p-2 rounded ${theme === 'light' ? 'bg-gray-100' : 'bg-gray-700'}`}>
                                     <span className="text-sm">
@@ -769,7 +685,7 @@ const Planning = () => {
                                     onChange={handleChange} 
                                     onFocus={handleFocus}
                                 />
-                            </div>
+                            </div>*/}
                                 
                             <div className='mb-4 block'>
                                 <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
