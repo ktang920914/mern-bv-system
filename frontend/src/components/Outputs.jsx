@@ -194,6 +194,23 @@ const Outputs = () => {
         { value: 'pie', label: 'Pie' }
     ]
 
+    // 获取饼图颜色（为每个月份生成不同的颜色）
+    const getPieChartColors = (numColors) => {
+        const colors = [];
+        for (let i = 0; i < numColors; i++) {
+            const hue = (i * 360 / numColors) % 360;
+            const saturation = 70;
+            const lightness = 60;
+            
+            colors.push({
+                backgroundColor: `hsla(${hue}, ${saturation}%, ${lightness}%, 0.8)`,
+                borderColor: `hsl(${hue}, ${saturation}%, ${lightness - 15}%)`,
+                hoverBackgroundColor: `hsla(${hue}, ${saturation}%, ${lightness + 10}%, 0.9)`
+            });
+        }
+        return colors;
+    };
+
     // 生成颜色 - 优先使用 jobCodeColors
     const generateColors = (count, jobCodes = []) => {
         const colors = [];
@@ -425,7 +442,7 @@ const Outputs = () => {
         let chartData;
         
         if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
-            // 比较模式：多个数据集
+            // 比较模式：多个数据集（多个饼图 - 每个Job Code一个）
             const datasets = selectedData.map((dataItem) => {
                 const data = monthFields.map(month => {
                     const value = dataItem[month.key];
@@ -433,23 +450,33 @@ const Outputs = () => {
                 });
 
                 const jobCode = dataItem.code || 'All';
-                // 使用 jobCodeColors 中对应的颜色
                 const color = jobCodeColors[jobCode] || { 
                     bg: 'rgba(59, 130, 246, 0.5)', 
                     border: 'rgba(59, 130, 246, 1)' 
                 };
 
-                return {
-                    label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
-                    data,
-                    backgroundColor: selectedChartType === 'pie' 
-                        ? jobCodeColors[jobCode]?.bg || '#FF6384'
-                        : color.bg,
-                    borderColor: color.border,
-                    borderWidth: 2,
-                    fill: selectedChartType === 'line',
-                    tension: selectedChartType === 'line' ? 0.1 : undefined
-                };
+                // 如果是饼图，需要为每个月份生成不同的颜色
+                if (selectedChartType === 'pie') {
+                    const pieColors = getPieChartColors(data.length);
+                    return {
+                        label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                        data,
+                        backgroundColor: pieColors.map(c => c.backgroundColor),
+                        borderColor: pieColors.map(c => c.borderColor),
+                        borderWidth: 2,
+                        hoverBackgroundColor: pieColors.map(c => c.hoverBackgroundColor),
+                    };
+                } else {
+                    return {
+                        label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                        data,
+                        backgroundColor: color.bg,
+                        borderColor: color.border,
+                        borderWidth: 2,
+                        fill: selectedChartType === 'line',
+                        tension: selectedChartType === 'line' ? 0.1 : undefined
+                    };
+                }
             });
 
             chartData = {
@@ -470,22 +497,38 @@ const Outputs = () => {
                 return formatNumber(value);
             });
 
-            chartData = {
-                labels,
-                datasets: [
-                    {
-                        label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
-                        data,
-                        backgroundColor: selectedChartType === 'pie' 
-                            ? jobCodeColors[jobCode]?.bg || '#FF6384'
-                            : color.bg,
-                        borderColor: color.border,
-                        borderWidth: 2,
-                        fill: selectedChartType === 'line',
-                        tension: selectedChartType === 'line' ? 0.1 : undefined
-                    },
-                ],
-            };
+            // 如果是饼图，为每个月份生成不同的颜色
+            if (selectedChartType === 'pie') {
+                const pieColors = getPieChartColors(data.length);
+                chartData = {
+                    labels,
+                    datasets: [
+                        {
+                            label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                            data,
+                            backgroundColor: pieColors.map(c => c.backgroundColor),
+                            borderColor: pieColors.map(c => c.borderColor),
+                            borderWidth: 2,
+                            hoverBackgroundColor: pieColors.map(c => c.hoverBackgroundColor),
+                        },
+                    ],
+                };
+            } else {
+                chartData = {
+                    labels,
+                    datasets: [
+                        {
+                            label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                            data,
+                            backgroundColor: color.bg,
+                            borderColor: color.border,
+                            borderWidth: 2,
+                            fill: selectedChartType === 'line',
+                            tension: selectedChartType === 'line' ? 0.1 : undefined
+                        },
+                    ],
+                };
+            }
         }
 
         // 饼图插件配置
@@ -497,7 +540,8 @@ const Outputs = () => {
                     padding: 15,
                     font: {
                         size: 11
-                    }
+                    },
+                    color: theme === 'light' ? '#374151' : '#D1D5DB'
                 }
             },
             tooltip: {
@@ -528,7 +572,9 @@ const Outputs = () => {
                         boxWidth: 10,
                         font: {
                             size: comparisonMode && selectedCodes.length > 8 ? 10 : 12
-                        }
+                        },
+                        // 修复标签颜色
+                        // color: theme === 'light' ? '#374151' : '#D1D5DB'
                     }
                 },
                 title: {
@@ -538,7 +584,9 @@ const Outputs = () => {
                         : `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
-                    }
+                    },
+                    // 标题颜色
+                    // color: theme === 'light' ? 'text-gray-900' : 'text-gray-900'
                 },
                 ...(selectedChartType === 'pie' && {
                     tooltip: piePlugins.tooltip
@@ -549,18 +597,24 @@ const Outputs = () => {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Value'
+                        text: 'Value',
+                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
                     },
                     ticks: {
                         callback: function(value) {
                             return formatNumber(value);
-                        }
+                        },
+                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
                     }
                 },
                 x: {
                     title: {
                         display: true,
-                        text: 'Month'
+                        text: 'Month',
+                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
+                    },
+                    ticks: {
+                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
                     }
                 }
             } : undefined
