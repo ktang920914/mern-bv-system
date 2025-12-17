@@ -36,8 +36,20 @@ ChartJS.register(
   ArcElement
 )
 
-const Outputs = () => {
+// 颜色映射 - 与 statistics.jsx 保持一致
+const jobCodeColors = {
+  'L1': { bg: 'rgba(59, 130, 246, 0.5)', border: 'rgba(59, 130, 246, 1)' },  // 蓝色
+  'L2': { bg: 'rgba(16, 185, 129, 0.5)', border: 'rgba(16, 185, 129, 1)' },  // 绿色
+  'L3': { bg: 'rgba(139, 92, 246, 0.5)', border: 'rgba(139, 92, 246, 1)' },  // 紫色
+  'L5': { bg: 'rgba(245, 158, 11, 0.5)', border: 'rgba(245, 158, 11, 1)' },  // 黄色
+  'L6': { bg: 'rgba(239, 68, 68, 0.5)', border: 'rgba(239, 68, 68, 1)' },     // 红色
+  'L9': { bg: 'rgba(236, 72, 153, 0.5)', border: 'rgba(236, 72, 153, 1)' },  // 粉色
+  'L10': { bg: 'rgba(6, 182, 212, 0.5)', border: 'rgba(6, 182, 212, 1)' },    // 青色
+  'L11': { bg: 'rgba(132, 204, 22, 0.5)', border: 'rgba(132, 204, 22, 1)' },  // 青绿色
+  'L12': { bg: 'rgba(249, 115, 22, 0.5)', border: 'rgba(249, 115, 22, 1)' }   // 橙色
+}
 
+const Outputs = () => {
     const {theme} = useThemeStore()
     const {currentUser} = useUserstore()
     const [errorMessage,setErrorMessage] = useState(null)
@@ -182,39 +194,56 @@ const Outputs = () => {
         { value: 'pie', label: 'Pie' }
     ]
 
-    // 生成更多颜色用于图表
-    const generateColors = (count) => {
-        const baseColors = [
-            { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
-            { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
-            { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
-            { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
-            { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
-            { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
-            { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
-            { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
-            { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
-            { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' },
-            { bg: 'rgba(241, 196, 15, 0.5)', border: 'rgba(241, 196, 15, 1)' },
-            { bg: 'rgba(230, 126, 34, 0.5)', border: 'rgba(230, 126, 34, 1)' },
-            { bg: 'rgba(231, 76, 60, 0.5)', border: 'rgba(231, 76, 60, 1)' },
-            { bg: 'rgba(52, 152, 219, 0.5)', border: 'rgba(52, 152, 219, 1)' },
-            { bg: 'rgba(142, 68, 173, 0.5)', border: 'rgba(142, 68, 173, 1)' }
-        ];
-
-        // 如果需要的颜色比基础颜色多，动态生成更多颜色
-        if (count <= baseColors.length) {
-            return baseColors.slice(0, count);
+    // 生成颜色 - 优先使用 jobCodeColors
+    const generateColors = (count, jobCodes = []) => {
+        const colors = [];
+        
+        // 如果提供了jobCodes，使用对应的颜色
+        jobCodes.forEach((code, index) => {
+            if (jobCodeColors[code]) {
+                colors.push(jobCodeColors[code]);
+            } else {
+                // 如果没有对应的颜色，使用默认颜色
+                const baseColors = [
+                    { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
+                    { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
+                    { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
+                    { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
+                    { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
+                    { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
+                    { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
+                    { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
+                    { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
+                    { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' }
+                ];
+                colors.push(baseColors[index % baseColors.length]);
+            }
+        });
+        
+        // 如果colors数量不够，补充颜色
+        if (colors.length < count) {
+            const baseColors = [
+                { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
+                { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
+                { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
+                { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
+                { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
+                { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
+                { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
+                { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
+                { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
+                { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' }
+            ];
+            
+            for (let i = colors.length; i < count; i++) {
+                const hue = (i * 137.5) % 360;
+                colors.push({
+                    bg: `hsla(${hue}, 70%, 65%, 0.5)`,
+                    border: `hsl(${hue}, 70%, 50%)`
+                });
+            }
         }
-
-        const colors = [...baseColors];
-        for (let i = baseColors.length; i < count; i++) {
-            const hue = (i * 137.5) % 360; // 使用黄金角度分布颜色
-            colors.push({
-                bg: `hsla(${hue}, 70%, 65%, 0.5)`,
-                border: `hsl(${hue}, 70%, 50%)`
-            });
-        }
+        
         return colors;
     };
 
@@ -397,25 +426,24 @@ const Outputs = () => {
         
         if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
             // 比较模式：多个数据集
-            const colors = generateColors(selectedData.length);
-            
-            const datasets = selectedData.map((dataItem, index) => {
+            const datasets = selectedData.map((dataItem) => {
                 const data = monthFields.map(month => {
                     const value = dataItem[month.key];
                     return formatNumber(value);
                 });
 
-                const color = colors[index];
+                const jobCode = dataItem.code || 'All';
+                // 使用 jobCodeColors 中对应的颜色
+                const color = jobCodeColors[jobCode] || { 
+                    bg: 'rgba(59, 130, 246, 0.5)', 
+                    border: 'rgba(59, 130, 246, 1)' 
+                };
 
                 return {
-                    label: `${dataItem.code || 'All'} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                    label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
                     data,
                     backgroundColor: selectedChartType === 'pie' 
-                        ? [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                          ]
+                        ? jobCodeColors[jobCode]?.bg || '#FF6384'
                         : color.bg,
                     borderColor: color.border,
                     borderWidth: 2,
@@ -431,6 +459,12 @@ const Outputs = () => {
         } else {
             // 普通模式：单个数据集
             const singleData = Array.isArray(selectedData) ? selectedData[0] : selectedData;
+            const jobCode = singleData.code || 'All';
+            const color = jobCodeColors[jobCode] || { 
+                bg: 'rgba(59, 130, 246, 0.5)', 
+                border: 'rgba(59, 130, 246, 1)' 
+            };
+            
             const data = monthFields.map(month => {
                 const value = singleData[month.key];
                 return formatNumber(value);
@@ -440,16 +474,12 @@ const Outputs = () => {
                 labels,
                 datasets: [
                     {
-                        label: `${singleData.code || 'All'} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                        label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
                         data,
                         backgroundColor: selectedChartType === 'pie' 
-                            ? [
-                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                                '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                              ]
-                            : 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
+                            ? jobCodeColors[jobCode]?.bg || '#FF6384'
+                            : color.bg,
+                        borderColor: color.border,
                         borderWidth: 2,
                         fill: selectedChartType === 'line',
                         tension: selectedChartType === 'line' ? 0.1 : undefined
@@ -539,14 +569,9 @@ const Outputs = () => {
         return { options, data: chartData, plugins };
     };
 
-    // 准备表格数据 - 修复版本
+    // 准备表格数据
     const prepareTableData = () => {
         if (outputs.length === 0) return [];
-
-        /*console.log('=== 调试: 开始准备表格数据 ===');
-        console.log('所有 outputs:', outputs);
-        console.log('选中的 codes:', selectedCodes);
-        console.log('比较模式:', comparisonMode);*/
 
         // 按数据类型分组
         const groupedByDataType = {};
@@ -567,7 +592,6 @@ const Outputs = () => {
             const isAverageType = averageDataTypes.includes(dataType);
 
             if (comparisonMode && selectedCodes.length > 0) {
-                
                 // 只过滤出当前选中的 job codes 的数据
                 const filteredOutputs = dataTypeOutputs.filter(output => 
                     selectedCodes.includes(output.code)
@@ -590,7 +614,6 @@ const Outputs = () => {
                 });
 
                 if (isAverageType) {
-                    
                     // 对于平均值类型：计算每个月份的平均值
                     monthFields.forEach(month => {
                         const monthKey = month.key;
@@ -826,7 +849,7 @@ const Outputs = () => {
     // 获取图表数据
     const chartData = prepareChartData();
 
-    // 移动端卡片渲染函数 - 保持不变
+    // 移动端卡片渲染函数
     const renderMobileCards = () => {
         return (
             <div className="space-y-4">
@@ -909,48 +932,70 @@ const Outputs = () => {
                                 Clear All
                             </Button>
                         )}
-                        {/* 调试按钮 */}
                     </div>
                 </div>
                 
                 <div className="flex flex-wrap gap-1 mb-2">
-                    {selectedCodes.map(code => (
-                        <Badge key={code} color="info" className="flex items-center gap-1 py-0.5 px-2 text-xs">
-                            {code}
-                            <HiX 
-                                className="cursor-pointer text-xs" 
-                                onClick={() => handleCodeSelection(code)} 
-                            />
-                        </Badge>
-                    ))}
+                    {selectedCodes.map(code => {
+                        const color = jobCodeColors[code] || { bg: '#6B7280', border: '#6B7280' };
+                        return (
+                            <Badge 
+                                key={code} 
+                                color="info" 
+                                className="flex items-center gap-1 py-0.5 px-2 text-xs"
+                                style={{ backgroundColor: color.bg, borderColor: color.border }}
+                            >
+                                <div 
+                                    className="w-2 h-2 rounded-full bg-white"
+                                />
+                                {code}
+                                <HiX 
+                                    className="cursor-pointer text-xs" 
+                                    onClick={() => handleCodeSelection(code)} 
+                                />
+                            </Badge>
+                        );
+                    })}
                     {selectedCodes.length === 0 && (
                         <span className="text-gray-500 text-xs">All codes selected</span>
                     )}
                 </div>
                 
                 <div className="flex flex-wrap gap-1 mb-2">
-                    {availableCodes.map(code => (
-                        <div 
-                            key={code}
-                            className={`flex items-center p-1 rounded cursor-pointer text-xs ${
-                                selectedCodes.includes(code) 
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                            }`}
-                            onClick={() => handleCodeSelection(code)}
-                        >
-                            <div className={`w-3 h-3 flex items-center justify-center rounded-sm border mr-1 ${
-                                selectedCodes.includes(code) 
-                                    ? 'bg-blue-600 border-blue-600' 
-                                    : 'bg-white border-gray-300 dark:bg-gray-600 dark:border-gray-500'
-                            }`}>
-                                {selectedCodes.includes(code) && (
-                                    <HiCheck className="w-2 h-2 text-white" />
-                                )}
+                    {availableCodes.map(code => {
+                        const color = jobCodeColors[code] || { bg: '#6B7280', border: '#6B7280' };
+                        
+                        return (
+                            <div 
+                                key={code}
+                                className={`flex items-center p-1 rounded cursor-pointer text-xs ${
+                                    selectedCodes.includes(code) 
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                }`}
+                                onClick={() => handleCodeSelection(code)}
+                            >
+                                {/* 颜色标记 */}
+                                <div 
+                                    className={`w-3 h-3 rounded-sm mr-1 border`}
+                                    style={{ 
+                                        backgroundColor: color.bg, 
+                                        borderColor: color.border 
+                                    }}
+                                />
+                                <div className={`w-3 h-3 flex items-center justify-center rounded-sm border mr-1 ${
+                                    selectedCodes.includes(code) 
+                                        ? 'bg-blue-600 border-blue-600' 
+                                        : 'bg-white border-gray-300 dark:bg-gray-600 dark:border-gray-500'
+                                }`}>
+                                    {selectedCodes.includes(code) && (
+                                        <HiCheck className="w-2 h-2 text-white" />
+                                    )}
+                                </div>
+                                {code}
                             </div>
-                            {code}
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
                 
                 <div className="flex items-center gap-2 mt-2">
