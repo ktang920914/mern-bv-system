@@ -378,15 +378,12 @@ const Statistics = () => {
   }
 
   const handleSelectSlot = (slotInfo) => {
-    // 获取当天的事件，包括跨天事件
+    // ⭐ 修改：获取当天的事件，只包括在该日期实际开始的事件
     const dayEvents = events
       .filter(event => {
-        const eventStart = moment(event.start)
-        const eventEnd = event.allDay 
-          ? moment(event.resource.actualEnd || event.end)
-          : moment(event.end)
-        
-        return moment(slotInfo.start).isBetween(eventStart, eventEnd, 'day', '[]')
+        const eventStart = moment(event.resource.actualStart || event.resource.starttime)
+        // ⭐ 重点修改：只匹配开始日期（按天比较）
+        return moment(slotInfo.start).isSame(eventStart, 'day')
       })
       .sort((a, b) => {
         const timeA = new Date(a.resource.starttime).getTime()
@@ -587,15 +584,12 @@ const Statistics = () => {
                   const isCurrentMonth = day.month() === currentDate.month()
                   const isToday = day.isSame(moment(), 'day')
                   
-                  // 获取当天事件，包括跨天事件
+                  // ⭐ 修改：获取当天事件，只包括在该日期实际开始的事件
                   const dayEvents = events
                     .filter(event => {
-                      const eventStart = moment(event.start)
-                      const eventEnd = event.allDay 
-                        ? moment(event.resource.actualEnd || event.end)
-                        : moment(event.end)
-                      
-                      return day.isBetween(eventStart, eventEnd, 'day', '[]')
+                      const eventStart = moment(event.resource.actualStart || event.resource.starttime)
+                      // ⭐ 只匹配开始日期（按天比较）
+                      return day.isSame(eventStart, 'day')
                     })
                     .sort((a, b) => {
                       const timeA = new Date(a.resource.starttime).getTime()
