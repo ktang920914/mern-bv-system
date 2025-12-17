@@ -519,155 +519,140 @@ const Statistics = () => {
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
     return (
-      <>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-            <div className="flex justify-between items-center mb-2">
-              {/* 年份切换按钮 - 左侧 */}
-              <div className="flex space-x-1">
-                <Button size="xs" className='cursor-pointer px-2' onClick={() => {
-                  const newDate = currentDate.clone().subtract(1, 'year')
-                  setCalendarYear(newDate.year())
-                  setCurrentDate(newDate)
-                }} color="gray">
-                  «
-                </Button>
-                <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().subtract(1, 'month'))} color="gray">
-                  ‹
-                </Button>
-              </div>
-              
-              <div className="text-center flex-1">
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {currentDate.format('MMMM YYYY')}
-                </span>
-              </div>
-              
-              {/* 年份切换按钮 - 右侧 */}
-              <div className="flex space-x-1">
-                <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().add(1, 'month'))} color="gray">
-                  ›
-                </Button>
-                <Button size="xs" className='cursor-pointer px-2' onClick={() => {
-                  const newDate = currentDate.clone().add(1, 'year')
-                  setCalendarYear(newDate.year())
-                  setCurrentDate(newDate)
-                }} color="gray">
-                  »
-                </Button>
-              </div>
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+          <div className="flex justify-between items-center mb-2">
+            {/* 年份切换按钮 - 左侧 */}
+            <div className="flex space-x-1">
+              <Button size="xs" className='cursor-pointer px-2' onClick={() => {
+                const newDate = currentDate.clone().subtract(1, 'year')
+                setCalendarYear(newDate.year())
+                setCurrentDate(newDate)
+              }} color="gray">
+                «
+              </Button>
+              <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().subtract(1, 'month'))} color="gray">
+                ‹
+              </Button>
             </div>
             
-            <div className="flex justify-center">
-              <Button size="sm" onClick={() => {
-                const today = moment()
-                setCurrentDate(today)
-                setCalendarYear(today.year())
-              }} color="blue">
-                Today
+            <div className="text-center flex-1">
+              <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {currentDate.format('MMMM YYYY')}
+              </span>
+            </div>
+            
+            {/* 年份切换按钮 - 右侧 */}
+            <div className="flex space-x-1">
+              <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().add(1, 'month'))} color="gray">
+                ›
+              </Button>
+              <Button size="xs" className='cursor-pointer px-2' onClick={() => {
+                const newDate = currentDate.clone().add(1, 'year')
+                setCalendarYear(newDate.year())
+                setCurrentDate(newDate)
+              }} color="gray">
+                »
               </Button>
             </div>
           </div>
-
-          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-            {weekDays.map((day, index) => (
-              <div key={index} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {day}
-              </div>
-            ))}
+          
+          <div className="flex justify-center">
+            <Button size="sm" onClick={() => {
+              const today = moment()
+              setCurrentDate(today)
+              setCalendarYear(today.year())
+            }} color="blue">
+              Today
+            </Button>
           </div>
+        </div>
 
-          <div className="divide-y divide-gray-200 dark:divide-gray-600">
-            {calendar.map((week, weekIndex) => (
-              <div key={weekIndex} className="grid grid-cols-7">
-                {week.map((day, dayIndex) => {
-                  const isCurrentMonth = day.month() === currentDate.month()
-                  const isToday = day.isSame(moment(), 'day')
-                  
-                  // ⭐ 修改：获取当天事件，只包括在该日期实际开始的事件
-                  const dayEvents = events
-                    .filter(event => {
-                      const eventStart = moment(event.resource.actualStart || event.resource.starttime)
-                      // ⭐ 只匹配开始日期（按天比较）
-                      return day.isSame(eventStart, 'day')
-                    })
-                    .sort((a, b) => {
-                      const timeA = new Date(a.resource.starttime).getTime()
-                      const timeB = new Date(b.resource.starttime).getTime()
-                      return timeA - timeB
-                    })
+        <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+          {weekDays.map((day, index) => (
+            <div key={index} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+              {day}
+            </div>
+          ))}
+        </div>
 
-                  return (
-                    <div
-                      key={`${weekIndex}-${dayIndex}`}
-                      className={`min-h-[80px] p-1 border-r border-gray-200 dark:border-gray-600 relative ${
-                        !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800 text-gray-400' : ''
-                      } ${isToday ? 'bg-blue-50 dark:bg-blue-900' : ''} ${
-                        dayIndex === 6 ? 'border-r-0' : ''
-                      }`}
-                    >
-                      <div className={`text-xs text-center mb-1 ${
-                        isToday 
-                          ? 'font-bold text-blue-600 dark:text-blue-400' 
-                          : isCurrentMonth 
-                            ? 'text-gray-700 dark:text-gray-300'
-                            : 'text-gray-400 dark:text-gray-500'
-                      }`}>
-                        {day.format('D')}
-                      </div>
-                      
-                      <div className="space-y-1">
-                        {dayEvents.slice(0, 2).map((event, eventIndex) => {
-                          const jobCode = event.resource.code || 'L1'
-                          const isMultiDay = event.resource.isMultiDay
-                          const colorMap = {
-                            'L1': 'bg-blue-500',
-                            'L2': 'bg-green-500',
-                            'L3': 'bg-purple-500',
-                            'L5': 'bg-yellow-500',
-                            'L6': 'bg-red-500',
-                            'L9': 'bg-pink-500',
-                            'L10': 'bg-cyan-500',
-                            'L11': 'bg-lime-500',
-                            'L12': 'bg-orange-500'
-                          }
-                          const bgColor = colorMap[jobCode] || 'bg-gray-500'
-                          const borderClass = isMultiDay ? 'border-dashed border border-white' : ''
-                          
-                          return (
-                            <div
-                              key={eventIndex}
-                              className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor} ${borderClass} ${isMultiDay ? 'italic' : ''}`}
-                              title={`${event.resource.code} - ${event.resource.lotno} ${isMultiDay ? '(Multi-day)' : ''}`}
-                              onClick={() => handleSelectEvent(event)}
-                            >
-                              {event.resource.code}
-                              {isMultiDay && ' ↗'}
-                            </div>
-                          )
-                        })}
-                        {dayEvents.length > 2 && (
-                          <div 
-                            className="text-[10px] text-blue-500 text-center bg-blue-50 dark:bg-blue-900 rounded p-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
-                            onClick={() => {
-                              if (dayEvents.length > 0) {
-                                setSelectedDay({
-                                  date: day,
-                                  events: dayEvents
-                                })
-                                setShowDayEvents(true)
-                              }
+        <div className="divide-y divide-gray-200 dark:divide-gray-600">
+          {calendar.map((week, weekIndex) => (
+            <div key={weekIndex} className="grid grid-cols-7">
+              {week.map((day, dayIndex) => {
+                const isCurrentMonth = day.month() === currentDate.month()
+                const isToday = day.isSame(moment(), 'day')
+                
+                // ⭐ 修改：获取当天事件，只包括在该日期实际开始的事件
+                const dayEvents = events
+                  .filter(event => {
+                    const eventStart = moment(event.resource.actualStart || event.resource.starttime)
+                    // ⭐ 只匹配开始日期（按天比较）
+                    return day.isSame(eventStart, 'day')
+                  })
+                  .sort((a, b) => {
+                    const timeA = new Date(a.resource.starttime).getTime()
+                    const timeB = new Date(b.resource.starttime).getTime()
+                    return timeA - timeB
+                  })
+
+                return (
+                  <div
+                    key={`${weekIndex}-${dayIndex}`}
+                    className={`min-h-[80px] p-1 border-r border-gray-200 dark:border-gray-600 relative ${
+                      !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800 text-gray-400' : ''
+                    } ${isToday ? 'bg-blue-50 dark:bg-blue-900' : ''} ${
+                      dayIndex === 6 ? 'border-r-0' : ''
+                    }`}
+                  >
+                    <div className={`text-xs text-center mb-1 ${
+                      isToday 
+                        ? 'font-bold text-blue-600 dark:text-blue-400' 
+                        : isCurrentMonth 
+                          ? 'text-gray-700 dark:text-gray-300'
+                          : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {day.format('D')}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {dayEvents.slice(0, 2).map((event, eventIndex) => {
+                        const jobCode = event.resource.code || 'L1'
+                        const isMultiDay = event.resource.isMultiDay
+                        const colorMap = {
+                          'L1': 'bg-blue-500',
+                          'L2': 'bg-green-500',
+                          'L3': 'bg-purple-500',
+                          'L5': 'bg-yellow-500',
+                          'L6': 'bg-red-500',
+                          'L9': 'bg-pink-500',
+                          'L10': 'bg-cyan-500',
+                          'L11': 'bg-lime-500',
+                          'L12': 'bg-orange-500'
+                        }
+                        const bgColor = colorMap[jobCode] || 'bg-gray-500'
+                        const borderClass = isMultiDay ? 'border-dashed border border-white' : ''
+                        
+                        return (
+                          <div
+                            key={eventIndex}
+                            className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor} ${borderClass} ${isMultiDay ? 'italic' : ''}`}
+                            title={`${event.resource.code} - ${event.resource.lotno} ${isMultiDay ? '(Multi-day)' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation() // ⭐ 关键修复：阻止事件冒泡
+                              handleSelectEvent(event)
                             }}
                           >
-                            +{dayEvents.length - 2} more
+                            {event.resource.code}
+                            {isMultiDay && ' ↗'}
                           </div>
-                        )}
-                      </div>
-                      
-                      {dayEvents.length > 0 && (
+                        )
+                      })}
+                      {dayEvents.length > 2 && (
                         <div 
-                          className="absolute inset-0 cursor-pointer"
-                          onClick={() => {
+                          className="text-[10px] text-blue-500 text-center bg-blue-50 dark:bg-blue-900 rounded p-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation() // ⭐ 关键修复：阻止事件冒泡
                             if (dayEvents.length > 0) {
                               setSelectedDay({
                                 date: day,
@@ -676,19 +661,36 @@ const Statistics = () => {
                               setShowDayEvents(true)
                             }
                           }}
-                        />
+                        >
+                          +{dayEvents.length - 2} more
+                        </div>
                       )}
                     </div>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
+                    
+                    {/* 添加查看当天所有事件的链接 */}
+                    {dayEvents.length > 0 && (
+                      <div className="mt-1 text-center">
+                        <button
+                          className="text-[9px] text-blue-500 underline cursor-pointer hover:text-blue-700"
+                          onClick={() => {
+                            setSelectedDay({
+                              date: day,
+                              events: dayEvents
+                            })
+                            setShowDayEvents(true)
+                          }}
+                        >
+                          View all ({dayEvents.length})
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
         </div>
-
-        <DayEventsModal />
-        <JobDetailsModal />
-      </>
+      </div>
     )
   }
 
@@ -1140,7 +1142,11 @@ const Statistics = () => {
     })
 
     return (
-      <Modal show={showDayEvents} onClose={() => setShowDayEvents(false)} size="md">
+      <Modal 
+        show={showDayEvents} 
+        onClose={() => setShowDayEvents(false)} 
+        size={isMobile ? "md" : "lg"}
+      >
         <ModalHeader>
           Jobs on {selectedDay.date.format('MMMM D, YYYY')}
         </ModalHeader>
@@ -1159,6 +1165,11 @@ const Statistics = () => {
                       ? 'bg-white border-gray-200' 
                       : 'bg-gray-800 border-gray-700 text-white'
                   } ${isMultiDay ? 'border-dashed' : ''}`}
+                  onClick={() => {
+                    handleSelectEvent(event)
+                    setShowDayEvents(false)
+                  }}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -1223,7 +1234,11 @@ const Statistics = () => {
     const isMultiDay = selectedJob.isMultiDay
 
     return (
-      <Modal show={showJobDetails} onClose={() => setShowJobDetails(false)} size="lg">
+      <Modal 
+        show={showJobDetails} 
+        onClose={() => setShowJobDetails(false)} 
+        size={isMobile ? "md" : "lg"}
+      >
         <ModalHeader>
           Job Details - {selectedJob.code} / {selectedJob.lotno}
           {isMultiDay && (
@@ -1234,7 +1249,7 @@ const Statistics = () => {
         </ModalHeader>
         <ModalBody>
           <div className={`space-y-4 rounded-lg p-1 ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
               <div>
                 <h4 className="font-semibold mb-2">Production Information</h4>
                 <div className="space-y-1 text-sm">
@@ -1260,30 +1275,30 @@ const Statistics = () => {
             
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-2">Performance Metrics</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-4`}>
                 <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-blue-600 dark:text-blue-400`}>
                     {selectedJob.availability ? (selectedJob.availability * 100).toFixed(1) : 0}%
                   </div>
                   <div className="text-sm text-blue-600 dark:text-blue-400">Availability</div>
                 </div>
                 
                 <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-green-600 dark:text-green-400`}>
                     {selectedJob.performance ? (selectedJob.performance * 100).toFixed(1) : 0}%
                   </div>
                   <div className="text-sm text-green-600 dark:text-green-400">Performance</div>
                 </div>
                 
                 <div className="text-center p-3 bg-purple-50 dark:bg-purple-900 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-purple-600 dark:text-purple-400`}>
                     {selectedJob.quality ? (selectedJob.quality * 100).toFixed(1) : 0}%
                   </div>
                   <div className="text-sm text-purple-600 dark:text-purple-400">Quality</div>
                 </div>
                 
                 <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-yellow-600 dark:text-yellow-400`}>
                     {selectedJob.oee ? (selectedJob.oee * 100).toFixed(1) : 0}%
                   </div>
                   <div className="text-sm text-yellow-600 dark:text-yellow-400">OEE</div>
@@ -1293,7 +1308,7 @@ const Statistics = () => {
             
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-2">Additional Information</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4 text-sm`}>
                 <div>
                   <span className="font-medium">Downtime:</span> {selectedJob.downtime || 0} mins
                 </div>
@@ -1376,35 +1391,34 @@ const Statistics = () => {
         {isMobile ? (
           <MobileCalendar />
         ) : (
-          <>
-            <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
-              <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                eventPropGetter={eventStyleGetter}
-                views={['month']}
-                defaultView="month"
-                date={currentDate.toDate()}
-                onNavigate={(newDate) => {
-                  setCurrentDate(moment(newDate))
-                }}
-                components={{
-                  toolbar: CustomToolbar,
-                  event: CustomEvent
-                }}
-                onSelectEvent={handleSelectEvent}
-                onSelectSlot={handleSelectSlot}
-                selectable
-                popup
-              />
-            </div>
-            
-            <DayEventsModal />
-            <JobDetailsModal />
-          </>
+          <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              eventPropGetter={eventStyleGetter}
+              views={['month']}
+              defaultView="month"
+              date={currentDate.toDate()}
+              onNavigate={(newDate) => {
+                setCurrentDate(moment(newDate))
+              }}
+              components={{
+                toolbar: CustomToolbar,
+                event: CustomEvent
+              }}
+              onSelectEvent={handleSelectEvent}
+              onSelectSlot={handleSelectSlot}
+              selectable
+              popup
+            />
+          </div>
         )}
+        
+        {/* 统一在这里渲染所有弹窗 */}
+        <DayEventsModal />
+        <JobDetailsModal />
         
         <StatsCards />
       </Card>
