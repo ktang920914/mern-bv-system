@@ -223,15 +223,30 @@ const Statistics = () => {
         }
       })
 
-      // 过滤当前年份的数据并排序
+      // ⭐ 修改：根据结束时间（endtime）过滤当前年份的数据
       const yearJobs = jobsData
         .filter(job => {
-          const jobDate = job.starttime ? new Date(job.starttime) : null
+          // 优先使用 endtime 的年份，如果没有 endtime 则使用 starttime
+          const jobDate = job.endtime 
+            ? new Date(job.endtime)
+            : job.starttime
+              ? new Date(job.starttime)
+              : null
+          
           return jobDate && jobDate.getFullYear() === reportYear
         })
         .sort((a, b) => {
-          const timeA = a.starttime ? new Date(a.starttime).getTime() : 0
-          const timeB = b.starttime ? new Date(b.starttime).getTime() : 0
+          // 排序也优先使用 endtime，其次使用 starttime
+          const timeA = a.endtime 
+            ? new Date(a.endtime).getTime()
+            : a.starttime
+              ? new Date(a.starttime).getTime()
+              : 0
+          const timeB = b.endtime 
+            ? new Date(b.endtime).getTime()
+            : b.starttime
+              ? new Date(b.starttime).getTime()
+              : 0
           return timeB - timeA // 最新的在前
         })
 
@@ -363,15 +378,20 @@ const Statistics = () => {
   }
 
   const handleSelectSlot = (slotInfo) => {
-    // 获取当天的事件并按 starttime 排序（最早的在前）
+    // 获取当天的事件，包括跨天事件
     const dayEvents = events
-      .filter(event => 
-        moment(event.start).isSame(slotInfo.start, 'day')
-      )
+      .filter(event => {
+        const eventStart = moment(event.start)
+        const eventEnd = event.allDay 
+          ? moment(event.resource.actualEnd || event.end)
+          : moment(event.end)
+        
+        return moment(slotInfo.start).isBetween(eventStart, eventEnd, 'day', '[]')
+      })
       .sort((a, b) => {
         const timeA = new Date(a.resource.starttime).getTime()
         const timeB = new Date(b.resource.starttime).getTime()
-        return timeA - timeB // 最早的在前
+        return timeA - timeB
       })
     
     if (dayEvents.length > 0) {
@@ -385,14 +405,21 @@ const Statistics = () => {
 
   const CustomToolbar = ({ onNavigate, date, label }) => {
     const goToBack = () => {
+      const newDate = moment(date).subtract(1, 'month')
+      setCurrentDate(newDate)
       onNavigate('PREV')
     }
 
     const goToNext = () => {
+      const newDate = moment(date).add(1, 'month')
+      setCurrentDate(newDate)
       onNavigate('NEXT')
     }
 
     const goToCurrent = () => {
+      const today = moment()
+      setCurrentDate(today)
+      setCalendarYear(today.year())
       onNavigate('TODAY')
     }
 
@@ -407,10 +434,6 @@ const Statistics = () => {
       setCalendarYear(newDate.year())
       setCurrentDate(newDate)
     }
-
-    useEffect(() => {
-      setCalendarYear(moment(date).year())
-    }, [date])
 
     return (
       <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -539,7 +562,11 @@ const Statistics = () => {
             </div>
             
             <div className="flex justify-center">
-              <Button size="sm" onClick={() => setCurrentDate(moment())} color="blue">
+              <Button size="sm" onClick={() => {
+                const today = moment()
+                setCurrentDate(today)
+                setCalendarYear(today.year())
+              }} color="blue">
                 Today
               </Button>
             </div>
@@ -560,11 +587,16 @@ const Statistics = () => {
                   const isCurrentMonth = day.month() === currentDate.month()
                   const isToday = day.isSame(moment(), 'day')
                   
-                  // 获取当天事件并按 starttime 排序（最早的在前）
+                  // 获取当天事件，包括跨天事件
                   const dayEvents = events
-                    .filter(event => 
-                      moment(event.start).isSame(day, 'day')
-                    )
+                    .filter(event => {
+                      const eventStart = moment(event.start)
+                      const eventEnd = event.allDay 
+                        ? moment(event.resource.actualEnd || event.end)
+                        : moment(event.end)
+                      
+                      return day.isBetween(eventStart, eventEnd, 'day', '[]')
+                    })
                     .sort((a, b) => {
                       const timeA = new Date(a.resource.starttime).getTime()
                       const timeB = new Date(b.resource.starttime).getTime()
@@ -698,10 +730,18 @@ const Statistics = () => {
   }
 
   const StatsCards = () => {
-    // 过滤当前年份的数据
+    // ⭐ 重点修改：根据结束时间（endtime）的年份过滤
     const yearlyData = jobsData.filter(job => {
-      const jobDate = job.starttime ? new Date(job.starttime) : null
-      return jobDate && jobDate.getFullYear() === calendarYear
+      // 优先使用 endtime，如果没有 endtime 则使用 starttime
+      const jobDate = job.endtime 
+        ? moment(job.endtime)
+        : job.starttime 
+          ? moment(job.starttime)
+          : null
+      
+      if (!jobDate) return false
+      
+      return jobDate.year() === calendarYear
     })
     
     // 基础统计
@@ -921,7 +961,7 @@ const Statistics = () => {
             </div>
             <div className="text-sm text-cyan-600 dark:text-cyan-400 font-medium">Prod Lead Time</div>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Avg: {(totalProdLeadTime / totalJobs).toFixed(1)} days/job
+              Avg: {totalJobs > 0 ? (totalProdLeadTime / totalJobs).toFixed(1) : 0} days/job
             </div>
           </div>
         </div>
@@ -1089,33 +1129,6 @@ const Statistics = () => {
                 )
               })}
             </div>
-            
-            {/* 汇总信息 
-            {Object.keys(jobsByCode).length > 1 && (
-              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="text-sm font-semibold mb-2">Summary by Job Code</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                  <div>
-                    <div className="font-medium">Total Output:</div>
-                    <div className="text-green-600 dark:text-green-400">{totalOutput.toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="font-medium">Total Wastage (Positive):</div>
-                    <div className="text-red-600 dark:text-red-400">
-                      {totalWastage.toLocaleString()} ({wastageRate}%)
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-medium">Total Screw Out:</div>
-                    <div>{totalScrewOut.toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="font-medium">Avg Lead Time:</div>
-                    <div>{(totalProdLeadTime / totalJobs).toFixed(1)} days</div>
-                  </div>
-                </div>
-              </div>
-            )}*/}
           </div>
         )}
       </div>
