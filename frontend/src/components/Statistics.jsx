@@ -742,13 +742,12 @@ const Statistics = () => {
     
     // 基础统计
     const totalJobs = yearlyData.length
+    
+    // ⭐ 修改：使用 operatingtime（分钟转小时）
     const totalDuration = yearlyData.reduce((sum, job) => {
-      if (job.starttime && job.endtime) {
-        const start = moment(job.starttime)
-        const end = moment(job.endtime)
-        return sum + end.diff(start, 'hours', true)
-      }
-      return sum
+      const operatingTime = Number(job.operatingtime) || 0
+      // 将分钟转换为小时
+      return sum + (operatingTime / 60)
     }, 0)
     
     const totalOrder = yearlyData.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
@@ -822,13 +821,14 @@ const Statistics = () => {
       jobData.totalScrewOut += Number(job.screwout) || 0
       jobData.totalProdLeadTime += Number(job.prodleadtime) || 0
       
+      // ⭐ 修改：使用 operatingtime（分钟转小时）
+      const operatingTime = Number(job.operatingtime) || 0
+      jobData.totalDuration += (operatingTime / 60) // 转换为小时
+      
+      // 统计跨天工作
       if (job.starttime && job.endtime) {
         const start = moment(job.starttime)
         const end = moment(job.endtime)
-        const duration = end.diff(start, 'hours', true)
-        jobData.totalDuration += duration
-        
-        // 统计跨天工作
         if (!start.isSame(end, 'day')) {
           jobData.multiDayCount++
         }
@@ -888,11 +888,12 @@ const Statistics = () => {
             </div>
           </div>
           
+          {/* ⭐ 修改：Operating Time 卡片 */}
           <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg shadow">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400">
               {totalDuration.toFixed(1)}
             </div>
-            <div className="text-sm text-green-600 dark:text-green-400 font-medium">Total Hours</div>
+            <div className="text-sm text-green-600 dark:text-green-400 font-medium">Operating Time</div>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Avg: {totalJobs > 0 ? (totalDuration / totalJobs).toFixed(1) : 0}h/job
             </div>
