@@ -8,7 +8,6 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
 const Transactions = () => {
-
   const {theme} = useThemeStore()
   const {currentUser} = useUserstore()
   const [openModalCreateTransaction,setOpenModalCreateTransaction] = useState(false)
@@ -30,6 +29,8 @@ const Transactions = () => {
   const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [itemsPage] = useState(10)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  // 新增状态：选择的物料类型
+  const [selectedItemType, setSelectedItemType] = useState('')
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -164,6 +165,10 @@ const Transactions = () => {
     setOpenModalCreateTransaction(!openModalCreateTransaction)
     setErrorMessage(null)
     setLoading(false)
+    // 重置选择的物料类型
+    setSelectedItemType('')
+    // 重置表单中的code
+    setFormData({...formData, code: ''})
   }
 
   const handleSubmit = async (e) => {
@@ -274,6 +279,13 @@ const Transactions = () => {
   const handleSearch = (e) => {
     setSearchTerm(e.target.value.toLowerCase())
     setCurrentPage(1)
+  }
+
+  const handleItemTypeChange = (e) => {
+    const type = e.target.value
+    setSelectedItemType(type)
+    // 重置code选择
+    setFormData({...formData, code: ''})
   }
 
   const filteredRecords = records.filter(record => 
@@ -535,7 +547,7 @@ const Transactions = () => {
         )}
       </div>
 
-      {/* 模态框保持不变 */}
+      {/* 模态框 - 修改了创建交易的表单 */}
       <Modal show={openModalCreateTransaction} onClose={handleCreateTransaction} popup>
         <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
         <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
@@ -548,32 +560,70 @@ const Transactions = () => {
                   <TextInput  type='date' id="date" placeholder="Enter date" onChange={handleChange} onFocus={handleFocus} required/>
                 </div>
               </div>
+
+              {/* 新增：选择物料类型 */}
+              <div className="mb-4 block">
+                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item Type</Label>
+                <Select 
+                  value={selectedItemType} 
+                  onChange={handleItemTypeChange}
+                  onFocus={handleFocus} 
+                  required
+                >
+                  <option value="">Select Item Type</option>
+                  <option value="extruder">Extruders</option>
+                  <option value="inventory">Items</option>
+                  <option value="sparepart">Spareparts</option>
+                  <option value="other">Others</option>
+                </Select>
+              </div>
                 
               <div className="mb-4 block">
-                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
-                <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                  <option></option>
-                  {spareparts.map((sparepart) => (
-                    <option key={sparepart._id} value={sparepart.code}>{`${sparepart.code} --- ${sparepart.type} --- ${sparepart.status}`}</option>
+                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item Code</Label>
+                <Select 
+                  id="code" 
+                  className='mb-4' 
+                  onChange={handleChange} 
+                  onFocus={handleFocus} 
+                  value={formData.code || ''}
+                  disabled={!selectedItemType}
+                  required
+                >
+                  <option value="">Select Item Code</option>
+                  {selectedItemType === 'extruder' && extruders.map((extruder) => (
+                    <option key={extruder._id} value={extruder.code}>
+                      {`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}
+                    </option>
                   ))}
-                  {items.map((item) => (
-                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                  {selectedItemType === 'inventory' && items.map((item) => (
+                    <option key={item._id} value={item.code}>
+                      {`${item.code} --- ${item.type} --- ${item.status}`}
+                    </option>
                   ))}
-                  {others.map((other) => (
-                    <option key={other._id} value={other.code}>{`${other.code} --- ${other.type} --- ${other.status}`}</option>
+                  {selectedItemType === 'sparepart' && spareparts.map((sparepart) => (
+                    <option key={sparepart._id} value={sparepart.code}>
+                      {`${sparepart.code} --- ${sparepart.type} --- ${sparepart.status}`}
+                    </option>
                   ))}
-                  {extruders.map((extruder) => (
-                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                  {selectedItemType === 'other' && others.map((other) => (
+                    <option key={other._id} value={other.code}>
+                      {`${other.code} --- ${other.type} --- ${other.status}`}
+                    </option>
                   ))}
                 </Select>
+                {selectedItemType && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Showing {selectedItemType} items only
+                  </p>
+                )}
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Transaction</Label>
                 <Select id="transaction" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                  <option></option>
-                  <option>In</option>
-                  <option>Out</option>
+                  <option value="">Select Transaction Type</option>
+                  <option value="In">In</option>
+                  <option value="Out">Out</option>
                 </Select>
               </div>
 
@@ -585,17 +635,17 @@ const Transactions = () => {
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>User</Label>
                 <Select id="user" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                  <option></option>
-                  <option>{currentUser.username}</option>
+                  <option value="">Select User</option>
+                  <option value={currentUser.username}>{currentUser.username}</option>
                 </Select>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                 <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
-                  <option></option>
-                  <option>Active</option>
-                  <option>Inactive</option>
+                  <option value="">Select Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </Select>
               </div>
                 
@@ -618,6 +668,7 @@ const Transactions = () => {
         </ModalBody>
       </Modal>
 
+      {/* 其他模态框保持不变 */}
       <Modal show={openModalDeleteRecord} size="md" onClose={() => setOpenModalDeleteRecord(!openModalDeleteRecord)} popup>
         <ModalHeader />
         <ModalBody>
@@ -659,9 +710,9 @@ const Transactions = () => {
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
                 <Select value={updateFormData.status || ''} id="status" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
-                  <option></option>
-                  <option>Active</option>
-                  <option>Inactive</option>
+                  <option value="">Select Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </Select>
               </div>
 
