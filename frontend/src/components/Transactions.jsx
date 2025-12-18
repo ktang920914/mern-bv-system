@@ -19,6 +19,7 @@ const Transactions = () => {
   const [items,setItems] = useState([])
   const [extruders,setExtruders] = useState([])
   const [spareparts,setSpareparts] = useState([])
+  const [others,setOthers] = useState([])
   const [records,setRecords] = useState([])
   const [openModalDeleteRecord,setOpenModalDeleteRecord] = useState(false)
   const [openModalUpdateRecord,setOpenModalUpdateRecord] = useState(false)
@@ -112,6 +113,24 @@ const Transactions = () => {
       }
     }
     fetchSpareparts()
+  },[currentUser._id])
+
+  useEffect(() => {
+    const fetchOthers = async () => {
+      try {
+        const res = await fetch('/api/rest/getOthers')
+        const data = await res.json()
+        if(data.success === false){
+          console.log(data.message)
+        }
+        if(res.ok){
+          setOthers(data)
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+    }
+    fetchOthers()
   },[currentUser._id])
 
   useEffect(() => {
@@ -539,6 +558,9 @@ const Transactions = () => {
                   ))}
                   {items.map((item) => (
                     <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                  ))}
+                  {others.map((other) => (
+                    <option key={other._id} value={other.code}>{`${other.code} --- ${other.type} --- ${other.status}`}</option>
                   ))}
                   {extruders.map((extruder) => (
                     <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>

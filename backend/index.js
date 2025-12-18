@@ -21,6 +21,7 @@ import movementRoute from './routes/movement.route.js'
 import extruderRoute from './routes/extruder.route.js'
 import preventiveRoute from './routes/todo.route.js'
 import sparepartRoute from './routes/sparepart.route.js'
+import otherRoute from './routes/rest.route.js'
 import https from 'https'
 import fs from 'fs'
 
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoute)
 app.use('/api/purchase', purchaseRoute)
 app.use('/api/machine', extruderRoute)
 app.use('/api/other', sparepartRoute)
+app.use('/api/rest', otherRoute)
 app.use('/api/inventory', inventoryRoute)
 app.use('/api/transaction', transactionRoute)
 app.use('/api/activity', activityRoute)

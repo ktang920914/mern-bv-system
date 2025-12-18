@@ -254,6 +254,16 @@ const DashSidebar = () => {
                     Spareparts
                   </SidebarItem>
                 </Link>
+                <Link to='/?tab=Others'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Others'} 
+                    as='div'
+                    className={tab === 'Others' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Others
+                  </SidebarItem>
+                </Link>
                 <Link to='/?tab=Transactions'>
                   <SidebarItem 
                     onClick={() => setSidebarOpen(false)} 

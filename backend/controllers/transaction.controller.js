@@ -2,10 +2,11 @@ import Transaction from "../models/transaction.model.js"
 import Inventory from "../models/inventory.model.js"
 import Extruder from "../models/extruder.model.js"
 import Sparepart from "../models/sparepart.model.js"
+import Other from "../models/other.model.js"
 import { errorHandler } from "../utils/error.js"
 import Activity from "../models/activity.model.js"
 
-// 检查记录属于哪种类型（inventory、extruder 或 sparepart）
+// 检查记录属于哪种类型（inventory、extruder、sparepart 或 other）
 const checkItemType = async (code) => {
     const inventoryItem = await Inventory.findOne({ code });
     if (inventoryItem) return 'inventory';
@@ -15,6 +16,9 @@ const checkItemType = async (code) => {
 
     const sparepartItem = await Sparepart.findOne({ code });
     if (sparepartItem) return 'sparepart';
+
+    const otherItem = await Other.findOne({ code });
+    if (otherItem) return 'other';
     
     return null;
 };
@@ -45,6 +49,15 @@ const getItemAndQRFunction = async (code) => {
             item: sparepartItem,
             updateQRFunction: updateSparepartQRCode,
             type: 'sparepart'
+        };
+    }
+
+    const otherItem = await Other.findOne({ code });
+    if (otherItem) {
+        return {
+            item: otherItem,
+            updateQRFunction: updateOtherQRCode,
+            type: 'other'
         };
     }
     
@@ -88,6 +101,14 @@ const createDefaultItem = async (code, type = 'inventory') => {
                 updateQRFunction: updateSparepartQRCode,
                 type: 'sparepart'
             };
+        case 'other':
+            const newOther = new Other(defaultData);
+            await newOther.save();
+            return {
+                item: newOther,
+                updateQRFunction: updateOtherQRCode,
+                type: 'other'
+            };
         default:
             throw new Error('Unknown item type');
     }
@@ -99,9 +120,11 @@ const determineItemType = (code) => {
     // 例如：如果 code 以 "INV" 开头就是 inventory
     // 如果 code 以 "EXT" 开头就是 extruder  
     // 如果 code 以 "SPT" 开头就是 sparepart
+    // 如果 code 以 "OTH" 开头就是 other
     if (code.startsWith('INV')) return 'inventory';
     if (code.startsWith('EXT')) return 'extruder';
     if (code.startsWith('SPT')) return 'sparepart';
+    if (code.startsWith('OTH')) return 'other';
     return 'inventory'; // 默认
 };
 
@@ -189,10 +212,38 @@ const updateSparepartQRCode = async (sparepart) => {
     return await sparepart.save();
 };
 
+// 通用的 QR 码更新函数 - 用于 Other
+const updateOtherQRCode = async (other) => {
+    const formatDate = (date) => {
+        return new Date(date).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
+    const qrCodeContent = JSON.stringify({
+        code: other.code,
+        type: other.type,
+        location: other.location,
+        supplier: other.supplier,
+        balance: other.balance,
+        status: other.status,
+        createdAt: formatDate(other.createdAt),
+        lastUpdated: formatDate(new Date())
+    });
+    
+    other.qrCode = qrCodeContent;
+    return await other.save();
+};
+
 export const record = async (req,res,next) => {
     const {date,code,transaction,quantity,user,status} = req.body
     try {
-        // 检查 code 属于 inventory、extruder 还是 sparepart
+        // 检查 code 属于 inventory、extruder、sparepart 还是 other
         let itemData = await getItemAndQRFunction(code);
         
         if (!itemData) {
