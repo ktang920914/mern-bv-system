@@ -2,6 +2,7 @@ import { Button, Pagination, Popover, Select, Table, TableBody, TableCell, Table
 import useUserstore from '../store'
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import useThemeStore from '../themeStore'
 import { useSearchParams } from 'react-router-dom';
@@ -128,152 +129,353 @@ const Oee = () => {
         })
 
     // 生成Excel报告的函数 - 修复版（导出所有数据）
-    const generateExcelReport = () => {
-        try {
-            // 使用所有过滤后的数据，而不是当前页面的数据
-            const exportData = filteredAndSortedJobs;
+    // 生成Excel报告的函数 - 修复版（导出所有数据）
+const generateExcelReport = async () => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    
+    // 使用当前日期作为报告日期
+    const reportDate = new Date();
+    const dateStr = reportDate.toISOString().split('T')[0];
+    const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+    
+    const worksheet = workbook.addWorksheet(`OEE Report ${dateStr}`);
+    
+    // 设置工作表打印选项 - 像 Statistics 页面一样
+    const setupWorksheetPrint = (worksheet, options = {}) => {
+      const {
+        paperSize = 9,
+        orientation = 'landscape',
+        margins = {
+          left: 0.25,
+          right: 0.25,
+          top: 0.75,
+          bottom: 0.75,
+          header: 0.3,
+          footer: 0.3
+        },
+        horizontalCentered = true,
+        verticalCentered = false,
+        fitToPage = true,
+        fitToHeight = 1,
+        fitToWidth = 1,
+        scale = 100
+      } = options;
 
-            // 准备Excel数据 - 包含所有字段
-            const excelData = exportData.map(job => ({
-                'Extruder': job.code,
-                'Lot No': job.lotno,
-                'Start Time': job.starttime,
-                'End Time': job.endtime,
-                'Order Date': job.orderdate,
-                'Colour Code': job.colourcode,
-                'Material': job.material,
-                'Total Order': job.totalorder,
-                'Total Output': job.totaloutput,
-                'Reject': job.reject,
-                'Reject Cause': job.cause,
-                'Startup': job.startup,
-                'Screw Out': job.screwout,
-                'Process Complication': job.processcomplication,
-                'QC Time': job.qctime,
-                'Reason': job.reason,
-                'Downtime': job.downtime,
-                'Wash Resin': job.washresin,
-                'Wash Up': job.washup,
-                'Strand Drop': job.stranddrop,
-                'White Oil': job.whiteoil,
-                'Vent': job.vent,
-                'Uneven Pallet': job.unevenpallet,
-                'Trial Run': job.trialrun,
-                'Wastage': job.wastage,
-                'Meter Start': job.meterstart,
-                'Meter End': job.meterend,
-                'Total Meter': job.totalmeter,
-                'Operator': job.operator,
-                'IRR': job.irr,
-                'ARR': job.arr,
-                'IPQC': job.ipqc,
-                'Setup': job.setup,
-                'Prod Lead Time': job.prodleadtime,
-                'Plan Prod Time': job.planprodtime,
-                'Operating Time': job.operatingtime,
-                'Availability': job.availability,
-                'Performance': job.performance,
-                'Quality': job.quality,
-                'OEE': job.oee,
-                'OEE %': Math.round(job.oee * 100) + '%',
-                'Created At': new Date(job.createdAt).toLocaleString(),
-                'Updated At': new Date(job.updatedAt).toLocaleString()
-            }))
+      worksheet.pageSetup = {
+        paperSize,
+        orientation,
+        margins,
+        horizontalCentered,
+        verticalCentered,
+        fitToPage,
+        fitToHeight,
+        fitToWidth,
+        scale,
+        showGridLines: false,
+        blackAndWhite: false
+      };
+    };
 
-            // 如果没有数据，显示提示
-            if (excelData.length === 0) {
-                alert('No data available to export.')
-                return;
-            }
+    // 应用打印设置
+    setupWorksheetPrint(worksheet, {
+      fitToHeight: 1,
+      fitToWidth: 1,
+      horizontalCentered: true,
+      verticalCentered: false
+    });
 
-            // 创建工作簿和工作表
-            const workbook = XLSX.utils.book_new()
-            
-            // 先创建带标题的数据
-            const dataWithHeaders = [
-                ['OEE Report - Overall Equipment Effectiveness'], // 标题行
-                [`Generated on: ${new Date().toLocaleString()}`], // 日期行
-                [`Total Records: ${excelData.length}`], // 记录数量行
-                [''], // 空行
-                Object.keys(excelData[0]), // 表头
-                ...excelData.map(row => Object.values(row)) // 数据行
-            ]
+    // 定义列宽
+    const columnWidths = [
+      5,    // No.
+      10,   // Code
+      15,   // Lot No
+      20,   // Start Time
+      20,   // End Time
+      15,   // Order Date
+      15,   // Colour Code
+      40,   // Material
+      12,   // Total Order
+      12,   // Total Output
+      10,   // Reject
+      12,   // Reject Cause
+      10,   // Startup
+      10,   // Screw Out
+      18,   // Process Complication
+      10,   // QC Time
+      15,   // Reason
+      12,   // Downtime
+      12,   // Wash Resin
+      10,   // Wash Up
+      12,   // Strand Drop
+      12,   // White Oil
+      10,   // Vent
+      10,   // Uneven Pallet
+      15,   // Trial Run
+      10,   // Wastage
+      12,   // Meter Start
+      12,   // Meter End
+      12,   // Total Meter
+      20,   // Operator
+      10,   // IRR
+      10,   // ARR
+      10,   // IPQC
+      10,   // Setup
+      15,   // Prod Lead Time
+      15,   // Plan Prod Time
+      15,   // Operating Time
+      15,   // Availability
+      15,   // Performance
+      15,   // Quality
+      15,   // OEE
+      10,   // OEE %
+      25,   // Created At
+      25    // Updated At
+    ];
 
-            const worksheet = XLSX.utils.aoa_to_sheet(dataWithHeaders)
+    worksheet.columns = columnWidths.map(width => ({ width }));
 
-            // 获取数据范围
-            const range = XLSX.utils.decode_range(worksheet['!ref'])
-            
-            // 设置列宽
-            const colWidths = [
-                { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
-                { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 12 },
-                { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, 
-                { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 15 }, 
-                { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, 
-                { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, 
-                { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
-                { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, 
-                { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
-                { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
-                { wch: 10 }, { wch: 20 }, { wch: 20 }
-            ]
-            worksheet['!cols'] = colWidths
+    // 定义样式
+    const titleFont = { name: 'Arial Black', size: 16, bold: true };
+    const headerFont = { name: 'Calibri', size: 11, bold: true };
+    const defaultFont = { name: 'Calibri', size: 11 };
+    
+    // 边框样式 - 像 Statistics 页面一样
+    const borderStyle = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    };
 
-            // 设置合并单元格
-            if (!worksheet['!merges']) worksheet['!merges'] = []
-            
-            // 合并标题单元格
-            worksheet['!merges'].push({
-                s: { r: 0, c: 0 },
-                e: { r: 0, c: Object.keys(excelData[0]).length - 1 }
-            })
-            
-            // 合并日期单元格
-            worksheet['!merges'].push({
-                s: { r: 1, c: 0 },
-                e: { r: 1, c: Object.keys(excelData[0]).length - 1 }
-            })
+    // 对齐方式
+    const centerAlignment = { horizontal: 'center', vertical: 'middle' };
+    const leftAlignment = { horizontal: 'left', vertical: 'middle' };
 
-            // 合并记录数量单元格
-            worksheet['!merges'].push({
-                s: { r: 2, c: 0 },
-                e: { r: 2, c: Object.keys(excelData[0]).length - 1 }
-            })
+    // 标题行
+    const titleRow = worksheet.getRow(1);
+    titleRow.height = 30;
+    titleRow.getCell(1).value = `OEE REPORT - OVERALL EQUIPMENT EFFECTIVENESS`;
+    titleRow.getCell(1).font = titleFont;
+    titleRow.getCell(1).alignment = centerAlignment;
+    worksheet.mergeCells(1, 1, 1, columnWidths.length);
 
-            // 添加自动筛选器（从第5行开始，即表头行）
-            worksheet['!autofilter'] = { 
-                ref: XLSX.utils.encode_range({
-                    s: { r: 4, c: 0 },
-                    e: { r: range.e.r, c: range.e.c }
-                })
-            }
+    // 副标题行
+    const subtitleRow = worksheet.getRow(2);
+    subtitleRow.height = 20;
+    subtitleRow.getCell(1).value = `Generated on: ${reportDate.toLocaleString()}`;
+    subtitleRow.getCell(1).font = { ...defaultFont, italic: true };
+    subtitleRow.getCell(1).alignment = centerAlignment;
+    worksheet.mergeCells(2, 1, 2, columnWidths.length);
 
-            // 冻结窗格 - 冻结表头行（第5行）
-            worksheet['!freeze'] = { x: 0, y: 5 }
+    // 表头行
+    const headerRow = worksheet.getRow(3);
+    headerRow.height = 25;
+    
+    const headers = [
+      'No.', 'Extruder', 'Lot No', 'Start Time', 'End Time', 'Order Date',
+      'Colour Code', 'Material', 'Total Order', 'Total Output', 'Reject',
+      'Reject Cause', 'Startup', 'Screw Out', 'Process Complication', 'QC Time',
+      'Reason', 'Downtime', 'Wash Resin', 'Wash Up', 'Strand Drop', 'White Oil',
+      'Vent', 'Uneven Pallet', 'Trial Run', 'Wastage', 'Meter Start', 'Meter End',
+      'Total Meter', 'Operator', 'IRR', 'ARR', 'IPQC', 'Setup', 'Prod Lead Time',
+      'Plan Prod Time', 'Operating Time', 'Availability', 'Performance', 'Quality',
+      'OEE', 'OEE %', 'Created At', 'Updated At'
+    ];
 
-            // 添加工作表到工作簿
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'OEE Report')
-            
-            // 生成Excel文件并下载
-            const excelBuffer = XLSX.write(workbook, { 
-                bookType: 'xlsx', 
-                type: 'array'
-            })
-            const blob = new Blob([excelBuffer], { 
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-            })
-            
-            // 使用当前日期作为文件名
-            const date = new Date().toISOString().split('T')[0]
-            saveAs(blob, `OEE_Report_${date}.xlsx`)
-            
-            console.log('Excel report generated successfully with', excelData.length, 'records')
-        } catch (error) {
-            console.error('Error generating Excel report:', error)
-            alert('Error generating report. Please check console for details.')
-        }
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1);
+      cell.value = header;
+      cell.font = headerFont;
+      cell.alignment = centerAlignment;
+      cell.border = borderStyle;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景，和 Statistics 页面一样
+      };
+    });
+
+    // 获取所有过滤后的数据
+    const exportData = filteredAndSortedJobs;
+    
+    // 如果没有数据，添加提示行
+    if (exportData.length === 0) {
+      const emptyRow = worksheet.getRow(4);
+      emptyRow.getCell(1).value = 'No OEE data available for export';
+      worksheet.mergeCells(4, 1, 4, columnWidths.length);
+      emptyRow.getCell(1).alignment = centerAlignment;
+      emptyRow.getCell(1).font = { ...defaultFont, italic: true };
+    } else {
+      // 数据行
+      let rowIndex = 4;
+      exportData.forEach((job, index) => {
+        const row = worksheet.getRow(rowIndex);
+        row.height = 20;
+
+        // 准备行数据
+        const rowData = [
+          index + 1, // No.
+          job.code || '', // Extruder
+          job.lotno || '', // Lot No
+          job.starttime || '', // Start Time
+          job.endtime || '', // End Time
+          job.orderdate || '', // Order Date
+          job.colourcode || '', // Colour Code
+          job.material || '', // Material
+          job.totalorder || 0, // Total Order
+          job.totaloutput || 0, // Total Output
+          job.reject || 0, // Reject
+          job.cause || '', // Reject Cause
+          job.startup || 0, // Startup
+          job.screwout || 0, // Screw Out
+          job.processcomplication || '', // Process Complication
+          job.qctime || 0, // QC Time
+          job.reason || '', // Reason
+          job.downtime || 0, // Downtime
+          job.washresin || 0, // Wash Resin
+          job.washup || 0, // Wash Up
+          job.stranddrop || 0, // Strand Drop
+          job.whiteoil || 0, // White Oil
+          job.vent || 0, // Vent
+          job.unevenpallet || 0, // Uneven Pallet
+          job.trialrun || 0, // Trial Run
+          job.wastage || 0, // Wastage
+          job.meterstart || 0, // Meter Start
+          job.meterend || 0, // Meter End
+          job.totalmeter || 0, // Total Meter
+          job.operator || '', // Operator
+          job.irr || 0, // IRR
+          job.arr || 0, // ARR
+          job.ipqc || 0, // IPQC
+          job.setup || 0, // Setup
+          job.prodleadtime || 0, // Prod Lead Time
+          job.planprodtime || 0, // Plan Prod Time
+          job.operatingtime || 0, // Operating Time
+          job.availability ? job.availability.toFixed(4) : 0, // Availability
+          job.performance ? job.performance.toFixed(4) : 0, // Performance
+          job.quality ? job.quality.toFixed(4) : 0, // Quality
+          job.oee ? job.oee.toFixed(4) : 0, // OEE
+          job.oee ? (job.oee * 100).toFixed(1) + '%' : '0%', // OEE %
+          job.createdAt ? new Date(job.createdAt).toLocaleString() : '', // Created At
+          job.updatedAt ? new Date(job.updatedAt).toLocaleString() : ''  // Updated At
+        ];
+
+        // 填充数据并设置样式
+        rowData.forEach((value, colIndex) => {
+          const cell = row.getCell(colIndex + 1);
+          cell.value = value;
+          cell.font = defaultFont;
+          
+          // 设置对齐方式：数字和日期居中，文本左对齐
+          if (colIndex === 0 || colIndex === 1 || colIndex === 2 || 
+              colIndex === 3 || colIndex === 4 || colIndex === 5 ||
+              colIndex === 6 || colIndex === 7 || colIndex === 29) {
+            // 文本列左对齐
+            cell.alignment = leftAlignment;
+          } else {
+            // 数字和百分比列居中
+            cell.alignment = centerAlignment;
+          }
+          
+          // 设置边框
+          cell.border = borderStyle;
+          
+          // 为 OEE 百分比列添加条件格式颜色
+          if (colIndex === 41) { // OEE % 列
+            const oeePercentage = job.oee ? job.oee * 100 : 0;
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { 
+                argb: oeePercentage >= 85 ? 'FFC6EFCE' : 'FFFFC7CE' // 绿色或红色背景
+              }
+            };
+          }
+          
+          // 为关键指标添加浅色背景
+          if (colIndex >= 37 && colIndex <= 40) { // Availability, Performance, Quality, OEE
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF2F2F2' } // 浅灰色背景
+            };
+          }
+        });
+
+        rowIndex++;
+      });
+
+      // 为表头行添加筛选器 - ⭐ 关键添加部分
+      // ExcelJS 自动筛选器设置
+      const autoFilterRange = {
+        from: { row: 3, column: 1 }, // 从第3行第1列开始（表头行）
+        to: { row: rowIndex - 1, column: columnWidths.length } // 到最后一行最后一列
+      };
+      
+      // 设置自动筛选器
+      worksheet.autoFilter = autoFilterRange;
+
+      // 添加总计行
+      const totalRow = worksheet.getRow(rowIndex);
+      totalRow.height = 25;
+      
+      // 合并单元格用于总计文本
+      worksheet.mergeCells(rowIndex, 1, rowIndex, 8);
+      totalRow.getCell(1).value = `Total Records: ${exportData.length}`;
+      totalRow.getCell(1).font = { ...defaultFont, bold: true };
+      totalRow.getCell(1).alignment = centerAlignment;
+      
+      // 设置总计行背景色
+      for (let i = 1; i <= columnWidths.length; i++) {
+        const cell = totalRow.getCell(i);
+        cell.border = borderStyle;
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9EAD3' } // 浅绿色背景
+        };
+      }
+      
+      // 计算平均 OEE
+      const avgOEE = exportData.length > 0 
+        ? exportData.reduce((sum, job) => sum + (job.oee || 0), 0) / exportData.length
+        : 0;
+      
+      const avgOeeCell = worksheet.getCell(rowIndex, 41); // OEE % 列
+      avgOeeCell.value = `Avg OEE: ${(avgOEE * 100).toFixed(1)}%`;
+      avgOeeCell.font = { ...defaultFont, bold: true };
+      avgOeeCell.alignment = centerAlignment;
+      worksheet.mergeCells(rowIndex, 40, rowIndex, 42); // 合并 OEE, OEE %, Created At 列
     }
+
+    // 设置冻结窗格 - 冻结表头行
+    worksheet.views = [
+      {
+        state: 'frozen',
+        xSplit: 8,
+        ySplit: 3, // 冻结前3行（标题、副标题、表头）
+        topLeftCell: 'I4', // 从第4行开始可滚动
+        activeCell: 'I4'
+      }
+    ];
+
+    // 生成 Excel 文件
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    
+    // 保存文件
+    saveAs(blob, `OEE_Report_${dateStr}_${timeStr}.xlsx`);
+
+    console.log('Excel report generated with auto-filter successfully!');
+
+  } catch (error) {
+    console.error('Error generating Excel report:', error);
+    alert('Failed to generate Excel report. Please try again.');
+  }
+};
 
     // 获取OEE百分比显示（去掉小数点）
     const getOeePercentage = (oeeValue) => {
