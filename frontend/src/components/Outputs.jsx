@@ -4,6 +4,7 @@ import { useState } from 'react'
 import useUserstore from '../store'
 import { HiX, HiCheck } from 'react-icons/hi'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver'
 
 // 导入 Chart.js 相关
@@ -730,86 +731,271 @@ const Outputs = () => {
         return tableData;
     };
 
-    const generateExcelReport = () => {
-        const tableData = prepareTableData();
-        if (tableData.length === 0) {
-            setErrorMessage('No data to export')
-            return
+    const generateExcelReport = async () => {
+    const tableData = prepareTableData();
+    if (tableData.length === 0) {
+        setErrorMessage('No data to export');
+        return;
+    }
+
+    try {
+        const workbook = new ExcelJS.Workbook();
+        
+        // 使用当前日期作为报告日期
+        const reportDate = new Date();
+        const dateStr = reportDate.toISOString().split('T')[0];
+        const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+        
+        const worksheet = workbook.addWorksheet(`Outputs Report ${displayYear}`);
+        
+        // 设置工作表打印选项
+        const setupWorksheetPrint = (worksheet, options = {}) => {
+            const {
+                paperSize = 9,
+                orientation = 'landscape',
+                margins = {
+                    left: 0.25,
+                    right: 0.25,
+                    top: 0.75,
+                    bottom: 0.75,
+                    header: 0.3,
+                    footer: 0.3
+                },
+                horizontalCentered = true,
+                verticalCentered = false,
+                fitToPage = true,
+                fitToHeight = 1,
+                fitToWidth = 1,
+                scale = 100
+            } = options;
+
+            worksheet.pageSetup = {
+                paperSize,
+                orientation,
+                margins,
+                horizontalCentered,
+                verticalCentered,
+                fitToPage,
+                fitToHeight,
+                fitToWidth,
+                scale,
+                showGridLines: false,
+                blackAndWhite: false
+            };
+        };
+
+        // 应用打印设置
+        setupWorksheetPrint(worksheet, {
+            fitToHeight: 1,
+            fitToWidth: 1,
+            horizontalCentered: true,
+            verticalCentered: false
+        });
+
+        // 定义列宽 - 根据你的数据显示需求调整
+        const columnWidths = [
+            25,    // Data Type
+            10,    // Jan
+            10,    // Feb
+            10,    // Mar
+            10,    // Apr
+            10,    // May
+            10,    // Jun
+            10,    // Jul
+            10,    // Aug
+            10,    // Sep
+            10,    // Oct
+            10,    // Nov
+            10,    // Dec
+            12     // Total
+        ];
+
+        worksheet.columns = columnWidths.map(width => ({ width }));
+
+        // 定义样式
+        const titleFont = { name: 'Arial Black', size: 16, bold: true };
+        const headerFont = { name: 'Calibri', size: 11, bold: true };
+        const defaultFont = { name: 'Calibri', size: 11 };
+        
+        // 边框样式 - 统一使用细边框
+        const borderStyle = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
+
+        // 对齐方式
+        const centerAlignment = { horizontal: 'center', vertical: 'middle' };
+        const leftAlignment = { horizontal: 'left', vertical: 'middle' };
+        const rightAlignment = { horizontal: 'right', vertical: 'middle' };
+
+        // 标题行
+        const titleRow = worksheet.getRow(1);
+        titleRow.height = 30;
+        titleRow.getCell(1).value = `OUTPUTS REPORT - YEAR ${displayYear}`;
+        titleRow.getCell(1).font = titleFont;
+        titleRow.getCell(1).alignment = centerAlignment;
+        worksheet.mergeCells(1, 1, 1, columnWidths.length);
+
+        // 副标题行
+        const subtitleRow = worksheet.getRow(2);
+        subtitleRow.height = 20;
+        
+        let subtitleText = `Generated on: ${reportDate.toLocaleString()}`;
+        if (selectedCodes.length > 0) {
+            subtitleText += ` | Job Codes: ${selectedCodes.join(', ')}`;
+        }
+        if (comparisonMode) {
+            subtitleText += ' | Comparison Mode';
+        }
+        
+        subtitleRow.getCell(1).value = subtitleText;
+        subtitleRow.getCell(1).font = { ...defaultFont, italic: true };
+        subtitleRow.getCell(1).alignment = centerAlignment;
+        worksheet.mergeCells(2, 1, 2, columnWidths.length);
+
+        // 表头行
+        const headerRow = worksheet.getRow(3);
+        headerRow.height = 25;
+        
+        const headers = [
+            'Data Type',
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+            'Total'
+        ];
+
+        headers.forEach((header, index) => {
+            const cell = headerRow.getCell(index + 1);
+            cell.value = header;
+            cell.font = headerFont;
+            cell.alignment = centerAlignment;
+            cell.border = borderStyle;
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+            };
+        });
+
+        // 数据行
+        let rowIndex = 4;
+        tableData.forEach((output, index) => {
+            const row = worksheet.getRow(rowIndex);
+            row.height = 20;
+
+            // 准备行数据
+            const rowData = [
+                output.dataTypeLabel || 'Unknown'
+            ];
+            
+            // 添加月份数据
+            monthFields.forEach(month => {
+                const value = output[month.key] || 0;
+                rowData.push(formatNumber(value));
+            });
+            
+            // 添加总计
+            rowData.push(formatNumber(output.total || 0));
+
+            // 填充数据并设置样式
+            rowData.forEach((value, colIndex) => {
+                const cell = row.getCell(colIndex + 1);
+                cell.value = value;
+                cell.font = defaultFont;
+                
+                // 设置对齐方式
+                if (colIndex === 0) {
+                    // 第一列（数据类型）左对齐
+                    cell.alignment = leftAlignment;
+                } else {
+                    // 数据列右对齐（数字）
+                    cell.alignment = rightAlignment;
+                }
+                
+                // 设置边框
+                cell.border = borderStyle;
+                
+                // 为总计列添加特殊背景色
+                if (colIndex === rowData.length - 1) { // 总计列
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFF2F2F2' } // 浅灰色背景
+                    };
+                }
+            });
+
+            rowIndex++;
+        });
+
+        // 为表头行添加筛选器
+        const autoFilterRange = {
+            from: { row: 3, column: 1 }, // 从第3行第1列开始（表头行）
+            to: { row: rowIndex - 1, column: columnWidths.length } // 到最后一行最后一列
+        };
+        
+        // 设置自动筛选器
+        worksheet.autoFilter = autoFilterRange;
+
+        // 添加总计行
+        const totalRow = worksheet.getRow(rowIndex);
+        totalRow.height = 25;
+        
+        // 合并单元格用于总计文本
+        worksheet.mergeCells(rowIndex, 1, rowIndex, columnWidths.length);
+        totalRow.getCell(1).value = `Total Records: ${tableData.length} | Year: ${displayYear}${selectedCodes.length > 0 ? ` | Job Codes: ${selectedCodes.join(', ')}` : ''}`;
+        totalRow.getCell(1).font = { ...defaultFont, bold: true };
+        totalRow.getCell(1).alignment = centerAlignment;
+        
+        // 设置总计行背景色
+        for (let i = 1; i <= columnWidths.length; i++) {
+            const cell = totalRow.getCell(i);
+            cell.border = borderStyle;
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFD9EAD3' } // 浅绿色背景
+            };
         }
 
-        try {
-            const worksheetData = []
-            
-            // 添加报告标题和筛选信息
-            worksheetData.push(['Outputs Report'])
-            worksheetData.push([`Year: ${displayYear}`])
-            worksheetData.push([`Filtered Job Codes: ${selectedCodes.length > 0 ? selectedCodes.join(', ') : 'All codes selected'}`])
-            worksheetData.push([`Comparison Mode: ${comparisonMode ? 'Enabled' : 'Disabled'}`])
-            worksheetData.push([])
-            
-            // 添加标题行
-            const headers = ['Data Type', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Total']
-            worksheetData.push(headers)
-            
-            // 添加数据行
-            tableData.forEach(output => {
-                const rowData = [
-                    output.dataTypeLabel || 'Unknown'
-                ]
-                
-                monthFields.forEach(month => {
-                    const value = output[month.key] || 0
-                    rowData.push(formatNumber(value))
-                })
-                
-                const total = output.total || 0
-                rowData.push(formatNumber(total))
-                
-                worksheetData.push(rowData)
-            })
-            
-            // 创建工作簿和工作表
-            const workbook = XLSX.utils.book_new()
-            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-            
-            // 设置列宽
-            const colWidths = [
-                { wch: 25 },
-                ...Array(12).fill({ wch: 10 }),
-                { wch: 12 }
-            ]
-            worksheet['!cols'] = colWidths
-            
-            // 合并标题单元格
-            if (!worksheet['!merges']) worksheet['!merges'] = [];
-            worksheet['!merges'].push(
-                { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
-                { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
-                { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } },
-                { s: { r: 3, c: 0 }, e: { r: 3, c: 13 } }
-            );
-            
-            XLSX.utils.book_append_sheet(workbook, worksheet, `Outputs ${displayYear}`)
-            
-            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-            const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-            
-            let fileName = `Outputs_Report_${displayYear}`
-            if (selectedCodes.length > 0) {
-                fileName += `_${selectedCodes.join('_')}`
+        /* 设置冻结窗格 - 冻结表头行
+        worksheet.views = [
+            {
+                state: 'frozen',
+                xSplit: 1, // 冻结第一列（数据类型）
+                ySplit: 3, // 冻结前3行（标题、副标题、表头）
+                topLeftCell: 'B4', // 从第4行第2列开始可滚动
+                activeCell: 'B4'
             }
-            if (comparisonMode) {
-                fileName += '_comparison'
-            }
-            
-            saveAs(data, `${fileName}.xlsx`)
-            
-        } catch (error) {
-            setErrorMessage('Error generating Excel report: ' + error.message)
-            console.error('Excel export error:', error)
+        ];*/
+
+        // 生成 Excel 文件
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        
+        // 生成文件名
+        let fileName = `Outputs_Report_${displayYear}`;
+        if (selectedCodes.length > 0) {
+            const codesStr = selectedCodes.join('_').substring(0, 20); // 限制长度
+            fileName += `_${codesStr}`;
         }
+        if (comparisonMode) {
+            fileName += '_comparison';
+        }
+        
+        saveAs(blob, `${fileName}.xlsx`);
+
+        console.log('Outputs Excel report generated successfully!');
+
+    } catch (error) {
+        setErrorMessage('Error generating Excel report: ' + error.message);
+        console.error('Excel export error:', error);
     }
+};
 
     const handleYearChange = () => {
         setOpenModal(!openModal)

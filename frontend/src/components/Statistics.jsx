@@ -161,9 +161,9 @@ const Statistics = () => {
       // 设置列宽
       worksheet.columns = [
         { width: 5 },    // No.
-        { width: 15 },   // Job Code
+        { width: 10 },   // Job Code
         { width: 20 },   // Lot No
-        { width: 20 },   // Material
+        { width: 35 },   // Material
         { width: 15 },   // Color Code
         { width: 20 },   // Start Time
         { width: 20 },   // End Time
