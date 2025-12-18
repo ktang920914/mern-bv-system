@@ -5,6 +5,7 @@ import useUserstore from '../store'
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 
 const Suppliers = () => {
@@ -323,51 +324,263 @@ const Suppliers = () => {
     )
 
     // 生成Excel报告的函数
-    const generateExcelReport = () => {
-        // 准备Excel数据 - 包含所有供应商字段
-        const excelData = suppliers.map(supplier => ({
-            'Supplier': supplier.supplier,
-            'Contact': supplier.contact,
-            'Description': supplier.description,
-            'Address': supplier.address,
-            'PIC': supplier.pic,
-            'Email': supplier.email,
-            'Status': supplier.status,
-            'Created At': new Date(supplier.createdAt).toLocaleString(),
-            'Updated At': new Date(supplier.updatedAt).toLocaleString()
-        }))
+    const generateExcelReport = async () => {
+  try {
+    // 使用 ExcelJS 替代 XLSX
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Suppliers Report')
+    
+    // 设置工作表打印选项
+    setupWorksheetPrint(worksheet, {
+      fitToHeight: 1,
+      fitToWidth: 1,
+      horizontalCentered: true,
+      verticalCentered: false
+    })
+    
+    // 设置列宽
+    worksheet.columns = [
+      { width: 5 },    // No.
+      { width: 20 },   // Supplier
+      { width: 15 },   // Contact
+      { width: 35 },   // Description
+      { width: 30 },   // Address
+      { width: 15 },   // PIC
+      { width: 25 },   // Email
+      { width: 10 },   // Status
+      { width: 20 },   // Created At
+      { width: 20 }    // Updated At
+    ]
 
-        // 创建工作簿和工作表
-        const workbook = XLSX.utils.book_new()
-        const worksheet = XLSX.utils.json_to_sheet(excelData)
-        
-        // 设置列宽
-        const colWidths = [
-            { wch: 20 }, // Supplier
-            { wch: 15 }, // Contact
-            { wch: 30 }, // Description
-            { wch: 30 }, // Address
-            { wch: 15 }, // PIC
-            { wch: 25 }, // Email
-            { wch: 10 }, // Status
-            { wch: 20 }, // Created At
-            { wch: 20 }  // Updated At
-        ]
-        worksheet['!cols'] = colWidths
-
-        // 添加工作表到工作簿
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Suppliers Report')
-        
-        // 生成Excel文件并下载
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], { 
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        })
-        
-        // 使用当前日期作为文件名
-        const date = new Date().toISOString().split('T')[0]
-        saveAs(blob, `Suppliers_Report_${date}.xlsx`)
+    // 定义样式
+    const headerFont = { name: 'Calibri', size: 11, bold: true }
+    const titleFont = { name: 'Arial Black', size: 16, bold: true }
+    const defaultFont = { name: 'Calibri', size: 11 }
+    
+    const borderStyle = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
     }
+
+    const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+    const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+
+    // 标题行
+    const titleRow = worksheet.getRow(1)
+    titleRow.height = 30
+    titleRow.getCell(1).value = 'SUPPLIERS REPORT'
+    titleRow.getCell(1).font = titleFont
+    titleRow.getCell(1).alignment = centerAlignment
+    worksheet.mergeCells('A1:J1')
+
+    // 表头行
+    const headerRow = worksheet.getRow(2)
+    headerRow.height = 25
+    const headers = [
+      'No.', 'Supplier', 'Contact', 'Description', 'Address', 
+      'PIC', 'Email', 'Status', 'Created At', 'Updated At'
+    ]
+    
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1)
+      cell.value = header
+      cell.font = headerFont
+      cell.alignment = centerAlignment
+      cell.border = borderStyle
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+      }
+    })
+
+    // 准备数据
+    const excelData = suppliers.map(supplier => ({
+      'Supplier': supplier.supplier,
+      'Contact': supplier.contact,
+      'Description': supplier.description,
+      'Address': supplier.address,
+      'PIC': supplier.pic,
+      'Email': supplier.email,
+      'Status': supplier.status,
+      'Created At': new Date(supplier.createdAt).toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }),
+      'Updated At': new Date(supplier.updatedAt).toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+    }))
+
+    // 数据行
+    let rowIndex = 3
+    excelData.forEach((supplier, index) => {
+      const row = worksheet.getRow(rowIndex)
+      row.height = 20
+      
+      const rowData = [
+        index + 1,
+        supplier.Supplier,
+        supplier.Contact,
+        supplier.Description,
+        supplier.Address,
+        supplier.PIC,
+        supplier.Email,
+        supplier.Status,
+        supplier['Created At'],
+        supplier['Updated At']
+      ]
+
+      rowData.forEach((value, colIndex) => {
+        const cell = row.getCell(colIndex + 1)
+        cell.value = value
+        cell.font = defaultFont
+        cell.border = borderStyle
+        
+        // 不同的列对齐方式
+        if (colIndex === 0 || colIndex === 7) { // No. 和 Status 列居中
+          cell.alignment = centerAlignment
+        } else if (colIndex === 3 || colIndex === 4) { // Description 和 Address 列左对齐
+          cell.alignment = leftAlignment
+        } else {
+          cell.alignment = centerAlignment
+        }
+        
+        // 为状态列添加颜色
+        if (colIndex === 7) { // Status 列
+          if (value === 'Active') {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+            }
+            cell.font = { ...defaultFont, bold: true, color: { argb: 'FF006100' } }
+          } else if (value === 'Inactive') {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFC7CE' } // 浅红色
+            }
+            cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } }
+          }
+        }
+        
+        // 隔行着色
+        if (rowIndex % 2 === 0) {
+          if (colIndex !== 7) { // 保持状态列的颜色
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF8F8F8' } // 更浅的灰色
+            }
+          }
+        }
+      })
+
+      rowIndex++
+    })
+
+    // 如果没有数据，添加提示行
+    if (excelData.length === 0) {
+      const row = worksheet.getRow(rowIndex)
+      row.getCell(1).value = 'No supplier data available'
+      worksheet.mergeCells(`A${rowIndex}:J${rowIndex}`)
+      row.getCell(1).alignment = centerAlignment
+      row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } }
+      row.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+      }
+      row.getCell(1).border = borderStyle
+      rowIndex++
+    }
+
+    // 添加总计行
+    const totalRow = worksheet.getRow(rowIndex)
+    totalRow.height = 25
+    totalRow.getCell(1).value = 'TOTAL SUPPLIERS'
+    worksheet.mergeCells(`A${rowIndex}:G${rowIndex}`)
+    totalRow.getCell(1).font = { name: 'Calibri', size: 11, bold: true }
+    totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
+    totalRow.getCell(1).border = borderStyle
+    totalRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFDDEBF7' } // 浅蓝色
+    }
+    
+    totalRow.getCell(8).value = excelData.length
+    totalRow.getCell(8).font = { name: 'Calibri', size: 11, bold: true }
+    totalRow.getCell(8).alignment = centerAlignment
+    totalRow.getCell(8).border = borderStyle
+    totalRow.getCell(8).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFDDEBF7' }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    // 使用当前日期作为文件名
+    const date = new Date().toISOString().split('T')[0].replace(/-/g, '_')
+    saveAs(blob, `Suppliers_Report_${date}.xlsx`)
+
+  } catch (error) {
+    console.error('Error generating Excel report:', error)
+    alert('Failed to generate Excel report. Please try again.')
+  }
+}
+
+// 添加打印设置函数（与 Statistics.jsx 相同）
+const setupWorksheetPrint = (worksheet, options = {}) => {
+  const {
+    paperSize = 9,
+    orientation = 'landscape',
+    margins = {
+      left: 0.25,
+      right: 0.25,
+      top: 0.75,
+      bottom: 0.75,
+      header: 0.3,
+      footer: 0.3
+    },
+    horizontalCentered = true,
+    verticalCentered = false,
+    fitToPage = true,
+    fitToHeight = 1,
+    fitToWidth = 1,
+    scale = 100
+  } = options
+
+  worksheet.pageSetup = {
+    paperSize,
+    orientation,
+    margins,
+    horizontalCentered,
+    verticalCentered,
+    fitToPage,
+    fitToHeight,
+    fitToWidth,
+    scale,
+    showGridLines: false,
+    blackAndWhite: false
+  }
+}
 
   return (
     <div className='min-h-screen'>
