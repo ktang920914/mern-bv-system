@@ -977,10 +977,10 @@ const Oee = () => {
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="gray" onClick={() => setShowConfirmModal(false)}>
+                    <Button className='cursor-pointer' color="gray" onClick={() => setShowConfirmModal(false)}>
                         Cancel
                     </Button>
-                    <Button color="blue" onClick={executeSaveToServer}>
+                    <Button className='cursor-pointer' color="blue" onClick={executeSaveToServer}>
                         Save
                     </Button>
                 </ModalFooter>
@@ -1046,6 +1046,7 @@ const Oee = () => {
                                 </p>
                                 <div className="space-y-2">
                                     <Button 
+                                        className='cursor-pointer'
                                         fullSized 
                                         color="blue" 
                                         onClick={handleManualDownload}
@@ -1067,6 +1068,7 @@ const Oee = () => {
                         </Button>
                     ) : (
                         <Button 
+                            className='cursor-pointer'
                             color='gray' 
                             onClick={closeSaveModal}
                         >

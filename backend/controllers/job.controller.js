@@ -572,7 +572,7 @@ export const updateJob = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update job',
-            detail: `${req.user.username} updated job ${oldJob.lotno} with IPQC=${ipqc}, Setup=${setup}`
+            detail: `${req.user.username}`
         });
         await newActivity.save();
         
