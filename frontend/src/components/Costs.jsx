@@ -4,6 +4,7 @@ import useUserstore from '../store'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { HiX, HiCheck } from 'react-icons/hi'
+import ExcelJS from 'exceljs'
 
 // 导入 Chart.js 相关
 import {
@@ -725,108 +726,430 @@ const Costs = () => {
         return num.toFixed(2);
     }
 
-    const generateExcelReport = () => {
-        const displayCosts = getDisplayCosts();
-        
-        if (displayCosts.length === 0) {
-            setErrorMessage('No data to export')
-            return
-        }
+    // 替换现有的 generateExcelReport 函数
 
-        try {
-            const worksheetData = []
-            
-            // 添加报告标题和年份信息
-            worksheetData.push(['Costs Report'])
-            worksheetData.push([`Year: ${displayYear}`])
-            worksheetData.push([`Display Mode: ${comparisonMode ? 'Comparison' : 'Normal'}`])
-            if (selectedCategories.length === 0) {
-                worksheetData.push(['Selected Categories: Total of all categories'])
-            } else {
-                worksheetData.push([`Selected Categories: ${selectedCategories.join(', ')}`])
-            }
-            worksheetData.push([])
-            
-            // 如果是汇总数据，添加说明行
-            if (displayCosts[0]?.type.includes('All Costs') || displayCosts[0]?.type.includes(' + ')) {
-                worksheetData.push(['*Note: This is aggregated total data'])
-            }
-            worksheetData.push([])
-            
-            const headers = ['Cost Category', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Total']
-            worksheetData.push(headers)
-            
-            displayCosts.forEach(cost => {
-                const rowData = [cost.type]
-                
-                monthFields.forEach(month => {
-                    const value = cost[month.key] || 0
-                    rowData.push(formatDisplayNumber(value))
-                })
-                
-                const total = cost.total || 0
-                rowData.push(formatDisplayNumber(total))
-                
-                worksheetData.push(rowData)
-            })
-            
-            const workbook = XLSX.utils.book_new()
-            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-            
-            // 设置列宽和自动换行
-            const colWidths = [
-                { wch: 30 }, // 增加列宽以容纳更长的类别名称
-                ...Array(12).fill({ wch: 10 }),
-                { wch: 12 } 
-            ]
-            worksheet['!cols'] = colWidths
-            
-            // 为成本类别列设置自动换行样式
-            const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-            for (let R = 4; R <= range.e.r; R++) {
-                const cell_address = XLSX.utils.encode_cell({r:R, c:0});
-                if (!worksheet[cell_address]) continue;
-                worksheet[cell_address].s = {
-                    alignment: {
-                        wrapText: true,
-                        vertical: 'top'
-                    }
-                };
-            }
-            
-            // 合并标题单元格
-            if (!worksheet['!merges']) worksheet['!merges'] = [];
-            worksheet['!merges'].push(
-                { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
-                { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
-                { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } },
-                { s: { r: 3, c: 0 }, e: { r: 3, c: 13 } }
-            );
-            
-            XLSX.utils.book_append_sheet(workbook, worksheet, `Costs ${displayYear}`)
-            
-            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-            const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-            
-            let fileName = `Costs_Report_${displayYear}`
-            if (selectedCategories.length === 0) {
-                fileName += '_total_all'
-            } else if (selectedCategories.length === 1) {
-                fileName += `_${selectedCategories[0]}`
-            } else {
-                fileName += `_total_${selectedCategories.length}_categories`
-            }
-            if (comparisonMode) {
-                fileName += '_comparison'
-            }
-            
-            saveAs(data, `${fileName}.xlsx`)
-            
-            } catch (error) {
-                setErrorMessage('Error generating Excel report: ' + error.message)
-            }
+const setupWorksheetPrint = (worksheet, options = {}) => {
+  const {
+    paperSize = 9,
+    orientation = 'landscape',
+    margins = {
+      left: 0.25,
+      right: 0.25,
+      top: 0.75,
+      bottom: 0.75,
+      header: 0.3,
+      footer: 0.3
+    },
+    horizontalCentered = true,
+    verticalCentered = false,
+    fitToPage = true,
+    fitToHeight = 1,
+    fitToWidth = 1,
+    scale = 100
+  } = options
+
+  worksheet.pageSetup = {
+    paperSize,
+    orientation,
+    margins,
+    horizontalCentered,
+    verticalCentered,
+    fitToPage,
+    fitToHeight,
+    fitToWidth,
+    scale,
+    showGridLines: false,
+    blackAndWhite: false
+  }
+}
+
+// 新的 generateExcelReport 函数
+const generateExcelReport = async () => {
+  try {
+    const displayCosts = getDisplayCosts();
+    
+    if (displayCosts.length === 0) {
+      setErrorMessage('No data to export')
+      return
     }
+
+    // 使用 ExcelJS 创建报表
+    const workbook = new ExcelJS.Workbook()
+    let worksheetName = `Costs ${displayYear}`
+    
+    // 简化工作表名称
+    if (selectedCategories.length === 0) {
+      worksheetName = 'Total All Categories'
+    } else if (selectedCategories.length === 1) {
+      worksheetName = selectedCategories[0]
+    } else if (selectedCategories.length > 1) {
+      worksheetName = `Total ${selectedCategories.length} Categories`
+    }
+    
+    const worksheet = workbook.addWorksheet(worksheetName)
+    
+    // 设置打印选项
+    setupWorksheetPrint(worksheet, {
+      orientation: 'landscape',
+      fitToHeight: 1,
+      fitToWidth: 1,
+      horizontalCentered: true
+    })
+    
+    // 设置列宽 - 调整以适应成本数据
+    worksheet.columns = [
+      { width: 25 },    // Cost Category
+      { width: 12 },    // Jan
+      { width: 12 },    // Feb
+      { width: 12 },    // Mar
+      { width: 12 },    // Apr
+      { width: 12 },    // May
+      { width: 12 },    // Jun
+      { width: 12 },    // Jul
+      { width: 12 },    // Aug
+      { width: 12 },    // Sep
+      { width: 12 },    // Oct
+      { width: 12 },    // Nov
+      { width: 12 },    // Dec
+      { width: 15 }     // Total
+    ]
+
+    // 定义样式
+    const headerFont = { name: 'Calibri', size: 11, bold: true }
+    const titleFont = { name: 'Arial Black', size: 16, bold: true }
+    const defaultFont = { name: 'Calibri', size: 11 }
+    const boldFont = { name: 'Calibri', size: 11, bold: true }
+    
+    const borderStyle = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    }
+
+    const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+    const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+    const rightAlignment = { horizontal: 'right', vertical: 'middle' }
+
+    // 添加标题和报告信息
+    let titleRow = 1
+    
+    // 主标题
+    const mainTitleRow = worksheet.getRow(titleRow)
+    mainTitleRow.height = 30
+    mainTitleRow.getCell(1).value = 'COSTS MANAGEMENT REPORT'
+    mainTitleRow.getCell(1).font = titleFont
+    mainTitleRow.getCell(1).alignment = centerAlignment
+    worksheet.mergeCells(`A${titleRow}:N${titleRow}`)
+    
+    titleRow++
+    
+    // 年份信息
+    const yearRow = worksheet.getRow(titleRow)
+    yearRow.height = 22
+    yearRow.getCell(1).value = `Year: ${displayYear}`
+    yearRow.getCell(1).font = boldFont
+    yearRow.getCell(1).alignment = leftAlignment
+    worksheet.mergeCells(`A${titleRow}:N${titleRow}`)
+    
+    titleRow++
+    
+    // 显示模式
+    const modeRow = worksheet.getRow(titleRow)
+    modeRow.height = 22
+    const modeText = comparisonMode ? 'Comparison Mode' : 'Normal Mode'
+    modeRow.getCell(1).value = `Mode: ${modeText}`
+    modeRow.getCell(1).font = boldFont
+    modeRow.getCell(1).alignment = leftAlignment
+    worksheet.mergeCells(`A${titleRow}:N${titleRow}`)
+    
+    titleRow++
+    
+    // 类别信息
+    const categoryRow = worksheet.getRow(titleRow)
+    categoryRow.height = 22
+    let categoryText = ''
+    
+    if (selectedCategories.length === 0) {
+      categoryText = 'All Categories (Total of all categories)'
+    } else if (selectedCategories.length === 1) {
+      categoryText = `Category: ${selectedCategories[0]}`
+    } else {
+      categoryText = `Selected Categories: ${selectedCategories.join(', ')}`
+    }
+    
+    categoryRow.getCell(1).value = categoryText
+    categoryRow.getCell(1).font = { ...boldFont, color: { argb: 'FF0000FF' } } // 蓝色
+    categoryRow.getCell(1).alignment = leftAlignment
+    worksheet.mergeCells(`A${titleRow}:N${titleRow}`)
+    
+    titleRow++
+    
+    // 空行分隔
+    titleRow++
+
+    // 表头行
+    const headerRow = worksheet.getRow(titleRow)
+    headerRow.height = 25
+    
+    const headers = [
+      'Cost Category',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Total'
+    ]
+    
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1)
+      cell.value = header
+      cell.font = headerFont
+      cell.alignment = centerAlignment
+      cell.border = borderStyle
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      }
+    })
+    
+    titleRow++
+
+    // 准备数据行
+    let dataRowIndex = titleRow
+    let monthlyTotals = Array(12).fill(0) // 存储每个月的总计
+    let grandTotal = 0
+    
+    displayCosts.forEach((cost, index) => {
+      const row = worksheet.getRow(dataRowIndex)
+      row.height = 20
+      
+      const rowData = [cost.type]
+      
+      // 月份数据
+      monthFields.forEach((month, monthIndex) => {
+        const value = cost[month.key] || 0
+        rowData.push(value)
+        monthlyTotals[monthIndex] += value
+      })
+      
+      // 总计
+      const total = cost.total || 0
+      rowData.push(total)
+      grandTotal += total
+      
+      // 填充单元格数据
+      rowData.forEach((value, colIndex) => {
+        const cell = row.getCell(colIndex + 1)
+        
+        if (colIndex === 0) {
+          // 成本类别列
+          cell.value = value
+          cell.font = boldFont
+          cell.alignment = leftAlignment
+          cell.border = borderStyle
+          
+          // 根据是否是汇总数据添加不同颜色
+          if (cost.type.includes('All Costs') || cost.type.includes(' + ')) {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFDDEBF7' } // 浅蓝色
+            }
+          } else {
+            // 隔行着色
+            if (index % 2 === 0) {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF8F8F8' }
+              }
+            }
+          }
+        } else if (colIndex === 13) {
+          // 总计列
+          cell.value = Number(value) || 0
+          cell.numFmt = '#,##0.00'
+          cell.font = { ...boldFont, color: { argb: 'FF006100' } } // 深绿色
+          cell.alignment = rightAlignment
+          cell.border = borderStyle
+          
+          // 为较大金额添加不同背景色
+          const amount = Number(value) || 0
+          if (amount > 100000) {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFC7CE' } // 浅红色
+            }
+          } else if (amount > 50000) {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+            }
+          } else {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFE2EFDA' } // 浅绿色
+            }
+          }
+        } else {
+          // 月份数据列
+          cell.value = Number(value) || 0
+          cell.numFmt = '#,##0.00'
+          cell.font = defaultFont
+          cell.alignment = rightAlignment
+          cell.border = borderStyle
+          
+          // 高亮显示较大金额
+          const amount = Number(value) || 0
+          if (amount > 20000) {
+            cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } } // 红色
+          } else if (amount > 10000) {
+            cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C5700' } } // 橙色
+          }
+          
+          // 隔行着色
+          if (index % 2 === 0 && !cost.type.includes('All Costs')) {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF8F8F8' }
+            }
+          }
+        }
+      })
+      
+      dataRowIndex++
+    })
+
+    // 如果没有数据，添加提示行
+    if (displayCosts.length === 0) {
+      const row = worksheet.getRow(dataRowIndex)
+      row.getCell(1).value = 'No cost data available for selected criteria'
+      worksheet.mergeCells(`A${dataRowIndex}:N${dataRowIndex}`)
+      row.getCell(1).alignment = centerAlignment
+      row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } }
+      row.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFEB9C' }
+      }
+      row.getCell(1).border = borderStyle
+      dataRowIndex++
+    }
+
+    // 添加月度总计行
+    const monthlyTotalRow = worksheet.getRow(dataRowIndex)
+    monthlyTotalRow.height = 25
+    
+    // 总计标题
+    monthlyTotalRow.getCell(1).value = 'Monthly Totals'
+    monthlyTotalRow.getCell(1).font = { ...boldFont, size: 12 }
+    monthlyTotalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
+    monthlyTotalRow.getCell(1).border = borderStyle
+    monthlyTotalRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD9D9D9' } // 灰色
+    }
+    
+    // 每月总计数据
+    monthlyTotals.forEach((total, index) => {
+      const cell = monthlyTotalRow.getCell(index + 2)
+      cell.value = Number(total) || 0
+      cell.numFmt = '#,##0.00'
+      cell.font = { ...boldFont, size: 11, color: { argb: 'FF000080' } } // 深蓝色
+      cell.alignment = rightAlignment
+      cell.border = borderStyle
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD9D9D9' }
+      }
+    })
+    
+    // 月度总计的合计
+    const monthlyGrandTotalCell = monthlyTotalRow.getCell(14)
+    const monthlySum = monthlyTotals.reduce((sum, value) => sum + value, 0)
+    monthlyGrandTotalCell.value = monthlySum
+    monthlyGrandTotalCell.numFmt = '#,##0.00'
+    monthlyGrandTotalCell.font = { ...boldFont, size: 11, color: { argb: 'FF006100' } } // 深绿色
+    monthlyGrandTotalCell.alignment = rightAlignment
+    monthlyGrandTotalCell.border = borderStyle
+    monthlyGrandTotalCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+    }
+    
+    dataRowIndex++
+
+    // 添加总计行
+    const grandTotalRow = worksheet.getRow(dataRowIndex)
+    grandTotalRow.height = 28
+    
+    // 合并单元格显示总计标题
+    grandTotalRow.getCell(1).value = 'GRAND TOTAL'
+    worksheet.mergeCells(`A${dataRowIndex}:M${dataRowIndex}`)
+    grandTotalRow.getCell(1).font = { ...boldFont, size: 13, color: { argb: 'FFFFFFFF' } }
+    grandTotalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
+    grandTotalRow.getCell(1).border = borderStyle
+    grandTotalRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' } // 蓝色
+    }
+    
+    // 总计数值
+    grandTotalRow.getCell(14).value = grandTotal
+    grandTotalRow.getCell(14).numFmt = '#,##0.00'
+    grandTotalRow.getCell(14).font = { ...boldFont, size: 13, color: { argb: 'FFFFFFFF' } }
+    grandTotalRow.getCell(14).alignment = rightAlignment
+    grandTotalRow.getCell(14).border = borderStyle
+    grandTotalRow.getCell(14).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    }
+    
+    dataRowIndex++
+    
+    // 添加信息行
+    const infoRow = worksheet.getRow(dataRowIndex)
+    infoRow.height = 20
+    infoRow.getCell(1).value = `Generated on: ${new Date().toLocaleString()}`
+    worksheet.mergeCells(`A${dataRowIndex}:N${dataRowIndex}`)
+    infoRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+    infoRow.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FF7F7F7F' } }
+
+    // 生成文件名
+    let fileName = `Costs_Report_${displayYear}`
+    if (selectedCategories.length === 0) {
+      fileName += '_All_Categories'
+    } else if (selectedCategories.length === 1) {
+      fileName += `_${selectedCategories[0].replace(/[^a-zA-Z0-9]/g, '_')}`
+    } else {
+      fileName += `_${selectedCategories.length}_Categories`
+    }
+    if (comparisonMode) {
+      fileName += '_Comparison'
+    }
+    
+    // 保存文件
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    saveAs(blob, `${fileName}.xlsx`)
+
+  } catch (error) {
+    console.error('Error generating Excel report:', error)
+    setErrorMessage('Error generating Excel report: ' + error.message)
+  }
+}
 
     // 获取图表数据
     const chartData = prepareChartData();
