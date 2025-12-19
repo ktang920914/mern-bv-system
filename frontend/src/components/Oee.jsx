@@ -468,7 +468,7 @@ const Oee = () => {
       }
     };
 
-    // 保存到文件服务器的函数 - 使用 UNC 路径
+    // 保存到文件服务器的函数 - 使用 FormData
     const saveToFileServer = async () => {
       try {
         // 显示 Modal 并设置状态为保存中
@@ -485,13 +485,10 @@ const Oee = () => {
         setSaveMessage('Saving...')
         setSaveDetails(prev => ({ ...prev, fileName }))
 
-        // 创建 FormData 对象 - 使用 UNC 路径
+        // 创建 FormData 对象
         const formData = new FormData()
         formData.append('file', blob, fileName)
-        
-        // 关键修改：使用 UNC 路径而不是 Z: 盘
-        const uncPath = '\\\\192.168.100.1\\Bv Share Folder\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
-        formData.append('fileServerPath', uncPath)
+        formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
 
         // 发送到后端 API 保存到文件服务器
         const response = await fetch('/api/file/save-excel', {
@@ -506,7 +503,7 @@ const Oee = () => {
           setSaveMessage('Success！')
           setSaveDetails({
             fileName,
-            path: data.path || uncPath
+            path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
           })
           
           console.log('File saved to server:', data)
@@ -522,7 +519,7 @@ const Oee = () => {
       } catch (error) {
         console.error('Error saving to file server:', error)
         setSaveStatus('error')
-        setSaveMessage('Network connection error')
+        setSaveMessage('error')
         setSaveDetails({
           fileName: 'unknown',
           path: 'error'
@@ -961,23 +958,20 @@ const Oee = () => {
                 )}
             </div>
 
-            {/* 确认保存 Modal - 显示 UNC 路径 */}
+            {/* 确认保存 Modal */}
             <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
-                <ModalHeader>Save to File Server</ModalHeader>
+                <ModalHeader>Server</ModalHeader>
                 <ModalBody>
                     <div className="space-y-3">
                         <p className="text-gray-700 dark:text-gray-300">
-                            Are you sure want to save into file server?
+                            Are you sure want to save into server?
                         </p>
                         <div className={`p-3 rounded-lg ${
                             theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'border border-gray-600'
                         }`}>
-                            <p className={`text-sm font-semibold`}>Network Path:</p>
-                            <p className="text-sm mt-1 text-blue-600 dark:text-blue-400 break-all">
-                                \\192.168.100.1\Bv Share Folder\Document\FACTORY DEPT\Maintenance Department (MAINT)
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                                * Server must have network access to this path
+                            <p className={`text-sm font-semibold`}>File path:</p>
+                            <p className="text-sm mt-1 text-blue-600 dark:text-blue-400">
+                                Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
                             </p>
                         </div>
                     </div>
@@ -1048,7 +1042,7 @@ const Oee = () => {
                         {saveStatus === 'error' && (
                             <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                    Failed to save into file server. Network may not be accessible.
+                                    Failed to save into server, Please save as manual into server
                                 </p>
                                 <div className="space-y-2">
                                     <Button 
@@ -1057,10 +1051,10 @@ const Oee = () => {
                                         color="blue" 
                                         onClick={handleManualDownload}
                                     >
-                                        Download to Computer
+                                        Download manual
                                     </Button>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                                        After downloading, save manually to: \\192.168.100.1\Bv Share Folder\...
+                                        File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
                                     </p>
                                 </div>
                             </div>
@@ -1078,7 +1072,7 @@ const Oee = () => {
                             color='gray' 
                             onClick={closeSaveModal}
                         >
-                            Close
+                            Cancel
                         </Button>
                     )}
                 </ModalFooter>
