@@ -295,7 +295,7 @@ export const job = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Create Job',
-            detail: `${req.user.username} created job ${lotno} with IPQC=${ipqc}, Setup=${setup}`
+            detail: `${req.user.username}`
         });
         
         await newActivity.save();
@@ -342,7 +342,7 @@ export const deleteJob = async (req,res,next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Delete job',
-            detail: `${req.user.username} deleted job ${jobToDelete.lotno}`
+            detail: `${req.user.username}`
         })
         await newActivity.save()
         res.status(200).json('Job is deleted')
