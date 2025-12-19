@@ -448,7 +448,7 @@ const generateExcelReport = async () => {
     titleRow.getCell(1).alignment = centerAlignment
     worksheet.mergeCells('A1:L1')
 
-    // 表头行
+    // 表头行 - 添加过滤器
     const headerRow = worksheet.getRow(2)
     headerRow.height = 25
     const headers = [
@@ -469,6 +469,12 @@ const generateExcelReport = async () => {
         fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
       }
     })
+
+    // 添加自动过滤器到整个数据范围
+    worksheet.autoFilter = {
+      from: 'A2',  // 从A2单元格开始（表头行）
+      to: `L${2 + orders.length}`  // 到L列，数据行数+2（标题行+表头行+数据行）
+    }
 
     // 准备数据
     const excelData = orders.map(order => ({
@@ -612,8 +618,6 @@ const generateExcelReport = async () => {
     const totalRow = worksheet.getRow(rowIndex)
     totalRow.height = 25
     
-    
-
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], { 
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -628,7 +632,6 @@ const generateExcelReport = async () => {
     alert('Failed to generate Excel report. Please try again.')
   }
 }
-
   return (
     <div className='min-h-screen'>
         <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
