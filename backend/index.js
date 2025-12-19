@@ -22,6 +22,7 @@ import extruderRoute from './routes/extruder.route.js'
 import preventiveRoute from './routes/todo.route.js'
 import sparepartRoute from './routes/sparepart.route.js'
 import otherRoute from './routes/rest.route.js'
+import fileRoute from './routes/file.route.js'
 import https from 'https'
 import fs from 'fs'
 
@@ -31,6 +32,7 @@ const port = process.env.port
 
 app.use(express.json())
 app.use(cookieParser())
+
 
 mongoose.connect(process.env.mongodb)
 .then(() => console.log('Mongodb is connected'))
@@ -56,6 +58,7 @@ app.use('/api/new', productRoute)
 app.use('/api/raw', materialRoute)
 app.use('/api/stock', movementRoute)
 app.use('/api/preventive', preventiveRoute)
+app.use('/api/file', fileRoute)
 
 app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')
