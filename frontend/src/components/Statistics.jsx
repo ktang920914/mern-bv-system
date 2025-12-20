@@ -21,6 +21,9 @@ const Statistics = () => {
   const [calendarYear, setCalendarYear] = useState(moment().year())
   const [selectedJob, setSelectedJob] = useState(null)
   const [showJobDetails, setShowJobDetails] = useState(false)
+  // 新增：排序选项状态
+  const [sortBy, setSortBy] = useState('jobs') // 默认按工作数量排序
+  const [sortOrder, setSortOrder] = useState('desc') // 默认降序
 
   useEffect(() => {
     const handleResize = () => {
@@ -145,182 +148,227 @@ const Statistics = () => {
     }
   }
 
-  const generateJobReport = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook()
-      const reportYear = calendarYear
-      const worksheet = workbook.addWorksheet(`Jobs ${reportYear}`)
-      
-      setupWorksheetPrint(worksheet, {
-        fitToHeight: 1,
-        fitToWidth: 1,
-        horizontalCentered: true,
-        verticalCentered: false
-      })
-      
-      // 设置列宽
-      worksheet.columns = [
-        { width: 5 },    // No.
-        { width: 10 },   // Job Code
-        { width: 20 },   // Lot No
-        { width: 35 },   // Material
-        { width: 15 },   // Color Code
-        { width: 20 },   // Start Time
-        { width: 20 },   // End Time
-        { width: 15 },   // Duration (hrs)
-        { width: 15 },   // Total Order
-        { width: 15 },   // Downtime
-        { width: 15 },   // Operating Time
-        { width: 15 },   // Prod Lead Time
-        { width: 15 },   // Availability
-        { width: 15 },   // Performance
-        { width: 15 },   // Quality
-        { width: 15 },   // OEE
-      ]
-
-      const headerFont = { name: 'Calibri', size: 11, bold: true }
-      const titleFont = { name: 'Arial Black', size: 16, bold: true }
-      const defaultFont = { name: 'Calibri', size: 11 }
-      
-      const borderStyle = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      }
-
-      const centerAlignment = { horizontal: 'center', vertical: 'middle' }
-      const leftAlignment = { horizontal: 'left', vertical: 'middle' }
-
-      // 标题行
-      const titleRow = worksheet.getRow(1)
-      titleRow.height = 30
-      titleRow.getCell(1).value = `JOB PRODUCTION SCHEDULE - ${reportYear}`
-      titleRow.getCell(1).font = titleFont
-      titleRow.getCell(1).alignment = centerAlignment
-      worksheet.mergeCells(`A1:P1`)
-
-      // 表头行
-      const headerRow = worksheet.getRow(2)
-      headerRow.height = 25
-      const headers = [
-        'No.', 'Job Code', 'Lot No', 'Material', 'Color Code', 
-        'Start Time', 'End Time', 'Duration (hrs)', 'Total Order',
-        'Downtime', 'Operating Time', 'Prod Lead Time', 'Availability',
-        'Performance', 'Quality', 'OEE'
-      ]
-      
-      headers.forEach((header, index) => {
-        const cell = headerRow.getCell(index + 1)
-        cell.value = header
-        cell.font = headerFont
-        cell.alignment = centerAlignment
-        cell.border = borderStyle
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFE0E0E0' }
-        }
-      })
-
-      // ⭐ 修改：根据结束时间（endtime）过滤当前年份的数据
-      const yearJobs = jobsData
-        .filter(job => {
-          // 优先使用 endtime 的年份，如果没有 endtime 则使用 starttime
-          const jobDate = job.endtime 
-            ? new Date(job.endtime)
-            : job.starttime
-              ? new Date(job.starttime)
-              : null
-          
-          return jobDate && jobDate.getFullYear() === reportYear
-        })
-        .sort((a, b) => {
-          // 排序也优先使用 endtime，其次使用 starttime
-          const timeA = a.endtime 
-            ? new Date(a.endtime).getTime()
-            : a.starttime
-              ? new Date(a.starttime).getTime()
-              : 0
-          const timeB = b.endtime 
-            ? new Date(b.endtime).getTime()
-            : b.starttime
-              ? new Date(b.starttime).getTime()
-              : 0
-          return timeB - timeA // 最新的在前
-        })
-
-      // 数据行
-      let rowIndex = 3
-      yearJobs.forEach((job, index) => {
-        const row = worksheet.getRow(rowIndex)
-        row.height = 20
+const generateJobReport = async () => {
+  try {
+    // ⭐ 首先定义和过滤数据
+    const yearJobs = jobsData
+      .filter(job => {
+        // 优先使用 endtime 的年份，如果没有 endtime 则使用 starttime
+        const jobDate = job.endtime 
+          ? new Date(job.endtime)
+          : job.starttime
+            ? new Date(job.starttime)
+            : null
         
-        const startTime = job.starttime ? moment(job.starttime).format('YYYY-MM-DD HH:mm') : ''
-        const endTime = job.endtime ? moment(job.endtime).format('YYYY-MM-DD HH:mm') : ''
-        
-        // 计算持续时间
-        let duration = 0
-        if (job.starttime && job.endtime) {
-          const start = moment(job.starttime)
-          const end = moment(job.endtime)
-          duration = end.diff(start, 'hours', true)
-        }
-
-        const rowData = [
-          index + 1,
-          job.code || '',
-          job.lotno || '',
-          job.material || '',
-          job.colourcode || '',
-          startTime,
-          endTime,
-          duration.toFixed(1),
-          job.totalorder || 0,
-          job.downtime || 0,
-          job.operatingtime || 0,
-          job.prodleadtime || 0,
-          job.availability ? (job.availability * 100).toFixed(1) + '%' : '0%',
-          job.performance ? (job.performance * 100).toFixed(1) + '%' : '0%',
-          job.quality ? (job.quality * 100).toFixed(1) + '%' : '0%',
-          job.oee ? (job.oee * 100).toFixed(1) + '%' : '0%'
-        ]
-
-        rowData.forEach((value, colIndex) => {
-          const cell = row.getCell(colIndex + 1)
-          cell.value = value
-          cell.font = defaultFont
-          cell.alignment = colIndex >= 5 ? centerAlignment : leftAlignment
-          cell.border = borderStyle
-        })
-
-        rowIndex++
+        return jobDate && jobDate.getFullYear() === calendarYear
+      })
+      .sort((a, b) => {
+        // 排序也优先使用 endtime，其次使用 starttime
+        const timeA = a.endtime 
+          ? new Date(a.endtime).getTime()
+          : a.starttime
+            ? new Date(a.starttime).getTime()
+            : 0
+        const timeB = b.endtime 
+          ? new Date(b.endtime).getTime()
+          : b.starttime
+            ? new Date(b.starttime).getTime()
+            : 0
+        return timeB - timeA // 最新的在前
       })
 
-      // 如果没有数据，添加提示行
-      if (yearJobs.length === 0) {
-        const row = worksheet.getRow(rowIndex)
-        row.getCell(1).value = `No job data for ${reportYear}`
-        worksheet.mergeCells(`A${rowIndex}:P${rowIndex}`)
-        row.getCell(1).alignment = centerAlignment
-        row.getCell(1).font = { ...defaultFont, italic: true }
-        rowIndex++
-      }
+    const workbook = new ExcelJS.Workbook()
+    const reportYear = calendarYear
+    const worksheet = workbook.addWorksheet(`Jobs ${reportYear}`)
+    
+    setupWorksheetPrint(worksheet, {
+      fitToHeight: 1,
+      fitToWidth: 1,
+      horizontalCentered: true,
+      verticalCentered: false
+    })
+    
+    // 设置列宽
+    worksheet.columns = [
+      { width: 5 },    // No.
+      { width: 10 },   // Job Code
+      { width: 20 },   // Lot No
+      { width: 35 },   // Material
+      { width: 15 },   // Color Code
+      { width: 20 },   // Start Time
+      { width: 20 },   // End Time
+      { width: 15 },   // Duration (hrs)
+      { width: 15 },   // Total Order
+      { width: 15 },   // Downtime
+      { width: 15 },   // Operating Time
+      { width: 15 },   // Prod Lead Time
+      { width: 15 },   // Availability
+      { width: 15 },   // Performance
+      { width: 15 },   // Quality
+      { width: 15 },   // OEE
+    ]
 
-      const buffer = await workbook.xlsx.writeBuffer()
-      const blob = new Blob([buffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      })
-      
-      const date = moment().format('YYYY_MM_DD')
-      saveAs(blob, `Job_Production_Schedule_${reportYear}_${date}.xlsx`)
-
-    } catch (error) {
-      console.error('Error generating Excel report:', error)
-      alert('Failed to generate Excel report. Please try again.')
+    const headerFont = { name: 'Calibri', size: 11, bold: true }
+    const titleFont = { name: 'Arial Black', size: 16, bold: true }
+    const defaultFont = { name: 'Calibri', size: 11 }
+    
+    const borderStyle = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
     }
-  }
 
+    const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+    const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+
+    // 标题行
+    const titleRow = worksheet.getRow(1)
+    titleRow.height = 30
+    titleRow.getCell(1).value = `JOB PRODUCTION SCHEDULE - ${reportYear}`
+    titleRow.getCell(1).font = titleFont
+    titleRow.getCell(1).alignment = centerAlignment
+    worksheet.mergeCells(`A1:P1`)
+
+    // ⭐ 新增：添加生成时间信息
+    const dateRow = worksheet.getRow(2)
+    dateRow.height = 20
+    dateRow.getCell(1).value = `Generated on: ${moment().format('YYYY-MM-DD HH:mm:ss')}`
+    dateRow.getCell(1).font = { name: 'Calibri', size: 10, italic: true }
+    dateRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
+    worksheet.mergeCells(`A2:P2`)
+
+    // ⭐ 新增：统计信息行
+    const statsRow = worksheet.getRow(3)
+    statsRow.height = 20
+    const totalJobs = yearJobs.length
+    const totalOrder = yearJobs.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
+    const totalDuration = yearJobs.reduce((sum, job) => {
+      const start = job.starttime ? moment(job.starttime) : null
+      const end = job.endtime ? moment(job.endtime) : null
+      if (start && end) {
+        return sum + end.diff(start, 'hours', true)
+      }
+      return sum
+    }, 0)
+    
+    statsRow.getCell(1).value = `Total Jobs: ${totalJobs} | Total Order: ${totalOrder.toLocaleString()} | Total Duration: ${totalDuration.toFixed(1)} hrs`
+    statsRow.getCell(1).font = { name: 'Calibri', size: 10, bold: true }
+    statsRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
+    worksheet.mergeCells(`A3:P3`)
+
+    // 表头行（现在在第4行）
+    const headerRow = worksheet.getRow(4)
+    headerRow.height = 25
+    const headers = [
+      'No.', 'Job Code', 'Lot No', 'Material', 'Color Code', 
+      'Start Time', 'End Time', 'Duration (hrs)', 'Total Order',
+      'Downtime', 'Operating Time', 'Prod Lead Time', 'Availability',
+      'Performance', 'Quality', 'OEE'
+    ]
+    
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1)
+      cell.value = header
+      cell.font = headerFont
+      cell.alignment = centerAlignment
+      cell.border = borderStyle
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      }
+    })
+
+    // 数据行（从第5行开始）
+    let rowIndex = 5
+    yearJobs.forEach((job, index) => {
+      const row = worksheet.getRow(rowIndex)
+      row.height = 20
+      
+      const startTime = job.starttime ? moment(job.starttime).format('YYYY-MM-DD HH:mm') : ''
+      const endTime = job.endtime ? moment(job.endtime).format('YYYY-MM-DD HH:mm') : ''
+      
+      // 计算持续时间
+      let duration = 0
+      if (job.starttime && job.endtime) {
+        const start = moment(job.starttime)
+        const end = moment(job.endtime)
+        duration = end.diff(start, 'hours', true)
+      }
+
+      const rowData = [
+        index + 1,
+        job.code || '',
+        job.lotno || '',
+        job.material || '',
+        job.colourcode || '',
+        startTime,
+        endTime,
+        duration.toFixed(1),
+        job.totalorder || 0,
+        job.downtime || 0,
+        job.operatingtime || 0,
+        job.prodleadtime || 0,
+        job.availability ? (job.availability * 100).toFixed(1) + '%' : '0%',
+        job.performance ? (job.performance * 100).toFixed(1) + '%' : '0%',
+        job.quality ? (job.quality * 100).toFixed(1) + '%' : '0%',
+        job.oee ? (job.oee * 100).toFixed(1) + '%' : '0%'
+      ]
+
+      rowData.forEach((value, colIndex) => {
+        const cell = row.getCell(colIndex + 1)
+        cell.value = value
+        cell.font = defaultFont
+        cell.alignment = colIndex >= 5 ? centerAlignment : leftAlignment
+        cell.border = borderStyle
+      })
+
+      rowIndex++
+    })
+
+    // ⭐ 新增：启用筛选功能
+    // 设置筛选范围从表头行（第4行）到最后一行的所有列
+    if (yearJobs.length > 0) {
+      const lastRow = rowIndex - 1 // 最后一行数据
+      worksheet.autoFilter = {
+        from: { row: 4, column: 1 }, // 从第4行第1列开始（表头）
+        to: { row: lastRow, column: 16 } // 到最后一行第16列结束
+      }
+    }
+
+    // 如果没有数据，添加提示行
+    if (yearJobs.length === 0) {
+      const row = worksheet.getRow(rowIndex)
+      row.getCell(1).value = `No job data for ${reportYear}`
+      worksheet.mergeCells(`A${rowIndex}:P${rowIndex}`)
+      row.getCell(1).alignment = centerAlignment
+      row.getCell(1).font = { ...defaultFont, italic: true }
+      rowIndex++
+    }
+
+    // ⭐ 新增：添加筛选说明
+    if (yearJobs.length > 0) {
+      const filterNoteRow = worksheet.getRow(rowIndex + 1)
+      filterNoteRow.getCell(1).value = `Note: Use filter icons in column headers to sort and filter data`
+      filterNoteRow.getCell(1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: 'FF666666' } }
+      filterNoteRow.getCell(1).alignment = leftAlignment
+      worksheet.mergeCells(`A${rowIndex + 1}:P${rowIndex + 1}`)
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    const date = moment().format('YYYY_MM_DD')
+    saveAs(blob, `Job_Production_Schedule_${reportYear}_${date}.xlsx`)
+
+  } catch (error) {
+    console.error('Error generating Excel report:', error)
+    alert('Failed to generate Excel report. Please try again.')
+  }
+}
   const eventStyleGetter = (event) => {
     // 根据 Job Code 分配不同的颜色
     const jobCode = event.resource.code || 'L1'
@@ -852,6 +900,62 @@ const Statistics = () => {
       }
     })
 
+    // 将 jobsByCode 转换为数组并排序
+    const sortedJobsByCode = Object.entries(jobsByCode)
+      .map(([code, data]) => ({ code, ...data }))
+      .sort((a, b) => {
+        // 根据排序选项和顺序进行排序
+        let valueA, valueB;
+        
+        switch (sortBy) {
+          case 'jobs':
+            valueA = a.count;
+            valueB = b.count;
+            break;
+          case 'order':
+            valueA = a.totalOrder;
+            valueB = b.totalOrder;
+            break;
+          case 'duration':
+            valueA = a.totalDuration;
+            valueB = b.totalDuration;
+            break;
+          case 'output':
+            valueA = a.totalOutput;
+            valueB = b.totalOutput;
+            break;
+          case 'wastage':
+            valueA = a.totalWastage;
+            valueB = b.totalWastage;
+            break;
+          case 'screwOut':
+            valueA = a.totalScrewOut;
+            valueB = b.totalScrewOut;
+            break;
+          case 'oee':
+            valueA = a.avgOEE;
+            valueB = b.avgOEE;
+            break;
+          case 'availability':
+            valueA = a.avgAvailability;
+            valueB = b.avgAvailability;
+            break;
+          case 'performance':
+            valueA = a.avgPerformance;
+            valueB = b.avgPerformance;
+            break;
+          case 'quality':
+            valueA = a.avgQuality;
+            valueB = b.avgQuality;
+            break;
+          default:
+            valueA = a.count;
+            valueB = b.count;
+        }
+        
+        return sortOrder === 'desc' ? valueB - valueA : valueA - valueB;
+      });
+
     // 最忙的 Job Code
     let busiestCode = 'N/A'
     let maxJobs = 0
@@ -866,6 +970,14 @@ const Statistics = () => {
     const wastageRate = totalOutput > 0 
       ? ((totalWastage / totalOutput) * 100).toFixed(2)
       : '0.00'
+
+    // 排名颜色配置
+    const getRankColor = (index) => {
+      if (index === 0) return 'bg-yellow-100 dark:bg-yellow-900 border-l-yellow-500'
+      if (index === 1) return 'bg-gray-100 dark:bg-gray-900 border-l-gray-500'
+      if (index === 2) return 'bg-orange-100 dark:bg-orange-900 border-l-orange-500'
+      return 'bg-blue-50 dark:bg-blue-900 border-l-blue-500'
+    }
 
     return (
       <div className="mt-4">
@@ -1023,55 +1135,118 @@ const Statistics = () => {
         </div>
         
         {/* Job Code 分布 - 增强版 */}
-        {Object.keys(jobsByCode).length > 0 && (
+        {sortedJobsByCode.length > 0 && (
           <div className="mt-4">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="text-md font-semibold text-gray-900 dark:text-white">Jobs by Code</h4>
-              <Badge color="gray" size="sm">
-                {Object.keys(jobsByCode).length} Job Codes
-              </Badge>
+              <h4 className="text-md font-semibold text-gray-900 dark:text-white">Jobs by Code (Ranked)</h4>
+              <div className="flex items-center space-x-2">
+                <Badge color="gray" size="sm">
+                  {sortedJobsByCode.length} Job Codes
+                </Badge>
+                
+                {/* 排序选择器 */}
+                <div className="flex items-center space-x-2">
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                  >
+                    <option value="jobs">Sort by Jobs</option>
+                    <option value="order">Sort by Order</option>
+                    <option value="duration">Sort by Duration</option>
+                    <option value="output">Sort by Output</option>
+                    <option value="wastage">Sort by Wastage</option>
+                    <option value="screwOut">Sort by Screw Out</option>
+                    <option value="oee">Sort by OEE</option>
+                    <option value="availability">Sort by Availability</option>
+                    <option value="performance">Sort by Performance</option>
+                    <option value="quality">Sort by Quality</option>
+                  </select>
+                  
+                  <Button 
+                    size="xs" 
+                    color="gray"
+                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                    className="cursor-pointer"
+                  >
+                    {sortOrder === 'desc' ? '↓ Desc' : '↑ Asc'}
+                  </Button>
+                </div>
+              </div>
             </div>
+            
+            {/* 排名说明 */}
+            <div className="mb-3 flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400">
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <span>1st Place</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                <span>2nd Place</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                <span>3rd Place</span>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {Object.entries(jobsByCode).map(([code, data]) => {
-                const percentage = (data.count / totalJobs * 100).toFixed(1)
+              {sortedJobsByCode.map((jobData, index) => {
+                const percentage = (jobData.count / totalJobs * 100).toFixed(1)
                 const colorMap = {
-                  'L1': 'border-blue-500 bg-blue-50 dark:bg-blue-900',
-                  'L2': 'border-green-500 bg-green-50 dark:bg-green-900',
-                  'L3': 'border-purple-500 bg-purple-50 dark:bg-purple-900',
-                  'L5': 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900',
-                  'L6': 'border-red-500 bg-red-50 dark:bg-red-900',
-                  'L9': 'border-pink-500 bg-pink-50 dark:bg-pink-900',
-                  'L10': 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900',
-                  'L11': 'border-lime-500 bg-lime-50 dark:bg-lime-900',
-                  'L12': 'border-orange-500 bg-orange-50 dark:bg-orange-900'
+                  'L1': 'border-blue-500',
+                  'L2': 'border-green-500',
+                  'L3': 'border-purple-500',
+                  'L5': 'border-yellow-500',
+                  'L6': 'border-red-500',
+                  'L9': 'border-pink-500',
+                  'L10': 'border-cyan-500',
+                  'L11': 'border-lime-500',
+                  'L12': 'border-orange-500'
                 }
-                const bgClass = colorMap[code] || 'border-gray-500 bg-gray-50 dark:bg-gray-900'
+                const rankBgClass = getRankColor(index)
+                const borderColor = colorMap[jobData.code] || 'border-gray-500'
+                const bgClass = `${rankBgClass} ${borderColor}`
                 
                 // 计算废品率（使用 positive wastage）
-                const wastageRate = data.totalOutput > 0 
-                  ? ((data.totalWastage / data.totalOutput) * 100).toFixed(2)
+                const wastageRate = jobData.totalOutput > 0 
+                  ? ((jobData.totalWastage / jobData.totalOutput) * 100).toFixed(2)
                   : '0.00'
                 
                 // 计算平均生产前置时间
-                const avgProdLeadTime = data.count > 0 
-                  ? (data.totalProdLeadTime / data.count).toFixed(1)
+                const avgProdLeadTime = jobData.count > 0 
+                  ? (jobData.totalProdLeadTime / jobData.count).toFixed(1)
                   : '0.0'
                 
                 return (
                   <div 
-                    key={code} 
-                    className={`p-3 rounded-lg border-l-4 ${bgClass}`}
+                    key={jobData.code} 
+                    className={`p-3 rounded-lg border-l-4 ${bgClass} transition-all duration-300 hover:shadow-md`}
                   >
-                    {/* 头部信息 */}
+                    {/* 头部信息 - 添加排名徽章 */}
                     <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="text-lg font-bold text-gray-900">{code}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {data.count} jobs • {percentage}%
+                      <div className="flex items-center space-x-2">
+                        <Badge 
+                          color={
+                            index === 0 ? "yellow" : 
+                            index === 1 ? "gray" : 
+                            index === 2 ? "orange" : "info"
+                          }
+                          size="sm"
+                          className="min-w-[24px] text-center font-bold"
+                        >
+                          #{index + 1}
+                        </Badge>
+                        <div>
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">{jobData.code}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {jobData.count} jobs • {percentage}%
+                          </div>
                         </div>
                       </div>
                       <Badge color="info" size="sm">
-                        {data.totalDuration.toFixed(1)}h
+                        {jobData.totalDuration.toFixed(1)}h
                       </Badge>
                     </div>
                     
@@ -1079,49 +1254,52 @@ const Statistics = () => {
                     <div className="space-y-1 text-xs mb-3">
                       <div className="grid grid-cols-2 gap-1">
                         <div className="font-medium text-green-600 dark:text-green-400">Order:</div>
-                        <div className="text-green-600 dark:text-green-400">{data.totalOrder.toLocaleString()}</div>
+                        <div className="text-green-600 dark:text-green-400">{jobData.totalOrder.toLocaleString()}</div>
                         
                         <div className="font-medium text-green-600 dark:text-green-400">Output:</div>
-                        <div className="text-green-600 dark:text-green-400">{data.totalOutput.toLocaleString()}</div>
+                        <div className="text-green-600 dark:text-green-400">{jobData.totalOutput.toLocaleString()}</div>
                         
                         <div className="font-medium text-red-600 dark:text-red-400">Wastage:</div>
                         <div className="text-red-600 dark:text-red-400">
-                          {data.totalWastage.toLocaleString()} ({wastageRate}%)
+                          {jobData.totalWastage.toLocaleString()} ({wastageRate}%)
                         </div>
                         
                         <div className="font-medium text-red-600 dark:text-red-400">Screw Out:</div>
-                        <div className="text-red-600 dark:text-red-400">{data.totalScrewOut.toLocaleString()}</div>
+                        <div className="text-red-600 dark:text-red-400">{jobData.totalScrewOut.toLocaleString()}</div>
                         
-                        <div className="font-medium text-gray-800">Lead Time:</div>
-                        <div className='text-gray-800'>{avgProdLeadTime} days</div>
+                        <div className="font-medium text-gray-800 dark:text-gray-300">Lead Time:</div>
+                        <div className='text-gray-800 dark:text-gray-300'>{avgProdLeadTime} days</div>
                       </div>
                     </div>
                     
                     {/* 性能指标 */}
                     <div className="space-y-1 text-xs">
                       <div className="grid grid-cols-2 gap-1">
-                        <div className="font-medium text-yellow-600">OEE:</div>
-                        <div className="text-yellow-600 dark:text-yellow-400">{data.avgOEE.toFixed(1)}%</div>
+                        <div className="font-medium text-yellow-600 dark:text-yellow-400">OEE:</div>
+                        <div className="text-yellow-600 dark:text-yellow-400">{jobData.avgOEE.toFixed(1)}%</div>
                         
-                        <div className="font-medium text-blue-600">Avail:</div>
-                        <div className="text-blue-600 dark:text-blue-400">{data.avgAvailability.toFixed(1)}%</div>
+                        <div className="font-medium text-blue-600 dark:text-blue-400">Avail:</div>
+                        <div className="text-blue-600 dark:text-blue-400">{jobData.avgAvailability.toFixed(1)}%</div>
                         
-                        <div className="font-medium text-green-600">Perf:</div>
-                        <div className="text-green-600 dark:text-green-400">{data.avgPerformance.toFixed(1)}%</div>
+                        <div className="font-medium text-green-600 dark:text-green-400">Perf:</div>
+                        <div className="text-green-600 dark:text-green-400">{jobData.avgPerformance.toFixed(1)}%</div>
                         
-                        <div className="font-medium text-purple-600">Quality:</div>
-                        <div className="text-purple-600 dark:text-purple-400">{data.avgQuality.toFixed(1)}%</div>
+                        <div className="font-medium text-purple-600 dark:text-purple-400">Quality:</div>
+                        <div className="text-purple-600 dark:text-purple-400">{jobData.avgQuality.toFixed(1)}%</div>
                       </div>
                     </div>
                     
                     {/* 底部信息 */}
-                    {data.multiDayCount > 0 && (
-                      <div className="mt-2 text-xs">
+                    <div className="mt-2 flex justify-between items-center">
+                      {jobData.multiDayCount > 0 && (
                         <Badge color="blue" size="xs">
-                          {data.multiDayCount} multi-day
+                          {jobData.multiDayCount} multi-day
                         </Badge>
+                      )}
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Rank by: {sortBy}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )
               })}
