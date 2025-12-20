@@ -447,10 +447,10 @@ const Oee = () => {
         worksheet.views = [
           {
             state: 'frozen',
-            xSplit: 8,
+            xSplit: 9,
             ySplit: 3,
-            topLeftCell: 'I4',
-            activeCell: 'I4'
+            topLeftCell: 'J4',
+            activeCell: 'J4'
           }
         ];
 
