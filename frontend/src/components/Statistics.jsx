@@ -1138,7 +1138,7 @@ const generateJobReport = async () => {
         {sortedJobsByCode.length > 0 && (
           <div className="mt-4">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="text-md font-semibold text-gray-900 dark:text-white">Jobs by Code (Ranked)</h4>
+              <h4></h4>
               <div className="flex items-center space-x-2">
                 <Badge color="gray" size="sm">
                   {sortedJobsByCode.length} Job Codes
