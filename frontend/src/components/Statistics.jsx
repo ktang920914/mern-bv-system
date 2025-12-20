@@ -1149,7 +1149,7 @@ const generateJobReport = async () => {
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                    className={"text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900"}
                   >
                     <option value="jobs">Sort by Jobs</option>
                     <option value="order">Sort by Order</option>
