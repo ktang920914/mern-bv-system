@@ -6,6 +6,7 @@ import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import ExcelJS from 'exceljs'
 
 const Transactions = () => {
   const {theme} = useThemeStore()
@@ -404,50 +405,326 @@ const Transactions = () => {
   )
 
   // 生成Excel报告的函数
-  const generateExcelReport = () => {
-    // 准备Excel数据 - 包含所有交易字段
-    const excelData = records.map(record => ({
-      'Date': record.date,
-      'Item Code': record.code,
-      'Transaction Type': record.transaction,
-      'Quantity': record.quantity,
-      'Balance': record.balance,
-      'User': record.user,
-      'Status': record.status,
-      'Created At': new Date(record.createdAt).toLocaleString(),
-      'Updated At': new Date(record.updatedAt).toLocaleString()
-    }))
+  const generateExcelReport = async () => {
+    try {
+      // 使用 ExcelJS 替代 XLSX
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Transactions Report')
+      
+      // 设置工作表打印选项
+      const setupWorksheetPrint = (worksheet, options = {}) => {
+        const {
+          paperSize = 9,
+          orientation = 'landscape',
+          margins = {
+            left: 0.25,
+            right: 0.25,
+            top: 0.75,
+            bottom: 0.75,
+            header: 0.3,
+            footer: 0.3
+          },
+          horizontalCentered = true,
+          verticalCentered = false,
+          fitToPage = true,
+          fitToHeight = 1,
+          fitToWidth = 1,
+          scale = 100
+        } = options
 
-    // 创建工作簿和工作表
-    const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(excelData)
-    
-    // 设置列宽
-    const colWidths = [
-      { wch: 12 }, // Date
-      { wch: 15 }, // Item Code
-      { wch: 15 }, // Transaction Type
-      { wch: 10 }, // Quantity
-      { wch: 10 }, // Balance
-      { wch: 15 }, // User
-      { wch: 10 }, // Status
-      { wch: 20 }, // Created At
-      { wch: 20 }  // Updated At
-    ]
-    worksheet['!cols'] = colWidths
+        worksheet.pageSetup = {
+          paperSize,
+          orientation,
+          margins,
+          horizontalCentered,
+          verticalCentered,
+          fitToPage,
+          fitToHeight,
+          fitToWidth,
+          scale,
+          showGridLines: false,
+          blackAndWhite: false
+        }
+      }
+      
+      // 设置工作表打印选项
+      setupWorksheetPrint(worksheet, {
+        fitToHeight: 1,
+        fitToWidth: 1,
+        horizontalCentered: true,
+        verticalCentered: false
+      })
+      
+      // 设置列宽
+      worksheet.columns = [
+        { width: 5 },    // No.
+        { width: 12 },   // Date
+        { width: 15 },   // Item Code
+        { width: 15 },   // Transaction Type
+        { width: 10 },   // Quantity
+        { width: 10 },   // Balance
+        { width: 15 },   // User
+        { width: 10 },   // Status
+        { width: 20 },   // Created At
+        { width: 20 }    // Updated At
+      ]
 
-    // 添加工作表到工作簿
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions Report')
-    
-    // 生成Excel文件并下载
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([excelBuffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    })
-    
-    // 使用当前日期作为文件名
-    const date = new Date().toISOString().split('T')[0]
-    saveAs(blob, `Transactions_Report_${date}.xlsx`)
+      // 定义样式
+      const headerFont = { name: 'Calibri', size: 11, bold: true }
+      const titleFont = { name: 'Arial Black', size: 16, bold: true }
+      const defaultFont = { name: 'Calibri', size: 11 }
+      const boldFont = { name: 'Calibri', size: 11, bold: true }
+      
+      const borderStyle = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+
+      const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+      const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+      const rightAlignment = { horizontal: 'right', vertical: 'middle' }
+
+      // 标题行
+      const titleRow = worksheet.getRow(1)
+      titleRow.height = 30
+      titleRow.getCell(1).value = 'TRANSACTIONS REPORT'
+      titleRow.getCell(1).font = titleFont
+      titleRow.getCell(1).alignment = centerAlignment
+      worksheet.mergeCells('A1:J1')
+
+      // 添加过滤信息行
+      const filterRow = worksheet.getRow(2)
+      filterRow.height = 20
+      
+      // 如果有搜索词，显示过滤条件
+      if (searchTerm) {
+        filterRow.getCell(1).value = `Filter: "${searchTerm}"`
+        worksheet.mergeCells('A2:J2')
+        filterRow.getCell(1).font = { name: 'Calibri', size: 10, italic: true }
+        filterRow.getCell(1).alignment = leftAlignment
+        filterRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFFCC' } // 浅黄色背景
+        }
+        filterRow.getCell(1).border = {
+          bottom: { style: 'thin' }
+        }
+      }
+
+      // 计算表头行号（考虑是否有过滤行）
+      const headerRowNum = searchTerm ? 3 : 2
+      
+      // 表头行
+      const headerRow = worksheet.getRow(headerRowNum)
+      headerRow.height = 25
+      const headers = [
+        'No.', 'Date', 'Item Code', 'Transaction Type', 'Quantity', 
+        'Balance', 'User', 'Status', 'Created At', 'Updated At'
+      ]
+      
+      headers.forEach((header, index) => {
+        const cell = headerRow.getCell(index + 1)
+        cell.value = header
+        cell.font = headerFont
+        cell.alignment = centerAlignment
+        cell.border = borderStyle
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+        }
+      })
+
+      // 准备数据
+      const excelData = records.map(record => ({
+        'Date': record.date,
+        'Item Code': record.code,
+        'Transaction Type': record.transaction,
+        'Quantity': Number(record.quantity) || 0,
+        'Balance': Number(record.balance) || 0,
+        'User': record.user,
+        'Status': record.status,
+        'Created At': new Date(record.createdAt).toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }),
+        'Updated At': new Date(record.updatedAt).toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })
+      }))
+
+      // 数据行
+      let rowIndex = headerRowNum + 1
+      
+      excelData.forEach((record, index) => {
+        const row = worksheet.getRow(rowIndex)
+        row.height = 20
+        
+        const rowData = [
+          index + 1,
+          record.Date,
+          record['Item Code'],
+          record['Transaction Type'],
+          record.Quantity,
+          record.Balance,
+          record.User,
+          record.Status,
+          record['Created At'],
+          record['Updated At']
+        ]
+
+        rowData.forEach((value, colIndex) => {
+          const cell = row.getCell(colIndex + 1)
+          cell.value = value
+          cell.font = defaultFont
+          cell.border = borderStyle
+          
+          // 不同的列对齐方式
+          if (colIndex === 0 || colIndex === 4 || colIndex === 5) { // No., Quantity, Balance 列居右
+            cell.alignment = rightAlignment
+          } else if (colIndex === 7) { // Status 列居中
+            cell.alignment = centerAlignment
+          } else if (colIndex === 1 || colIndex === 2 || colIndex === 3 || colIndex === 6) { // 文本列左对齐
+            cell.alignment = leftAlignment
+          } else {
+            cell.alignment = centerAlignment
+          }
+          
+          // 为数值列添加千位分隔符
+          if (colIndex === 4 || colIndex === 5) { // Quantity 和 Balance 列
+            cell.numFmt = '#,##0'
+          }
+          
+          // 为状态列添加颜色
+          if (colIndex === 7) { // Status 列
+            if (value === 'Active') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+              }
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF006100' } }
+            } else if (value === 'Inactive') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFC7CE' } // 浅红色
+              }
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } }
+            }
+          }
+          
+          // 为交易类型列添加颜色
+          if (colIndex === 3) { // Transaction Type 列
+            if (value === 'In') {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF006100' } } // 绿色
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+              }
+            } else if (value === 'Out') {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } } // 红色
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFC7CE' } // 浅红色
+              }
+            }
+          }
+          
+          // 为数量列添加颜色（根据值大小）
+          if (colIndex === 4) { // Quantity 列
+            const quantity = Number(value) || 0
+            if (quantity > 100) {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } } // 红色
+            } else if (quantity > 50) {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C5700' } } // 橙色
+            } else if (quantity === 0) {
+              cell.font = { ...defaultFont, italic: true, color: { argb: 'FF808080' } } // 灰色
+            }
+          }
+          
+          // 为余额列添加颜色（根据值大小）
+          if (colIndex === 5) { // Balance 列
+            const balance = Number(value) || 0
+            if (balance > 1000) {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } } // 红色
+            } else if (balance > 500) {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C5700' } } // 橙色
+            } else if (balance === 0) {
+              cell.font = { ...defaultFont, italic: true, color: { argb: 'FF808080' } } // 灰色
+            }
+          }
+          
+          // 为代码列添加特殊样式
+          if (colIndex === 2) { // Item Code 列
+            cell.font = { ...defaultFont, bold: true }
+          }
+          
+          // 隔行着色
+          if (rowIndex % 2 === 0) {
+            if (colIndex !== 3 && colIndex !== 4 && colIndex !== 5 && colIndex !== 7) { // 保持特殊列的颜色
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF8F8F8' } // 更浅的灰色
+              }
+            }
+          }
+        })
+
+        rowIndex++
+      })
+
+      // 如果没有数据，添加提示行
+      if (excelData.length === 0) {
+        const row = worksheet.getRow(rowIndex)
+        row.getCell(1).value = 'No transaction data available'
+        worksheet.mergeCells(`A${rowIndex}:J${rowIndex}`)
+        row.getCell(1).alignment = centerAlignment
+        row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } }
+        row.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+        }
+        row.getCell(1).border = borderStyle
+        rowIndex++
+      }
+
+      // 在表格上方添加过滤（Excel的自动筛选功能）
+      if (excelData.length > 0) {
+        // 设置自动筛选范围（从表头到最后一行）
+        const filterRange = `A${headerRowNum}:J${rowIndex - 1}`
+        worksheet.autoFilter = filterRange
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      })
+      
+      // 使用当前日期作为文件名
+      const date = new Date().toISOString().split('T')[0].replace(/-/g, '_')
+      saveAs(blob, `Transactions_Report_${date}.xlsx`)
+
+    } catch (error) {
+      console.error('Error generating Excel report:', error)
+      alert('Failed to generate Excel report. Please try again.')
+    }
   }
 
   return (
