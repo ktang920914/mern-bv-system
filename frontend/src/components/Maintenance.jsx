@@ -982,9 +982,12 @@ const Maintenance = () => {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
     })
     
-    // 使用作业编号和日期作为文件名
-    const date = new Date().toISOString().split('T')[0]
-    const fileName = `Maintenance_Request_Form_${maintenance.code}_${date}.xlsx`
+    // 使用作业编号、日期和时间作为文件名，避免覆盖
+    const now = new Date()
+    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_')
+    const timeStr = now.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
+    
+    const fileName = `Maintenance_Request_Form_${maintenance.code}_${dateStr}_${timeStr}.xlsx`
     
     if (returnBlob) {
       return { blob, fileName }
@@ -1259,9 +1262,11 @@ const Maintenance = () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       })
       
-      // 使用当前日期作为文件名
-      const date = new Date().toISOString().split('T')[0].replace(/-/g, '_')
-      saveAs(blob, `Maintenance_Jobs_Report_${date}.xlsx`)
+      // 使用当前日期作为文件名（包含时间戳）
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_')
+      const timeStr = now.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
+      saveAs(blob, `Maintenance_Jobs_Report_${dateStr}_${timeStr}.xlsx`)
 
     } catch (error) {
       console.error('Error generating Excel report:', error)
