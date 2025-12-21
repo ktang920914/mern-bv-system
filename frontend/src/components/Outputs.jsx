@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge, Card } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, Badge, Card, ModalFooter } from 'flowbite-react'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import useUserstore from '../store'
@@ -73,6 +73,13 @@ const Outputs = () => {
     const [comparisonMode, setComparisonMode] = useState(false)
     const [debouncedSelectedCodes, setDebouncedSelectedCodes] = useState([])
     const [dataCache, setDataCache] = useState({})
+    
+    // 新增 Modal 状态
+    const [showSaveModal, setShowSaveModal] = useState(false)
+    const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
+    const [saveMessage, setSaveMessage] = useState('')
+    const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
+    const [showConfirmModal, setShowConfirmModal] = useState(false)
 
     // 常量定义
     const API_BATCH_SIZE = 3
@@ -574,8 +581,6 @@ const Outputs = () => {
                         font: {
                             size: comparisonMode && selectedCodes.length > 8 ? 10 : 12
                         },
-                        // 修复标签颜色
-                        // color: theme === 'light' ? '#374151' : '#D1D5DB'
                     }
                 },
                 title: {
@@ -586,8 +591,6 @@ const Outputs = () => {
                     font: {
                         size: 16
                     },
-                    // 标题颜色
-                    // color: theme === 'light' ? 'text-gray-900' : 'text-gray-900'
                 },
                 ...(selectedChartType === 'pie' && {
                     tooltip: piePlugins.tooltip
@@ -599,24 +602,19 @@ const Outputs = () => {
                     title: {
                         display: true,
                         text: 'Value',
-                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
                     },
                     ticks: {
                         callback: function(value) {
                             return formatNumber(value);
                         },
-                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
                     }
                 },
                 x: {
                     title: {
                         display: true,
                         text: 'Month',
-                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
                     },
-                    ticks: {
-                        //color: theme === 'light' ? '#374151' : '#D1D5DB'
-                    }
+                    ticks: {}
                 }
             } : undefined
         };
@@ -731,271 +729,361 @@ const Outputs = () => {
         return tableData;
     };
 
-    const generateExcelReport = async () => {
-    const tableData = prepareTableData();
-    if (tableData.length === 0) {
-        setErrorMessage('No data to export');
-        return;
-    }
-
-    try {
-        const workbook = new ExcelJS.Workbook();
-        
-        // 使用当前日期作为报告日期
-        const reportDate = new Date();
-        const dateStr = reportDate.toISOString().split('T')[0];
-        const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-        
-        const worksheet = workbook.addWorksheet(`Outputs Report ${displayYear}`);
-        
-        // 设置工作表打印选项
-        const setupWorksheetPrint = (worksheet, options = {}) => {
-            const {
-                paperSize = 9,
-                orientation = 'landscape',
-                margins = {
-                    left: 0.25,
-                    right: 0.25,
-                    top: 0.75,
-                    bottom: 0.75,
-                    header: 0.3,
-                    footer: 0.3
-                },
-                horizontalCentered = true,
-                verticalCentered = false,
-                fitToPage = true,
-                fitToHeight = 1,
-                fitToWidth = 1,
-                scale = 100
-            } = options;
-
-            worksheet.pageSetup = {
-                paperSize,
-                orientation,
-                margins,
-                horizontalCentered,
-                verticalCentered,
-                fitToPage,
-                fitToHeight,
-                fitToWidth,
-                scale,
-                showGridLines: false,
-                blackAndWhite: false
-            };
-        };
-
-        // 应用打印设置
-        setupWorksheetPrint(worksheet, {
-            fitToHeight: 1,
-            fitToWidth: 1,
-            horizontalCentered: true,
-            verticalCentered: false
-        });
-
-        // 定义列宽 - 根据你的数据显示需求调整
-        const columnWidths = [
-            25,    // Data Type
-            10,    // Jan
-            10,    // Feb
-            10,    // Mar
-            10,    // Apr
-            10,    // May
-            10,    // Jun
-            10,    // Jul
-            10,    // Aug
-            10,    // Sep
-            10,    // Oct
-            10,    // Nov
-            10,    // Dec
-            12     // Total
-        ];
-
-        worksheet.columns = columnWidths.map(width => ({ width }));
-
-        // 定义样式
-        const titleFont = { name: 'Arial Black', size: 16, bold: true };
-        const headerFont = { name: 'Calibri', size: 11, bold: true };
-        const defaultFont = { name: 'Calibri', size: 11 };
-        
-        // 边框样式 - 统一使用细边框
-        const borderStyle = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-        };
-
-        // 对齐方式
-        const centerAlignment = { horizontal: 'center', vertical: 'middle' };
-        const leftAlignment = { horizontal: 'left', vertical: 'middle' };
-        const rightAlignment = { horizontal: 'right', vertical: 'middle' };
-
-        // 标题行
-        const titleRow = worksheet.getRow(1);
-        titleRow.height = 30;
-        titleRow.getCell(1).value = `OUTPUTS REPORT - YEAR ${displayYear}`;
-        titleRow.getCell(1).font = titleFont;
-        titleRow.getCell(1).alignment = centerAlignment;
-        worksheet.mergeCells(1, 1, 1, columnWidths.length);
-
-        // 副标题行
-        const subtitleRow = worksheet.getRow(2);
-        subtitleRow.height = 20;
-        
-        let subtitleText = `Generated on: ${reportDate.toLocaleString()}`;
-        if (selectedCodes.length > 0) {
-            subtitleText += ` | Job Codes: ${selectedCodes.join(', ')}`;
+    // 生成Excel报告的函数 - 支持返回blob
+    const generateExcelReport = async (returnBlob = false) => {
+        const tableData = prepareTableData();
+        if (tableData.length === 0) {
+            setErrorMessage('No data to export');
+            return returnBlob ? null : undefined;
         }
-        if (comparisonMode) {
-            subtitleText += ' | Comparison Mode';
-        }
-        
-        subtitleRow.getCell(1).value = subtitleText;
-        subtitleRow.getCell(1).font = { ...defaultFont, italic: true };
-        subtitleRow.getCell(1).alignment = centerAlignment;
-        worksheet.mergeCells(2, 1, 2, columnWidths.length);
 
-        // 表头行
-        const headerRow = worksheet.getRow(3);
-        headerRow.height = 25;
-        
-        const headers = [
-            'Data Type',
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-            'Total'
-        ];
+        try {
+            const workbook = new ExcelJS.Workbook();
+            
+            // 使用当前日期作为报告日期
+            const reportDate = new Date();
+            const dateStr = reportDate.toISOString().split('T')[0];
+            const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+            
+            const worksheet = workbook.addWorksheet(`Outputs Report ${displayYear}`);
+            
+            // 设置工作表打印选项
+            const setupWorksheetPrint = (worksheet, options = {}) => {
+                const {
+                    paperSize = 9,
+                    orientation = 'landscape',
+                    margins = {
+                        left: 0.25,
+                        right: 0.25,
+                        top: 0.75,
+                        bottom: 0.75,
+                        header: 0.3,
+                        footer: 0.3
+                    },
+                    horizontalCentered = true,
+                    verticalCentered = false,
+                    fitToPage = true,
+                    fitToHeight = 1,
+                    fitToWidth = 1,
+                    scale = 100
+                } = options;
 
-        headers.forEach((header, index) => {
-            const cell = headerRow.getCell(index + 1);
-            cell.value = header;
-            cell.font = headerFont;
-            cell.alignment = centerAlignment;
-            cell.border = borderStyle;
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+                worksheet.pageSetup = {
+                    paperSize,
+                    orientation,
+                    margins,
+                    horizontalCentered,
+                    verticalCentered,
+                    fitToPage,
+                    fitToHeight,
+                    fitToWidth,
+                    scale,
+                    showGridLines: false,
+                    blackAndWhite: false
+                };
             };
-        });
 
-        // 数据行
-        let rowIndex = 4;
-        tableData.forEach((output, index) => {
-            const row = worksheet.getRow(rowIndex);
-            row.height = 20;
+            // 应用打印设置
+            setupWorksheetPrint(worksheet, {
+                fitToHeight: 1,
+                fitToWidth: 1,
+                horizontalCentered: true,
+                verticalCentered: false
+            });
 
-            // 准备行数据
-            const rowData = [
-                output.dataTypeLabel || 'Unknown'
+            // 定义列宽
+            const columnWidths = [
+                25,    // Data Type
+                10,    // Jan
+                10,    // Feb
+                10,    // Mar
+                10,    // Apr
+                10,    // May
+                10,    // Jun
+                10,    // Jul
+                10,    // Aug
+                10,    // Sep
+                10,    // Oct
+                10,    // Nov
+                10,    // Dec
+                12     // Total
             ];
+
+            worksheet.columns = columnWidths.map(width => ({ width }));
+
+            // 定义样式
+            const titleFont = { name: 'Arial Black', size: 16, bold: true };
+            const headerFont = { name: 'Calibri', size: 11, bold: true };
+            const defaultFont = { name: 'Calibri', size: 11 };
             
-            // 添加月份数据
-            monthFields.forEach(month => {
-                const value = output[month.key] || 0;
-                rowData.push(formatNumber(value));
-            });
-            
-            // 添加总计
-            rowData.push(formatNumber(output.total || 0));
-
-            // 填充数据并设置样式
-            rowData.forEach((value, colIndex) => {
-                const cell = row.getCell(colIndex + 1);
-                cell.value = value;
-                cell.font = defaultFont;
-                
-                // 设置对齐方式
-                if (colIndex === 0) {
-                    // 第一列（数据类型）左对齐
-                    cell.alignment = leftAlignment;
-                } else {
-                    // 数据列右对齐（数字）
-                    cell.alignment = rightAlignment;
-                }
-                
-                // 设置边框
-                cell.border = borderStyle;
-                
-                // 为总计列添加特殊背景色
-                if (colIndex === rowData.length - 1) { // 总计列
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: 'FFF2F2F2' } // 浅灰色背景
-                    };
-                }
-            });
-
-            rowIndex++;
-        });
-
-        // 为表头行添加筛选器
-        const autoFilterRange = {
-            from: { row: 3, column: 1 }, // 从第3行第1列开始（表头行）
-            to: { row: rowIndex - 1, column: columnWidths.length } // 到最后一行最后一列
-        };
-        
-        // 设置自动筛选器
-        worksheet.autoFilter = autoFilterRange;
-
-        // 添加总计行
-        const totalRow = worksheet.getRow(rowIndex);
-        totalRow.height = 25;
-        
-        // 合并单元格用于总计文本
-        worksheet.mergeCells(rowIndex, 1, rowIndex, columnWidths.length);
-        totalRow.getCell(1).value = `Total Records: ${tableData.length} | Year: ${displayYear}${selectedCodes.length > 0 ? ` | Job Codes: ${selectedCodes.join(', ')}` : ''}`;
-        totalRow.getCell(1).font = { ...defaultFont, bold: true };
-        totalRow.getCell(1).alignment = centerAlignment;
-        
-        // 设置总计行背景色
-        for (let i = 1; i <= columnWidths.length; i++) {
-            const cell = totalRow.getCell(i);
-            cell.border = borderStyle;
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFD9EAD3' } // 浅绿色背景
+            // 边框样式
+            const borderStyle = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
             };
-        }
 
-        /* 设置冻结窗格 - 冻结表头行
-        worksheet.views = [
-            {
-                state: 'frozen',
-                xSplit: 1, // 冻结第一列（数据类型）
-                ySplit: 3, // 冻结前3行（标题、副标题、表头）
-                topLeftCell: 'B4', // 从第4行第2列开始可滚动
-                activeCell: 'B4'
+            // 对齐方式
+            const centerAlignment = { horizontal: 'center', vertical: 'middle' };
+            const leftAlignment = { horizontal: 'left', vertical: 'middle' };
+            const rightAlignment = { horizontal: 'right', vertical: 'middle' };
+
+            // 标题行
+            const titleRow = worksheet.getRow(1);
+            titleRow.height = 30;
+            titleRow.getCell(1).value = `OUTPUTS REPORT - YEAR ${displayYear}`;
+            titleRow.getCell(1).font = titleFont;
+            titleRow.getCell(1).alignment = centerAlignment;
+            worksheet.mergeCells(1, 1, 1, columnWidths.length);
+
+            // 副标题行
+            const subtitleRow = worksheet.getRow(2);
+            subtitleRow.height = 20;
+            
+            let subtitleText = `Generated on: ${reportDate.toLocaleString()}`;
+            if (selectedCodes.length > 0) {
+                subtitleText += ` | Job Codes: ${selectedCodes.join(', ')}`;
             }
-        ];*/
+            if (comparisonMode) {
+                subtitleText += ' | Comparison Mode';
+            }
+            
+            subtitleRow.getCell(1).value = subtitleText;
+            subtitleRow.getCell(1).font = { ...defaultFont, italic: true };
+            subtitleRow.getCell(1).alignment = centerAlignment;
+            worksheet.mergeCells(2, 1, 2, columnWidths.length);
 
-        // 生成 Excel 文件
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { 
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        });
-        
-        // 生成文件名
-        let fileName = `Outputs_Report_${displayYear}`;
-        if (selectedCodes.length > 0) {
-            const codesStr = selectedCodes.join('_').substring(0, 20); // 限制长度
-            fileName += `_${codesStr}`;
+            // 表头行
+            const headerRow = worksheet.getRow(3);
+            headerRow.height = 25;
+            
+            const headers = [
+                'Data Type',
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+                'Total'
+            ];
+
+            headers.forEach((header, index) => {
+                const cell = headerRow.getCell(index + 1);
+                cell.value = header;
+                cell.font = headerFont;
+                cell.alignment = centerAlignment;
+                cell.border = borderStyle;
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE0E0E0' }
+                };
+            });
+
+            // 数据行
+            let rowIndex = 4;
+            tableData.forEach((output, index) => {
+                const row = worksheet.getRow(rowIndex);
+                row.height = 20;
+
+                // 准备行数据
+                const rowData = [
+                    output.dataTypeLabel || 'Unknown'
+                ];
+                
+                // 添加月份数据
+                monthFields.forEach(month => {
+                    const value = output[month.key] || 0;
+                    rowData.push(formatNumber(value));
+                });
+                
+                // 添加总计
+                rowData.push(formatNumber(output.total || 0));
+
+                // 填充数据并设置样式
+                rowData.forEach((value, colIndex) => {
+                    const cell = row.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = defaultFont;
+                    
+                    // 设置对齐方式
+                    if (colIndex === 0) {
+                        cell.alignment = leftAlignment;
+                    } else {
+                        cell.alignment = rightAlignment;
+                    }
+                    
+                    // 设置边框
+                    cell.border = borderStyle;
+                    
+                    // 为总计列添加特殊背景色
+                    if (colIndex === rowData.length - 1) {
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFF2F2F2' }
+                        };
+                    }
+                });
+
+                rowIndex++;
+            });
+
+            // 设置自动筛选器
+            const autoFilterRange = {
+                from: { row: 3, column: 1 },
+                to: { row: rowIndex - 1, column: columnWidths.length }
+            };
+            
+            worksheet.autoFilter = autoFilterRange;
+
+            // 添加总计行
+            const totalRow = worksheet.getRow(rowIndex);
+            totalRow.height = 25;
+            
+            // 合并单元格用于总计文本
+            worksheet.mergeCells(rowIndex, 1, rowIndex, columnWidths.length);
+            totalRow.getCell(1).value = `Total Records: ${tableData.length} | Year: ${displayYear}${selectedCodes.length > 0 ? ` | Job Codes: ${selectedCodes.join(', ')}` : ''}`;
+            totalRow.getCell(1).font = { ...defaultFont, bold: true };
+            totalRow.getCell(1).alignment = centerAlignment;
+            
+            // 设置总计行背景色
+            for (let i = 1; i <= columnWidths.length; i++) {
+                const cell = totalRow.getCell(i);
+                cell.border = borderStyle;
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFD9EAD3' }
+                };
+            }
+
+            // 生成 Excel 文件
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            });
+            
+            // 生成文件名
+            let fileName = `Outputs_Report_${displayYear}`;
+            if (selectedCodes.length > 0) {
+                const codesStr = selectedCodes.join('_').substring(0, 20);
+                fileName += `_${codesStr}`;
+            }
+            if (comparisonMode) {
+                fileName += '_comparison';
+            }
+            fileName += `_${dateStr}_${timeStr}`;
+            
+            if (returnBlob) {
+                return { blob, fileName: `${fileName}.xlsx` };
+            } else {
+                saveAs(blob, `${fileName}.xlsx`);
+                console.log('Outputs Excel report generated successfully!');
+            }
+
+        } catch (error) {
+            setErrorMessage('Error generating Excel report: ' + error.message);
+            console.error('Excel export error:', error);
+            if (returnBlob) {
+                throw error;
+            }
         }
-        if (comparisonMode) {
-            fileName += '_comparison';
+    };
+
+    // 保存到文件服务器的函数
+    const saveToFileServer = async () => {
+        try {
+            // 显示 Modal 并设置状态为保存中
+            setShowSaveModal(true)
+            setSaveStatus('saving')
+            setSaveMessage('Generating...')
+            setSaveDetails({ fileName: '', path: '' })
+
+            // 首先生成 Excel 文件
+            const result = await generateExcelReport(true)
+            const { blob, fileName } = result
+
+            // 更新状态
+            setSaveMessage('Saving...')
+            setSaveDetails(prev => ({ ...prev, fileName }))
+
+            // 创建 FormData 对象
+            const formData = new FormData()
+            formData.append('file', blob, fileName)
+            formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
+
+            // 发送到后端 API 保存到文件服务器
+            const response = await fetch('/api/file/save-excel', {
+                method: 'POST',
+                body: formData,
+            })
+
+            const data = await response.json()
+
+            if (response.ok) {
+                setSaveStatus('success')
+                setSaveMessage('Success！')
+                setSaveDetails({
+                    fileName,
+                    path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
+                })
+                
+                console.log('File saved to server:', data)
+            } else {
+                setSaveStatus('error')
+                setSaveMessage(`Failed: ${data.message || 'Error'}`)
+                setSaveDetails({
+                    fileName,
+                    path: 'Failed'
+                })
+            }
+
+        } catch (error) {
+            console.error('Error saving to file server:', error)
+            setSaveStatus('error')
+            setSaveMessage('error')
+            setSaveDetails({
+                fileName: 'unknown',
+                path: 'error'
+            })
         }
-        
-        saveAs(blob, `${fileName}.xlsx`);
-
-        console.log('Outputs Excel report generated successfully!');
-
-    } catch (error) {
-        setErrorMessage('Error generating Excel report: ' + error.message);
-        console.error('Excel export error:', error);
     }
-};
+
+    // 处理下载到本地
+    const handleDownloadReport = async () => {
+        try {
+            await generateExcelReport(false)
+        } catch (error) {
+            console.error('Error downloading report:', error)
+            alert('Failed to download report. Please try again.')
+        }
+    }
+
+    // 处理手动下载（当服务器保存失败时）
+    const handleManualDownload = () => {
+        handleDownloadReport()
+        setShowSaveModal(false)
+    }
+
+    // 关闭保存 Modal
+    const closeSaveModal = () => {
+        setShowSaveModal(false)
+        setTimeout(() => {
+            setSaveStatus('')
+            setSaveMessage('')
+            setSaveDetails({ fileName: '', path: '' })
+        }, 300)
+    }
+
+    // 确认保存到服务器
+    const confirmSaveToServer = () => {
+        setShowConfirmModal(true)
+    }
+
+    // 实际执行保存
+    const executeSaveToServer = () => {
+        setShowConfirmModal(false)
+        saveToFileServer()
+    }
 
     const handleYearChange = () => {
         setOpenModal(!openModal)
@@ -1154,10 +1242,19 @@ const Outputs = () => {
                     <Button 
                         color='green' 
                         className='cursor-pointer flex-1 sm:flex-none'
-                        onClick={generateExcelReport}
+                        onClick={handleDownloadReport}
                         disabled={tableData.length === 0}
                     >
                         Report
+                    </Button>
+                    {/* 新增 Save to Server 按钮 */}
+                    <Button 
+                        color='blue' 
+                        className='cursor-pointer flex-1 sm:flex-none'
+                        onClick={confirmSaveToServer}
+                        disabled={tableData.length === 0}
+                    >
+                        Save to Server
                     </Button>
                 </div>
             </div>
@@ -1422,6 +1519,7 @@ const Outputs = () => {
                 </Alert>
             )}
 
+            {/* 现有的 Change Year Modal */}
             <Modal show={openModal} size="md" onClose={handleYearChange} popup>
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                     <div className={`px-4 py-2 text-xl font-semibold ${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
@@ -1459,6 +1557,126 @@ const Outputs = () => {
                         )}
                     </div>
                 </ModalBody>
+            </Modal>
+
+            {/* 新增：确认保存 Modal */}
+            <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
+                <ModalHeader>Server</ModalHeader>
+                <ModalBody>
+                    <div className="space-y-3">
+                        <p className="text-gray-700 dark:text-gray-300">
+                            Are you sure want to save into server?
+                        </p>
+                        <div className={`p-3 rounded-lg ${
+                            theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'border border-gray-600'
+                        }`}>
+                            <p className={`text-sm font-semibold`}>File path:</p>
+                            <p className="text-sm mt-1 text-blue-600 dark:text-blue-400">
+                                Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                            </p>
+                        </div>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button className='cursor-pointer' color="gray" onClick={() => setShowConfirmModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button className='cursor-pointer' color="blue" onClick={executeSaveToServer}>
+                        Save
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            {/* 新增：保存状态 Modal */}
+            <Modal show={showSaveModal} onClose={closeSaveModal} size="md">
+                <ModalHeader>
+                    {saveStatus === 'saving' ? 'Saving...' : 
+                     saveStatus === 'success' ? 'Success' : 
+                     saveStatus === 'error' ? 'Failed' : 'Saving'}
+                </ModalHeader>
+                <ModalBody>
+                    <div className="space-y-4">
+                        {/* 状态图标 */}
+                        <div className="flex justify-center">
+                            {saveStatus === 'saving' && (
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            )}
+                            {saveStatus === 'success' && (
+                                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                            )}
+                            {saveStatus === 'error' && (
+                                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* 消息 */}
+                        <p className="text-center text-gray-700 dark:text-gray-300">
+                            {saveMessage}
+                        </p>
+                        
+                        {/* 详细信息 */}
+                        {saveDetails.fileName && (
+                            <div className={`p-3 rounded-lg ${
+                                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+                            }`}>
+                                <p className="text-sm font-semibold">Document information:</p>
+                                <p className="text-sm mt-1">
+                                    <span className="font-medium">File name:</span> {saveDetails.fileName}
+                                </p>
+                                {saveDetails.path && (
+                                    <p className="text-sm mt-1">
+                                        <span className="font-medium">File path:</span> {saveDetails.path}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        
+                        {/* 错误时的额外选项 */}
+                        {saveStatus === 'error' && (
+                            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                    Failed to save into server, Please save as manual into server
+                                </p>
+                                <div className="space-y-2">
+                                    <Button 
+                                        className='cursor-pointer'
+                                        fullSized 
+                                        color="blue" 
+                                        onClick={handleManualDownload}
+                                    >
+                                        Download manual
+                                    </Button>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                        File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    {saveStatus === 'saving' ? (
+                        <Button color="gray" disabled>
+                            Please wait...
+                        </Button>
+                    ) : (
+                        <Button 
+                            className='cursor-pointer'
+                            color='gray' 
+                            onClick={closeSaveModal}
+                        >
+                            Cancel
+                        </Button>
+                    )}
+                </ModalFooter>
             </Modal>
         </div>
     )

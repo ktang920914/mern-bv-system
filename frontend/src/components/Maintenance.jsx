@@ -880,57 +880,315 @@ const Maintenance = () => {
     saveAs(blob, `Maintenance_Request_Form_${maintenance.code}_${date}.xlsx`)
   }
 
-  // 生成Excel报告的函数
-  const generateExcelReport = () => {
-    // 准备Excel数据 - 包含所有维护作业字段
-    const excelData = maintenances.map(maintenance => ({
-      'Job Date': maintenance.jobdate,
-      'Job Type': maintenance.jobtype,
-      'Item Code': maintenance.code,
-      'Problem': maintenance.problem,
-      'Job Detail': maintenance.jobdetail,
-      'Root Cause': maintenance.rootcause,
-      'Supplier': maintenance.supplier,
-      'Cost': maintenance.cost,
-      'Completion Date': maintenance.completiondate,
-      'Status': maintenance.status,
-      'Created At': new Date(maintenance.createdAt).toLocaleString(),
-      'Updated At': new Date(maintenance.updatedAt).toLocaleString()
-    }))
+  // 页面设置辅助函数 - 为报表单独设置
+  const setupWorksheetPrintForReport = (worksheet, options = {}) => {
+    const {
+      paperSize = 9,
+      orientation = 'landscape',
+      margins = {
+        left: 0.25,
+        right: 0.25,
+        top: 0.75,
+        bottom: 0.75,
+        header: 0.3,
+        footer: 0.3
+      },
+      horizontalCentered = true,
+      verticalCentered = false,
+      fitToPage = true,
+      fitToHeight = 1,
+      fitToWidth = 1,
+      scale = 100
+    } = options
 
-    // 创建工作簿和工作表
-    const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(excelData)
-    
-    // 设置列宽
-    const colWidths = [
-      { wch: 12 }, // Job Date
-      { wch: 15 }, // Job Type
-      { wch: 15 }, // Item Code
-      { wch: 25 }, // Problem
-      { wch: 30 }, // Job Detail
-      { wch: 25 }, // Root Cause
-      { wch: 20 }, // Supplier
-      { wch: 10 }, // Cost
-      { wch: 15 }, // Completion Date
-      { wch: 15 }, // Status
-      { wch: 20 }, // Created At
-      { wch: 20 }  // Updated At
-    ]
-    worksheet['!cols'] = colWidths
+    worksheet.pageSetup = {
+      paperSize,
+      orientation,
+      margins,
+      horizontalCentered,
+      verticalCentered,
+      fitToPage,
+      fitToHeight,
+      fitToWidth,
+      scale,
+      showGridLines: false,
+      blackAndWhite: false
+    }
+  }
 
-    // 添加工作表到工作簿
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Maintenance Jobs Report')
-    
-    // 生成Excel文件并下载
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([excelBuffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    })
-    
-    // 使用当前日期作为文件名
-    const date = new Date().toISOString().split('T')[0]
-    saveAs(blob, `Maintenance_Jobs_Report_${date}.xlsx`)
+  // 生成Excel报告的函数 - 完全重写，类似于 orders.jsx 的版本
+  const generateExcelReport = async () => {
+    try {
+      // 使用 ExcelJS
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Maintenance Jobs Report')
+      
+      // 设置工作表打印选项
+      setupWorksheetPrintForReport(worksheet, {
+        fitToHeight: 1,
+        fitToWidth: 1,
+        horizontalCentered: true,
+        verticalCentered: false
+      })
+      
+      // 设置列宽
+      worksheet.columns = [
+        { width: 5 },    // No.
+        { width: 12 },   // Job Date
+        { width: 15 },   // Job Type
+        { width: 15 },   // Item Code
+        { width: 25 },   // Problem
+        { width: 25 },   // Job Detail
+        { width: 20 },   // Root Cause
+        { width: 20 },   // Supplier
+        { width: 12 },   // Cost
+        { width: 15 },   // Completion Date
+        { width: 15 },   // Status
+        { width: 20 },   // Created At
+        { width: 20 }    // Updated At
+      ]
+
+      // 定义样式
+      const headerFont = { name: 'Calibri', size: 11, bold: true }
+      const titleFont = { name: 'Arial Black', size: 16, bold: true }
+      const defaultFont = { name: 'Calibri', size: 11 }
+      const boldFont = { name: 'Calibri', size: 11, bold: true }
+      
+      const borderStyle = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+
+      const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+      const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+      const rightAlignment = { horizontal: 'right', vertical: 'middle' }
+
+      // 标题行
+      const titleRow = worksheet.getRow(1)
+      titleRow.height = 30
+      titleRow.getCell(1).value = 'MAINTENANCE JOBS REPORT'
+      titleRow.getCell(1).font = titleFont
+      titleRow.getCell(1).alignment = centerAlignment
+      worksheet.mergeCells('A1:M1')
+
+      // 表头行 - 添加过滤器
+      const headerRow = worksheet.getRow(2)
+      headerRow.height = 25
+      const headers = [
+        'No.', 'Job Date', 'Job Type', 'Item Code', 'Problem', 
+        'Job Detail', 'Root Cause', 'Supplier', 'Cost', 'Completion Date',
+        'Status', 'Created At', 'Updated At'
+      ]
+      
+      headers.forEach((header, index) => {
+        const cell = headerRow.getCell(index + 1)
+        cell.value = header
+        cell.font = headerFont
+        cell.alignment = centerAlignment
+        cell.border = borderStyle
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+        }
+      })
+
+      // 准备数据
+      const excelData = maintenances.map(maintenance => ({
+        'Job Date': maintenance.jobdate,
+        'Job Type': maintenance.jobtype,
+        'Item Code': maintenance.code,
+        'Problem': maintenance.problem,
+        'Job Detail': maintenance.jobdetail,
+        'Root Cause': maintenance.rootcause,
+        'Supplier': maintenance.supplier,
+        'Cost': Number(maintenance.cost) || 0,
+        'Completion Date': maintenance.completiondate,
+        'Status': maintenance.status,
+        'Created At': new Date(maintenance.createdAt).toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }),
+        'Updated At': new Date(maintenance.updatedAt).toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })
+      }))
+
+      // 添加自动过滤器到整个数据范围
+      worksheet.autoFilter = {
+        from: 'A2',  // 从A2单元格开始（表头行）
+        to: `M${2 + excelData.length}`  // 到M列，数据行数+2（标题行+表头行+数据行）
+      }
+
+      // 数据行
+      let rowIndex = 3
+      let totalCost = 0
+      
+      excelData.forEach((maintenance, index) => {
+        const row = worksheet.getRow(rowIndex)
+        row.height = 20
+        
+        totalCost += maintenance.Cost
+        
+        const rowData = [
+          index + 1,
+          maintenance['Job Date'],
+          maintenance['Job Type'],
+          maintenance['Item Code'],
+          maintenance.Problem,
+          maintenance['Job Detail'],
+          maintenance['Root Cause'],
+          maintenance.Supplier,
+          maintenance.Cost,
+          maintenance['Completion Date'],
+          maintenance.Status,
+          maintenance['Created At'],
+          maintenance['Updated At']
+        ]
+
+        rowData.forEach((value, colIndex) => {
+          const cell = row.getCell(colIndex + 1)
+          cell.value = value
+          cell.font = defaultFont
+          cell.border = borderStyle
+          
+          // 不同的列对齐方式
+          if (colIndex === 0 || colIndex === 8) { // No. 和 Cost 列居右
+            cell.alignment = rightAlignment
+          } else if (colIndex === 10) { // Status 列居中
+            cell.alignment = centerAlignment
+          } else if (colIndex === 4 || colIndex === 5 || colIndex === 6) { // Problem, Job Detail, Root Cause 列左对齐
+            cell.alignment = leftAlignment
+          } else {
+            cell.alignment = centerAlignment
+          }
+          
+          // 为成本列添加货币格式
+          if (colIndex === 8) { // Cost 列
+            cell.numFmt = '#,##0.00'
+          }
+          
+          // 为状态列添加颜色
+          if (colIndex === 10) { // Status 列
+            if (value === 'Minor Complete' || value === 'Major Complete') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+              }
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF006100' } }
+            } else if (value === 'Minor Incomplete' || value === 'Major Incomplete') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFC7CE' } // 浅红色
+              }
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } }
+            }
+          }
+          
+          // 为成本列添加颜色（根据值大小）
+          if (colIndex === 8) { // Cost 列
+            const cost = Number(value) || 0
+            if (cost > 10000) {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } } // 红色
+            } else if (cost > 5000) {
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C5700' } } // 橙色
+            }
+          }
+          
+          // 隔行着色
+          if (rowIndex % 2 === 0) {
+            if (colIndex !== 10 && colIndex !== 8) { // 保持状态列和成本列的颜色
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF8F8F8' } // 更浅的灰色
+              }
+            }
+          }
+        })
+
+        rowIndex++
+      })
+
+      // 如果没有数据，添加提示行
+      if (excelData.length === 0) {
+        const row = worksheet.getRow(rowIndex)
+        row.getCell(1).value = 'No maintenance job data available'
+        worksheet.mergeCells(`A${rowIndex}:M${rowIndex}`)
+        row.getCell(1).alignment = centerAlignment
+        row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } }
+        row.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+        }
+        row.getCell(1).border = borderStyle
+        rowIndex++
+      }
+
+      {/*//添加总计行
+      if (excelData.length > 0) {
+        const totalRow = worksheet.getRow(rowIndex)
+        totalRow.height = 25
+        
+        // 合并前8列，显示总计
+        totalRow.getCell(1).value = 'Total'
+        worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`)
+        totalRow.getCell(1).font = boldFont
+        totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
+        totalRow.getCell(1).border = borderStyle
+        
+        // 总成本
+        totalRow.getCell(9).value = totalCost
+        totalRow.getCell(9).font = boldFont
+        totalRow.getCell(9).alignment = rightAlignment
+        totalRow.getCell(9).numFmt = '#,##0.00'
+        totalRow.getCell(9).border = borderStyle
+        totalRow.getCell(9).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9D9D9' } // 灰色背景
+        }
+        
+        // 合并剩余列
+        worksheet.mergeCells(`J${rowIndex}:M${rowIndex}`)
+        totalRow.getCell(10).border = borderStyle
+        totalRow.getCell(10).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9D9D9' }
+        }
+        
+        rowIndex++
+      }*/}
+
+      // 生成Excel文件并下载
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      })
+      
+      // 使用当前日期作为文件名
+      const date = new Date().toISOString().split('T')[0].replace(/-/g, '_')
+      saveAs(blob, `Maintenance_Jobs_Report_${date}.xlsx`)
+
+    } catch (error) {
+      console.error('Error generating Excel report:', error)
+      alert('Failed to generate Excel report. Please try again.')
+    }
   }
 
   // 移动端简洁分页组件 - 只显示 Previous/Next
