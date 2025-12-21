@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalFooter, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
@@ -17,6 +17,8 @@ const Maintenance = () => {
   const [openModalCreateJob,setOpenModalCreateJob] = useState(false)
   const [openModalDeleteMaintenance,setOpenModalDeleteMaintenance] = useState(false)
   const [openModalUpdateMaintenance,setOpenModalUpdateMaintenance] = useState(false)
+  const [openModalMFR, setOpenModalMFR] = useState(false)
+  const [selectedMaintenanceForMFR, setSelectedMaintenanceForMFR] = useState(null)
   const [formData,setFormData] = useState({})
   const [updateFormData,setUpdateFormData] = useState({})
   const [extruders,setExtruders] = useState([])
@@ -30,6 +32,12 @@ const Maintenance = () => {
   const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [itemsPage] = useState(10)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  // MFR 保存状态
+  const [mfrSaveStatus, setMfrSaveStatus] = useState('')
+  const [mfrSaveMessage, setMfrSaveMessage] = useState('')
+  const [mfrSaveDetails, setMfrSaveDetails] = useState({ fileName: '', path: '' })
+  const [showMfrSaveModal, setShowMfrSaveModal] = useState(false)
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -254,6 +262,105 @@ const Maintenance = () => {
     }
   }
 
+  // MRF 按钮点击处理
+  const handleMRFClick = (maintenance) => {
+    setSelectedMaintenanceForMFR(maintenance)
+    setOpenModalMFR(true)
+  }
+
+  // 保存 MFR 到服务器的函数
+  const saveMFRToServer = async () => {
+    if (!selectedMaintenanceForMFR) return
+    
+    try {
+      // 显示保存 Modal
+      setOpenModalMFR(false)
+      setShowMfrSaveModal(true)
+      setMfrSaveStatus('saving')
+      setMfrSaveMessage('Generating MFR...')
+      setMfrSaveDetails({ fileName: '', path: '' })
+
+      // 生成 Excel 文件
+      const result = await generateMaintenanceRequestForm(selectedMaintenanceForMFR, true)
+      
+      if (!result) {
+        setMfrSaveStatus('error')
+        setMfrSaveMessage('Failed to generate MFR')
+        return
+      }
+
+      const { blob, fileName } = result
+
+      // 更新状态
+      setMfrSaveMessage('Saving to server...')
+      setMfrSaveDetails(prev => ({ ...prev, fileName }))
+
+      // 创建 FormData 对象
+      const formData = new FormData()
+      formData.append('file', blob, fileName)
+      formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)\\MRF Forms')
+
+      // 发送到后端 API 保存到文件服务器
+      const response = await fetch('/api/file/save-excel', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMfrSaveStatus('success')
+        setMfrSaveMessage('Success！')
+        setMfrSaveDetails({
+          fileName,
+          path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)\\MRF Forms'
+        })
+        console.log('MRF saved to server:', data)
+      } else {
+        setMfrSaveStatus('error')
+        setMfrSaveMessage(`Failed: ${data.message || 'Error'}`)
+        setMfrSaveDetails({
+          fileName,
+          path: 'Failed'
+        })
+      }
+
+    } catch (error) {
+      console.error('Error saving MFR to server:', error)
+      setMfrSaveStatus('error')
+      setMfrSaveMessage('Error saving to server')
+      setMfrSaveDetails({
+        fileName: 'unknown',
+        path: 'error'
+      })
+    }
+  }
+
+  // 处理手动下载 MFR
+  const handleManualMFRDownload = async () => {
+    if (!selectedMaintenanceForMFR) return
+    
+    try {
+      await generateMaintenanceRequestForm(selectedMaintenanceForMFR, false)
+      setOpenModalMFR(false)
+      setShowMfrSaveModal(false)
+    } catch (error) {
+      console.error('Error downloading MFR:', error)
+      setMfrSaveStatus('error')
+      setMfrSaveMessage('Failed to download')
+    }
+  }
+
+  // 关闭保存 Modal
+  const closeMfrSaveModal = () => {
+    setShowMfrSaveModal(false)
+    setTimeout(() => {
+      setMfrSaveStatus('')
+      setMfrSaveMessage('')
+      setMfrSaveDetails({ fileName: '', path: '' })
+    }, 300)
+  }
+
   const handleSearch = (e) => {
     setSearchTerm(e.target.value.toLowerCase())
     setCurrentPage(1)
@@ -322,7 +429,7 @@ const Maintenance = () => {
   }
 
   // 生成维护请求表格Excel文件 - 使用exceljs
-  const generateMaintenanceRequestForm = async (maintenance) => {
+  const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) => {
     // 创建工作簿
     const workbook = new ExcelJS.Workbook()
     
@@ -869,7 +976,7 @@ const Maintenance = () => {
       }
     }
 
-    // 生成Excel文件并下载
+    // 生成Excel文件
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], { 
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -877,7 +984,14 @@ const Maintenance = () => {
     
     // 使用作业编号和日期作为文件名
     const date = new Date().toISOString().split('T')[0]
-    saveAs(blob, `Maintenance_Request_Form_${maintenance.code}_${date}.xlsx`)
+    const fileName = `Maintenance_Request_Form_${maintenance.code}_${date}.xlsx`
+    
+    if (returnBlob) {
+      return { blob, fileName }
+    } else {
+      saveAs(blob, fileName)
+      return null
+    }
   }
 
   // 页面设置辅助函数 - 为报表单独设置
@@ -1139,42 +1253,6 @@ const Maintenance = () => {
         rowIndex++
       }
 
-      {/*//添加总计行
-      if (excelData.length > 0) {
-        const totalRow = worksheet.getRow(rowIndex)
-        totalRow.height = 25
-        
-        // 合并前8列，显示总计
-        totalRow.getCell(1).value = 'Total'
-        worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`)
-        totalRow.getCell(1).font = boldFont
-        totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
-        totalRow.getCell(1).border = borderStyle
-        
-        // 总成本
-        totalRow.getCell(9).value = totalCost
-        totalRow.getCell(9).font = boldFont
-        totalRow.getCell(9).alignment = rightAlignment
-        totalRow.getCell(9).numFmt = '#,##0.00'
-        totalRow.getCell(9).border = borderStyle
-        totalRow.getCell(9).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFD9D9D9' } // 灰色背景
-        }
-        
-        // 合并剩余列
-        worksheet.mergeCells(`J${rowIndex}:M${rowIndex}`)
-        totalRow.getCell(10).border = borderStyle
-        totalRow.getCell(10).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFD9D9D9' }
-        }
-        
-        rowIndex++
-      }*/}
-
       // 生成Excel文件并下载
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { 
@@ -1305,7 +1383,7 @@ const Maintenance = () => {
           color='blue'
           outline 
           className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => generateMaintenanceRequestForm(maintenance)}
+          onClick={() => handleMRFClick(maintenance)}
         >
           MRF
         </Button>
@@ -1426,7 +1504,7 @@ const Maintenance = () => {
                 </TableCell>
                 <TableCell className="align-middle">
                   <Button color='blue' outline className='cursor-pointer py-1 px-1 text-sm h-8'
-                    onClick={() => generateMaintenanceRequestForm(maintenance)}
+                    onClick={() => handleMRFClick(maintenance)}
                   >
                     MRF
                   </Button>
@@ -1473,7 +1551,7 @@ const Maintenance = () => {
         )}
       </div>
 
-      {/* 模态框保持不变 */}
+      {/* 现有模态框保持不变 */}
       <Modal show={openModalCreateJob} onClose={handleCreateJob} popup>
         <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`} />
         <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
@@ -1692,6 +1770,155 @@ const Maintenance = () => {
             }
           </div>
         </ModalBody>
+      </Modal>
+
+      {/* 新增：MFR 选择 Modal */}
+      <Modal show={openModalMFR} onClose={() => setOpenModalMFR(false)} size="md">
+        <ModalHeader>Maintenance Request Form</ModalHeader>
+        <ModalBody>
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-300">
+              How would you like to generate the Maintenance Request Form?
+            </p>
+            
+            {selectedMaintenanceForMFR && (
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <p className="text-sm font-semibold">Selected Job:</p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Code:</span> {selectedMaintenanceForMFR.code}
+                </p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Job Type:</span> {selectedMaintenanceForMFR.jobtype}
+                </p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Problem:</span> {selectedMaintenanceForMFR.problem.substring(0, 50)}...
+                </p>
+              </div>
+            )}
+            
+            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <p className="text-sm font-semibold mb-2">Save Location:</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)\MRF Forms
+              </p>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button 
+            className='cursor-pointer' 
+            color="gray" 
+            onClick={() => setOpenModalMFR(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            className='cursor-pointer' 
+            color="green"
+            onClick={handleManualMFRDownload}
+          >
+            Download
+          </Button>
+          <Button 
+            className='cursor-pointer' 
+            color="blue" 
+            onClick={saveMFRToServer}
+          >
+            Save to Server
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* 新增：MFR 保存状态 Modal */}
+      <Modal show={showMfrSaveModal} onClose={closeMfrSaveModal} size="md">
+        <ModalHeader>
+          {mfrSaveStatus === 'saving' ? 'Saving MFR...' : 
+           mfrSaveStatus === 'success' ? 'Success' : 
+           mfrSaveStatus === 'error' ? 'Failed' : 'Saving MFR'}
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4">
+            {/* 状态图标 */}
+            <div className="flex justify-center">
+              {mfrSaveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              )}
+              {mfrSaveStatus === 'success' && (
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              )}
+              {mfrSaveStatus === 'error' && (
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* 消息 */}
+            <p className="text-center text-gray-700 dark:text-gray-300">
+              {mfrSaveMessage}
+            </p>
+            
+            {/* 详细信息 */}
+            {mfrSaveDetails.fileName && (
+              <div className={`p-3 rounded-lg ${
+                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+              }`}>
+                <p className="text-sm font-semibold">Document information:</p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">File name:</span> {mfrSaveDetails.fileName}
+                </p>
+                {mfrSaveDetails.path && (
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">File path:</span> {mfrSaveDetails.path}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* 错误时的额外选项 */}
+            {mfrSaveStatus === 'error' && (
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Failed to save into server, Please save as manual into server
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className='cursor-pointer'
+                    fullSized 
+                    color="blue" 
+                    onClick={handleManualMFRDownload}
+                  >
+                    Download manual
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)\MRF Forms
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          {mfrSaveStatus === 'saving' ? (
+            <Button color="gray" disabled>
+              Please wait...
+            </Button>
+          ) : (
+            <Button 
+              className='cursor-pointer'
+              color='gray' 
+              onClick={closeMfrSaveModal}
+            >
+              Cancel
+            </Button>
+          )}
+        </ModalFooter>
       </Modal>
     </div>
   )
