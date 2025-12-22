@@ -4,6 +4,7 @@ import useUserstore from '../store'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { HiX, HiCheck } from 'react-icons/hi'
+import ExcelJS from 'exceljs'
 
 // 导入 Chart.js 相关
 import {
@@ -509,78 +510,462 @@ const Cases = () => {
         return { options, data: chartData, plugins }
     }
 
-    const generateExcelReport = () => {
+    // 添加打印设置函数
+    const setupWorksheetPrint = (worksheet, options = {}) => {
+      const {
+        paperSize = 9,
+        orientation = 'landscape',
+        margins = {
+          left: 0.25,
+          right: 0.25,
+          top: 0.75,
+          bottom: 0.75,
+          header: 0.3,
+          footer: 0.3
+        },
+        horizontalCentered = true,
+        verticalCentered = false,
+        fitToPage = true,
+        fitToHeight = 1,
+        fitToWidth = 1,
+        scale = 100
+      } = options;
+
+      worksheet.pageSetup = {
+        paperSize,
+        orientation,
+        margins,
+        horizontalCentered,
+        verticalCentered,
+        fitToPage,
+        fitToHeight,
+        fitToWidth,
+        scale,
+        showGridLines: false,
+        blackAndWhite: false
+      };
+    };
+
+    // 新的 generateExcelReport 函数（像 cost.jsx 一样）
+    const generateExcelReport = async () => {
+      try {
+        const tableData = prepareTableData();
+        
         if (tableData.length === 0) {
-            setErrorMessage('No data to export')
-            return
+          setErrorMessage('No data to export');
+          return;
         }
 
-        try {
-            const worksheetData = []
-            
-            worksheetData.push([`${dataType === 'cost' ? 'Cost' : 'Cases'} Report - ${displayYear}`])
-            
-            if (selectedCodes.length > 0) {
-                worksheetData.push([`Filtered Job Codes: ${selectedCodes.join(', ')}`])
-            } else {
-                worksheetData.push(['Filtered Job Codes: All codes selected'])
-            }
-            
-            worksheetData.push([`Comparison Mode: ${comparisonMode ? 'Enabled' : 'Disabled'}`])
-            worksheetData.push([])
-            
-            const headers = ['Case Type', ...monthFields.map(month => month.name), 'Total']
-            worksheetData.push(headers)
-            
-            tableData.forEach(row => {
-                const rowData = [row.type]
-                
-                monthFields.forEach(month => {
-                    const value = row[month.key] || 0
-                    rowData.push(formatDisplayNumber(value))
-                })
-                
-                const totalValue = row.total || 0
-                rowData.push(formatDisplayNumber(totalValue))
-                worksheetData.push(rowData)
-            })
-            
-            const workbook = XLSX.utils.book_new()
-            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-            
-            const colWidths = [
-                { wch: 20 }, 
-                ...Array(12).fill({ wch: 10 }),
-                { wch: 12 } 
-            ]
-            worksheet['!cols'] = colWidths
-            
-            if (!worksheet['!merges']) worksheet['!merges'] = [];
-            worksheet['!merges'].push(
-                { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
-                { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
-                { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }
-            );
-            
-            XLSX.utils.book_append_sheet(workbook, worksheet, `${dataType === 'cost' ? 'Cost' : 'Cases'}_${displayYear}`)
-            
-            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-            const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-            
-            let fileName = `${dataType === 'cost' ? 'Cost' : 'Cases'}_Report_${displayYear}`
-            if (selectedCodes.length > 0) {
-                fileName += `_${selectedCodes.join('_')}`
-            }
-            if (comparisonMode) {
-                fileName += '_comparison'
-            }
-            
-            saveAs(data, `${fileName}.xlsx`)
-            
-        } catch (error) {
-            setErrorMessage('Error generating Excel report: ' + error.message)
+        // 使用 ExcelJS 创建报表
+        const workbook = new ExcelJS.Workbook();
+        let worksheetName = `Cases ${displayYear}`;
+        
+        // 简化工作表名称
+        if (selectedCodes.length === 0) {
+          worksheetName = 'All Job Codes';
+        } else if (selectedCodes.length === 1) {
+          worksheetName = `Code ${selectedCodes[0]}`;
+        } else if (selectedCodes.length > 1) {
+          worksheetName = `${selectedCodes.length} Job Codes`;
         }
-    }
+        
+        const worksheet = workbook.addWorksheet(worksheetName);
+        
+        // 设置打印选项
+        setupWorksheetPrint(worksheet, {
+          orientation: 'landscape',
+          fitToHeight: 1,
+          fitToWidth: 1,
+          horizontalCentered: true
+        });
+        
+        // 设置列宽
+        worksheet.columns = [
+          { width: 25 },    // Case Type
+          { width: 12 },    // Jan
+          { width: 12 },    // Feb
+          { width: 12 },    // Mar
+          { width: 12 },    // Apr
+          { width: 12 },    // May
+          { width: 12 },    // Jun
+          { width: 12 },    // Jul
+          { width: 12 },    // Aug
+          { width: 12 },    // Sep
+          { width: 12 },    // Oct
+          { width: 12 },    // Nov
+          { width: 12 },    // Dec
+          { width: 15 }     // Total
+        ];
+
+        // 定义样式
+        const headerFont = { name: 'Calibri', size: 11, bold: true };
+        const titleFont = { name: 'Arial Black', size: 16, bold: true };
+        const defaultFont = { name: 'Calibri', size: 11 };
+        const boldFont = { name: 'Calibri', size: 11, bold: true };
+        
+        const borderStyle = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+
+        const centerAlignment = { horizontal: 'center', vertical: 'middle' };
+        const leftAlignment = { horizontal: 'left', vertical: 'middle' };
+        const rightAlignment = { horizontal: 'right', vertical: 'middle' };
+
+        // 添加标题和报告信息
+        let titleRow = 1;
+        
+        // 主标题
+        const mainTitleRow = worksheet.getRow(titleRow);
+        mainTitleRow.height = 30;
+        mainTitleRow.getCell(1).value = `${dataType === 'cost' ? 'CASES COST' : 'CASES COUNT'} MANAGEMENT REPORT`;
+        mainTitleRow.getCell(1).font = titleFont;
+        mainTitleRow.getCell(1).alignment = centerAlignment;
+        worksheet.mergeCells(`A${titleRow}:N${titleRow}`);
+        
+        titleRow++;
+        
+        // 年份信息
+        const yearRow = worksheet.getRow(titleRow);
+        yearRow.height = 22;
+        yearRow.getCell(1).value = `Year: ${displayYear}`;
+        yearRow.getCell(1).font = boldFont;
+        yearRow.getCell(1).alignment = leftAlignment;
+        worksheet.mergeCells(`A${titleRow}:N${titleRow}`);
+        
+        titleRow++;
+        
+        // 数据模式
+        const modeRow = worksheet.getRow(titleRow);
+        modeRow.height = 22;
+        const modeText = dataType === 'cost' ? 'Cost Mode' : 'Count Mode';
+        modeRow.getCell(1).value = `Data Mode: ${modeText}`;
+        modeRow.getCell(1).font = boldFont;
+        modeRow.getCell(1).alignment = leftAlignment;
+        worksheet.mergeCells(`A${titleRow}:N${titleRow}`);
+        
+        titleRow++;
+        
+        // 比较模式
+        const compModeRow = worksheet.getRow(titleRow);
+        compModeRow.height = 22;
+        compModeRow.getCell(1).value = `Comparison Mode: ${comparisonMode ? 'Enabled' : 'Disabled'}`;
+        compModeRow.getCell(1).font = boldFont;
+        compModeRow.getCell(1).alignment = leftAlignment;
+        worksheet.mergeCells(`A${titleRow}:N${titleRow}`);
+        
+        titleRow++;
+        
+        // Job Code 信息
+        const codeRow = worksheet.getRow(titleRow);
+        codeRow.height = 22;
+        let codeText = '';
+        
+        if (selectedCodes.length === 0) {
+          codeText = 'All Job Codes (All available codes)';
+        } else if (selectedCodes.length === 1) {
+          codeText = `Job Code: ${selectedCodes[0]}`;
+        } else {
+          codeText = `Selected Job Codes: ${selectedCodes.join(', ')}`;
+        }
+        
+        codeRow.getCell(1).value = codeText;
+        codeRow.getCell(1).font = { ...boldFont, color: { argb: 'FF0000FF' } }; // 蓝色
+        codeRow.getCell(1).alignment = leftAlignment;
+        worksheet.mergeCells(`A${titleRow}:N${titleRow}`);
+        
+        titleRow++;
+        
+        // 空行分隔
+        titleRow++;
+
+        // 表头行
+        const headerRow = worksheet.getRow(titleRow);
+        headerRow.height = 25;
+        
+        const headers = [
+          'Case Type',
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+          'Total'
+        ];
+        
+        headers.forEach((header, index) => {
+          const cell = headerRow.getCell(index + 1);
+          cell.value = header;
+          cell.font = headerFont;
+          cell.alignment = centerAlignment;
+          cell.border = borderStyle;
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+          };
+        });
+        
+        titleRow++;
+
+        // 准备数据行
+        let dataRowIndex = titleRow;
+        let monthlyTotals = Array(12).fill(0); // 存储每个月的总计
+        let grandTotal = 0;
+        
+        tableData.forEach((item, index) => {
+          const row = worksheet.getRow(dataRowIndex);
+          row.height = 20;
+          
+          const rowData = [item.type];
+          
+          // 月份数据
+          monthFields.forEach((month, monthIndex) => {
+            const value = item[month.key] || 0;
+            rowData.push(value);
+            monthlyTotals[monthIndex] += value;
+          });
+          
+          // 总计
+          const total = item.total || 0;
+          rowData.push(total);
+          grandTotal += total;
+          
+          // 填充单元格数据
+          rowData.forEach((value, colIndex) => {
+            const cell = row.getCell(colIndex + 1);
+            
+            if (colIndex === 0) {
+              // Case Type 列
+              cell.value = value;
+              cell.font = boldFont;
+              cell.alignment = leftAlignment;
+              cell.border = borderStyle;
+              
+              // 隔行着色
+              if (index % 2 === 0) {
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: 'FFF8F8F8' }
+                };
+              }
+            } else if (colIndex === 13) {
+              // 总计列
+              cell.value = Number(value) || 0;
+              cell.numFmt = dataType === 'cost' ? '#,##0.00' : '#,##0';
+              cell.font = { ...boldFont, color: { argb: 'FF006100' } }; // 深绿色
+              cell.alignment = rightAlignment;
+              cell.border = borderStyle;
+              
+              // 根据数据模式设置不同背景色
+              const amount = Number(value) || 0;
+              if (dataType === 'cost') {
+                // 成本模式：为较大金额添加不同背景色
+                if (amount > 50000) {
+                  cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFC7CE' } // 浅红色
+                  };
+                } else if (amount > 20000) {
+                  cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+                  };
+                } else {
+                  cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE2EFDA' } // 浅绿色
+                  };
+                }
+              } else {
+                // 计数模式：为较大数量添加不同背景色
+                if (amount > 30) {
+                  cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFC7CE' }
+                  };
+                } else if (amount > 15) {
+                  cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFEB9C' }
+                  };
+                } else {
+                  cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE2EFDA' }
+                  };
+                }
+              }
+            } else {
+              // 月份数据列
+              cell.value = Number(value) || 0;
+              cell.numFmt = dataType === 'cost' ? '#,##0.00' : '#,##0';
+              cell.font = defaultFont;
+              cell.alignment = rightAlignment;
+              cell.border = borderStyle;
+              
+              // 高亮显示较大数值
+              const amount = Number(value) || 0;
+              if (dataType === 'cost') {
+                if (amount > 10000) {
+                  cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } }; // 红色
+                } else if (amount > 5000) {
+                  cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C5700' } }; // 橙色
+                }
+              } else {
+                if (amount > 10) {
+                  cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } };
+                } else if (amount > 5) {
+                  cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C5700' } };
+                }
+              }
+              
+              // 隔行着色
+              if (index % 2 === 0) {
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: 'FFF8F8F8' }
+                };
+              }
+            }
+          });
+          
+          dataRowIndex++;
+        });
+
+        // 如果没有数据，添加提示行
+        if (tableData.length === 0) {
+          const row = worksheet.getRow(dataRowIndex);
+          row.getCell(1).value = 'No data available for selected criteria';
+          worksheet.mergeCells(`A${dataRowIndex}:N${dataRowIndex}`);
+          row.getCell(1).alignment = centerAlignment;
+          row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } };
+          row.getCell(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFFEB9C' }
+          };
+          row.getCell(1).border = borderStyle;
+          dataRowIndex++;
+        }
+
+        // 添加月度总计行
+        const monthlyTotalRow = worksheet.getRow(dataRowIndex);
+        monthlyTotalRow.height = 25;
+        
+        // 总计标题
+        monthlyTotalRow.getCell(1).value = 'Monthly Totals';
+        monthlyTotalRow.getCell(1).font = { ...boldFont, size: 12 };
+        monthlyTotalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+        monthlyTotalRow.getCell(1).border = borderStyle;
+        monthlyTotalRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9D9D9' } // 灰色
+        };
+        
+        // 每月总计数据
+        monthlyTotals.forEach((total, index) => {
+          const cell = monthlyTotalRow.getCell(index + 2);
+          cell.value = Number(total) || 0;
+          cell.numFmt = dataType === 'cost' ? '#,##0.00' : '#,##0';
+          cell.font = { ...boldFont, size: 11, color: { argb: 'FF000080' } }; // 深蓝色
+          cell.alignment = rightAlignment;
+          cell.border = borderStyle;
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD9D9D9' }
+          };
+        });
+        
+        // 月度总计的合计
+        const monthlyGrandTotalCell = monthlyTotalRow.getCell(14);
+        const monthlySum = monthlyTotals.reduce((sum, value) => sum + value, 0);
+        monthlyGrandTotalCell.value = monthlySum;
+        monthlyGrandTotalCell.numFmt = dataType === 'cost' ? '#,##0.00' : '#,##0';
+        monthlyGrandTotalCell.font = { ...boldFont, size: 11, color: { argb: 'FF006100' } }; // 深绿色
+        monthlyGrandTotalCell.alignment = rightAlignment;
+        monthlyGrandTotalCell.border = borderStyle;
+        monthlyGrandTotalCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+        };
+        
+        dataRowIndex++;
+
+        // 添加总计行
+        const grandTotalRow = worksheet.getRow(dataRowIndex);
+        grandTotalRow.height = 28;
+        
+        // 合并单元格显示总计标题
+        grandTotalRow.getCell(1).value = 'GRAND TOTAL';
+        worksheet.mergeCells(`A${dataRowIndex}:M${dataRowIndex}`);
+        grandTotalRow.getCell(1).font = { ...boldFont, size: 13, color: { argb: 'FFFFFFFF' } };
+        grandTotalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+        grandTotalRow.getCell(1).border = borderStyle;
+        grandTotalRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' } // 蓝色
+        };
+        
+        // 总计数值
+        grandTotalRow.getCell(14).value = grandTotal;
+        grandTotalRow.getCell(14).numFmt = dataType === 'cost' ? '#,##0.00' : '#,##0';
+        grandTotalRow.getCell(14).font = { ...boldFont, size: 13, color: { argb: 'FFFFFFFF' } };
+        grandTotalRow.getCell(14).alignment = rightAlignment;
+        grandTotalRow.getCell(14).border = borderStyle;
+        grandTotalRow.getCell(14).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        
+        dataRowIndex++;
+        
+        // 添加信息行
+        const infoRow = worksheet.getRow(dataRowIndex);
+        infoRow.height = 20;
+        infoRow.getCell(1).value = `Generated on: ${new Date().toLocaleString()}`;
+        worksheet.mergeCells(`A${dataRowIndex}:N${dataRowIndex}`);
+        infoRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        infoRow.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FF7F7F7F' } };
+
+        // 生成文件名
+        let fileName = `${dataType === 'cost' ? 'Cases_Cost' : 'Cases_Count'}_Report_${displayYear}`;
+        if (selectedCodes.length === 0) {
+          fileName += '_All_Codes';
+        } else if (selectedCodes.length === 1) {
+          fileName += `_${selectedCodes[0]}`;
+        } else {
+          fileName += `_${selectedCodes.length}_Codes`;
+        }
+        if (comparisonMode) {
+          fileName += '_Comparison';
+        }
+        
+        // 保存文件
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { 
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        
+        saveAs(blob, `${fileName}.xlsx`);
+
+      } catch (error) {
+        console.error('Error generating Excel report:', error);
+        setErrorMessage('Error generating Excel report: ' + error.message);
+      }
+    };
 
     // 格式化数字显示
     const formatDisplayNumber = (value) => {
