@@ -1,11 +1,11 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput} from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useThemeStore from '../themeStore'
 import useUserstore from '../store'
 import { useSearchParams } from 'react-router-dom';
-import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import ExcelJS from 'exceljs'
 
 const ToDoListPreventive = () => {
     const {theme} = useThemeStore()
@@ -452,48 +452,272 @@ const ToDoListPreventive = () => {
     const showingTo = Math.min(indexOfLastItem, totalEntries)
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
-    const generateExcelReport = () => {
-        const excelData = todos.map(todo => ({
-            'Date': todo.date,
-            'Item': todo.code,
-            'Activity': todo.activity,
-            'Status': todo.status,
-            'Repeat Type': todo.repeatType || 'None',
-            'Repeat Interval': todo.repeatInterval || 1,
-            'Repeat End Date': todo.repeatEndDate || 'N/A',
-            'Is Recurring': todo.isRecurring ? 'Yes' : 'No',
-            'Is Generated': todo.isGenerated ? 'Yes' : 'No',
-            'Created At': new Date(todo.createdAt).toLocaleString(),
-            'Updated At': new Date(todo.updatedAt).toLocaleString()
-        }))
+    // 页面设置辅助函数 - 为报表单独设置
+    const setupWorksheetPrintForReport = (worksheet, options = {}) => {
+        const {
+            paperSize = 9,
+            orientation = 'landscape',
+            margins = {
+                left: 0.25,
+                right: 0.25,
+                top: 0.75,
+                bottom: 0.75,
+                header: 0.3,
+                footer: 0.3
+            },
+            horizontalCentered = true,
+            verticalCentered = false,
+            fitToPage = true,
+            fitToHeight = 1,
+            fitToWidth = 1,
+            scale = 100
+        } = options
 
-        const workbook = XLSX.utils.book_new()
-        const worksheet = XLSX.utils.json_to_sheet(excelData)
-        
-        const colWidths = [
-            { wch: 15 },
-            { wch: 20 },
-            { wch: 30 },
-            { wch: 12 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 18 },
-            { wch: 12 },
-            { wch: 12 },
-            { wch: 20 },
-            { wch: 20 }
-        ]
-        worksheet['!cols'] = colWidths
+        worksheet.pageSetup = {
+            paperSize,
+            orientation,
+            margins,
+            horizontalCentered,
+            verticalCentered,
+            fitToPage,
+            fitToHeight,
+            fitToWidth,
+            scale,
+            showGridLines: false,
+            blackAndWhite: false
+        }
+    }
 
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'ToDo List Report')
-        
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], { 
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        })
-        
-        const date = new Date().toISOString().split('T')[0]
-        saveAs(blob, `ToDo_List_Report_${date}.xlsx`)
+    // 生成Excel报告的函数 - 使用 ExcelJS，类似 maintenance.jsx 的格式
+    const generateExcelReport = async () => {
+        try {
+            // 使用 ExcelJS
+            const workbook = new ExcelJS.Workbook()
+            const worksheet = workbook.addWorksheet('ToDo List Report')
+            
+            // 设置工作表打印选项
+            setupWorksheetPrintForReport(worksheet, {
+                fitToHeight: 1,
+                fitToWidth: 1,
+                horizontalCentered: true,
+                verticalCentered: false
+            })
+            
+            // 设置列宽
+            worksheet.columns = [
+                { width: 5 },    // No.
+                { width: 12 },   // Date
+                { width: 20 },   // Item Code
+                { width: 30 },   // Activity
+                { width: 15 },   // Status
+                { width: 15 },   // Repeat Type
+                { width: 15 },   // Repeat Interval
+                { width: 15 },   // Repeat End Date
+                { width: 12 },   // Is Recurring
+                { width: 12 },   // Is Generated
+                { width: 20 },   // Created At
+                { width: 20 }    // Updated At
+            ]
+
+            // 定义样式
+            const headerFont = { name: 'Calibri', size: 11, bold: true }
+            const titleFont = { name: 'Arial Black', size: 16, bold: true }
+            const defaultFont = { name: 'Calibri', size: 11 }
+            const boldFont = { name: 'Calibri', size: 11, bold: true }
+            
+            const borderStyle = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            }
+
+            const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+            const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+            const rightAlignment = { horizontal: 'right', vertical: 'middle' }
+
+            // 标题行
+            const titleRow = worksheet.getRow(1)
+            titleRow.height = 30
+            titleRow.getCell(1).value = 'TODO LIST PREVENTIVE REPORT'
+            titleRow.getCell(1).font = titleFont
+            titleRow.getCell(1).alignment = centerAlignment
+            worksheet.mergeCells('A1:L1')
+
+            // 表头行 - 添加过滤器
+            const headerRow = worksheet.getRow(2)
+            headerRow.height = 25
+            const headers = [
+                'No.', 'Date', 'Item Code', 'Activity', 'Status', 'Repeat Type',
+                'Repeat Interval', 'Repeat End Date', 'Is Recurring', 'Is Generated',
+                'Created At', 'Updated At'
+            ]
+            
+            headers.forEach((header, index) => {
+                const cell = headerRow.getCell(index + 1)
+                cell.value = header
+                cell.font = headerFont
+                cell.alignment = centerAlignment
+                cell.border = borderStyle
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+                }
+            })
+
+            // 准备数据
+            const excelData = todos.map(todo => ({
+                'Date': todo.date,
+                'Item Code': todo.code,
+                'Activity': todo.activity,
+                'Status': todo.status,
+                'Repeat Type': todo.repeatType || 'None',
+                'Repeat Interval': todo.repeatInterval || 1,
+                'Repeat End Date': todo.repeatEndDate || 'N/A',
+                'Is Recurring': todo.isRecurring ? 'Yes' : 'No',
+                'Is Generated': todo.isGenerated ? 'Yes' : 'No',
+                'Created At': new Date(todo.createdAt).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }),
+                'Updated At': new Date(todo.updatedAt).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                })
+            }))
+
+            // 添加自动过滤器到整个数据范围
+            worksheet.autoFilter = {
+                from: 'A2',  // 从A2单元格开始（表头行）
+                to: `L${2 + excelData.length}`  // 到L列，数据行数+2（标题行+表头行+数据行）
+            }
+
+            // 数据行
+            let rowIndex = 3
+            
+            excelData.forEach((todo, index) => {
+                const row = worksheet.getRow(rowIndex)
+                row.height = 20
+                
+                const rowData = [
+                    index + 1,
+                    todo['Date'],
+                    todo['Item Code'],
+                    todo.Activity,
+                    todo.Status,
+                    todo['Repeat Type'],
+                    todo['Repeat Interval'],
+                    todo['Repeat End Date'],
+                    todo['Is Recurring'],
+                    todo['Is Generated'],
+                    todo['Created At'],
+                    todo['Updated At']
+                ]
+
+                rowData.forEach((value, colIndex) => {
+                    const cell = row.getCell(colIndex + 1)
+                    cell.value = value
+                    cell.font = defaultFont
+                    cell.border = borderStyle
+                    
+                    // 不同的列对齐方式
+                    if (colIndex === 0 || colIndex === 6) { // No. 和 Repeat Interval 列居右
+                        cell.alignment = rightAlignment
+                    } else if (colIndex === 4 || colIndex === 8 || colIndex === 9) { // Status, Is Recurring, Is Generated 列居中
+                        cell.alignment = centerAlignment
+                    } else if (colIndex === 3) { // Activity 列左对齐
+                        cell.alignment = leftAlignment
+                    } else {
+                        cell.alignment = centerAlignment
+                    }
+                    
+                    // 为状态列添加颜色
+                    if (colIndex === 4) { // Status 列
+                        if (value === 'Complete') {
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+                            }
+                            cell.font = { ...defaultFont, bold: true, color: { argb: 'FF006100' } }
+                        } else if (value === 'Incomplete') {
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFC7CE' } // 浅红色
+                            }
+                            cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } }
+                        }
+                    }
+                    
+                    // 为重复类型列添加颜色
+                    if (colIndex === 5) { // Repeat Type 列
+                        if (value !== 'None') {
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+                            }
+                            cell.font = { ...defaultFont, bold: true }
+                        }
+                    }
+                    
+                    // 隔行着色
+                    if (rowIndex % 2 === 0) {
+                        if (colIndex !== 4 && colIndex !== 5) { // 保持状态列和重复类型列的颜色
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFF8F8F8' } // 更浅的灰色
+                            }
+                        }
+                    }
+                })
+
+                rowIndex++
+            })
+
+            // 如果没有数据，添加提示行
+            if (excelData.length === 0) {
+                const row = worksheet.getRow(rowIndex)
+                row.getCell(1).value = 'No todo list data available'
+                worksheet.mergeCells(`A${rowIndex}:L${rowIndex}`)
+                row.getCell(1).alignment = centerAlignment
+                row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } }
+                row.getCell(1).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+                }
+                row.getCell(1).border = borderStyle
+                rowIndex++
+            }
+
+            // 生成Excel文件并下载
+            const buffer = await workbook.xlsx.writeBuffer()
+            const blob = new Blob([buffer], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            })
+            
+            // 使用当前日期作为文件名（包含时间戳）
+            const now = new Date()
+            const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_')
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
+            saveAs(blob, `ToDo_List_Report_${dateStr}_${timeStr}.xlsx`)
+
+        } catch (error) {
+            console.error('Error generating Excel report:', error)
+            alert('Failed to generate Excel report. Please try again.')
+        }
     }
 
     const MobileSimplePagination = () => (
