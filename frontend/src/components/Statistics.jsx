@@ -24,6 +24,13 @@ const Statistics = () => {
   // 新增：排序选项状态
   const [sortBy, setSortBy] = useState('jobs') // 默认按工作数量排序
   const [sortOrder, setSortOrder] = useState('desc') // 默认降序
+  
+  // 新增：保存到服务器的状态
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -148,227 +155,337 @@ const Statistics = () => {
     }
   }
 
-const generateJobReport = async () => {
-  try {
-    // ⭐ 首先定义和过滤数据
-    const yearJobs = jobsData
-      .filter(job => {
-        // 优先使用 endtime 的年份，如果没有 endtime 则使用 starttime
-        const jobDate = job.endtime 
-          ? new Date(job.endtime)
-          : job.starttime
-            ? new Date(job.starttime)
-            : null
-        
-        return jobDate && jobDate.getFullYear() === calendarYear
-      })
-      .sort((a, b) => {
-        // 排序也优先使用 endtime，其次使用 starttime
-        const timeA = a.endtime 
-          ? new Date(a.endtime).getTime()
-          : a.starttime
-            ? new Date(a.starttime).getTime()
-            : 0
-        const timeB = b.endtime 
-          ? new Date(b.endtime).getTime()
-          : b.starttime
-            ? new Date(b.starttime).getTime()
-            : 0
-        return timeB - timeA // 最新的在前
-      })
+  // 修改后的 generateJobReport 函数 - 添加时间戳文件名并返回对象
+  const generateJobReport = async () => {
+    try {
+      // ⭐ 首先定义和过滤数据
+      const yearJobs = jobsData
+        .filter(job => {
+          // 优先使用 endtime 的年份，如果没有 endtime 则使用 starttime
+          const jobDate = job.endtime 
+            ? new Date(job.endtime)
+            : job.starttime
+              ? new Date(job.starttime)
+              : null
+          
+          return jobDate && jobDate.getFullYear() === calendarYear
+        })
+        .sort((a, b) => {
+          // 排序也优先使用 endtime，其次使用 starttime
+          const timeA = a.endtime 
+            ? new Date(a.endtime).getTime()
+            : a.starttime
+              ? new Date(a.starttime).getTime()
+              : 0
+          const timeB = b.endtime 
+            ? new Date(b.endtime).getTime()
+            : b.starttime
+              ? new Date(b.starttime).getTime()
+              : 0
+          return timeB - timeA // 最新的在前
+        })
 
-    const workbook = new ExcelJS.Workbook()
-    const reportYear = calendarYear
-    const worksheet = workbook.addWorksheet(`Jobs ${reportYear}`)
-    
-    setupWorksheetPrint(worksheet, {
-      fitToHeight: 1,
-      fitToWidth: 1,
-      horizontalCentered: true,
-      verticalCentered: false
-    })
-    
-    // 设置列宽
-    worksheet.columns = [
-      { width: 5 },    // No.
-      { width: 10 },   // Job Code
-      { width: 20 },   // Lot No
-      { width: 35 },   // Material
-      { width: 15 },   // Color Code
-      { width: 20 },   // Start Time
-      { width: 20 },   // End Time
-      { width: 15 },   // Duration (hrs)
-      { width: 15 },   // Total Order
-      { width: 15 },   // Downtime
-      { width: 15 },   // Operating Time
-      { width: 15 },   // Prod Lead Time
-      { width: 15 },   // Availability
-      { width: 15 },   // Performance
-      { width: 15 },   // Quality
-      { width: 15 },   // OEE
-    ]
-
-    const headerFont = { name: 'Calibri', size: 11, bold: true }
-    const titleFont = { name: 'Arial Black', size: 16, bold: true }
-    const defaultFont = { name: 'Calibri', size: 11 }
-    
-    const borderStyle = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' }
-    }
-
-    const centerAlignment = { horizontal: 'center', vertical: 'middle' }
-    const leftAlignment = { horizontal: 'left', vertical: 'middle' }
-
-    // 标题行
-    const titleRow = worksheet.getRow(1)
-    titleRow.height = 30
-    titleRow.getCell(1).value = `JOB PRODUCTION SCHEDULE - ${reportYear}`
-    titleRow.getCell(1).font = titleFont
-    titleRow.getCell(1).alignment = centerAlignment
-    worksheet.mergeCells(`A1:P1`)
-
-    // ⭐ 新增：添加生成时间信息
-    const dateRow = worksheet.getRow(2)
-    dateRow.height = 20
-    dateRow.getCell(1).value = `Generated on: ${moment().format('YYYY-MM-DD HH:mm:ss')}`
-    dateRow.getCell(1).font = { name: 'Calibri', size: 10, italic: true }
-    dateRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
-    worksheet.mergeCells(`A2:P2`)
-
-    // ⭐ 新增：统计信息行
-    const statsRow = worksheet.getRow(3)
-    statsRow.height = 20
-    const totalJobs = yearJobs.length
-    const totalOrder = yearJobs.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
-    const totalDuration = yearJobs.reduce((sum, job) => {
-      const start = job.starttime ? moment(job.starttime) : null
-      const end = job.endtime ? moment(job.endtime) : null
-      if (start && end) {
-        return sum + end.diff(start, 'hours', true)
-      }
-      return sum
-    }, 0)
-    
-    statsRow.getCell(1).value = `Total Jobs: ${totalJobs} | Total Order: ${totalOrder.toLocaleString()} | Total Duration: ${totalDuration.toFixed(1)} hrs`
-    statsRow.getCell(1).font = { name: 'Calibri', size: 10, bold: true }
-    statsRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
-    worksheet.mergeCells(`A3:P3`)
-
-    // 表头行（现在在第4行）
-    const headerRow = worksheet.getRow(4)
-    headerRow.height = 25
-    const headers = [
-      'No.', 'Job Code', 'Lot No', 'Material', 'Color Code', 
-      'Start Time', 'End Time', 'Duration (hrs)', 'Total Order',
-      'Downtime', 'Operating Time', 'Prod Lead Time', 'Availability',
-      'Performance', 'Quality', 'OEE'
-    ]
-    
-    headers.forEach((header, index) => {
-      const cell = headerRow.getCell(index + 1)
-      cell.value = header
-      cell.font = headerFont
-      cell.alignment = centerAlignment
-      cell.border = borderStyle
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      }
-    })
-
-    // 数据行（从第5行开始）
-    let rowIndex = 5
-    yearJobs.forEach((job, index) => {
-      const row = worksheet.getRow(rowIndex)
-      row.height = 20
+      const workbook = new ExcelJS.Workbook()
+      const reportYear = calendarYear
       
-      const startTime = job.starttime ? moment(job.starttime).format('YYYY-MM-DD HH:mm') : ''
-      const endTime = job.endtime ? moment(job.endtime).format('YYYY-MM-DD HH:mm') : ''
+      // 生成带时间戳的文件名
+      const reportDate = new Date();
+      const dateStr = reportDate.toISOString().split('T')[0];
+      const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
       
-      // 计算持续时间
-      let duration = 0
-      if (job.starttime && job.endtime) {
-        const start = moment(job.starttime)
-        const end = moment(job.endtime)
-        duration = end.diff(start, 'hours', true)
-      }
-
-      const rowData = [
-        index + 1,
-        job.code || '',
-        job.lotno || '',
-        job.material || '',
-        job.colourcode || '',
-        startTime,
-        endTime,
-        duration.toFixed(1),
-        job.totalorder || 0,
-        job.downtime || 0,
-        job.operatingtime || 0,
-        job.prodleadtime || 0,
-        job.availability ? (job.availability * 100).toFixed(1) + '%' : '0%',
-        job.performance ? (job.performance * 100).toFixed(1) + '%' : '0%',
-        job.quality ? (job.quality * 100).toFixed(1) + '%' : '0%',
-        job.oee ? (job.oee * 100).toFixed(1) + '%' : '0%'
+      const worksheet = workbook.addWorksheet(`Jobs ${reportYear}`)
+      
+      setupWorksheetPrint(worksheet, {
+        fitToHeight: 1,
+        fitToWidth: 1,
+        horizontalCentered: true,
+        verticalCentered: false
+      })
+      
+      // 设置列宽
+      worksheet.columns = [
+        { width: 5 },    // No.
+        { width: 10 },   // Job Code
+        { width: 20 },   // Lot No
+        { width: 35 },   // Material
+        { width: 15 },   // Color Code
+        { width: 20 },   // Start Time
+        { width: 20 },   // End Time
+        { width: 15 },   // Duration (hrs)
+        { width: 15 },   // Total Order
+        { width: 15 },   // Downtime
+        { width: 15 },   // Operating Time
+        { width: 15 },   // Prod Lead Time
+        { width: 15 },   // Availability
+        { width: 15 },   // Performance
+        { width: 15 },   // Quality
+        { width: 15 },   // OEE
       ]
 
-      rowData.forEach((value, colIndex) => {
-        const cell = row.getCell(colIndex + 1)
-        cell.value = value
-        cell.font = defaultFont
-        cell.alignment = colIndex >= 5 ? centerAlignment : leftAlignment
+      const headerFont = { name: 'Calibri', size: 11, bold: true }
+      const titleFont = { name: 'Arial Black', size: 16, bold: true }
+      const defaultFont = { name: 'Calibri', size: 11 }
+      
+      const borderStyle = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+
+      const centerAlignment = { horizontal: 'center', vertical: 'middle' }
+      const leftAlignment = { horizontal: 'left', vertical: 'middle' }
+
+      // 标题行
+      const titleRow = worksheet.getRow(1)
+      titleRow.height = 30
+      titleRow.getCell(1).value = `JOB PRODUCTION SCHEDULE - ${reportYear}`
+      titleRow.getCell(1).font = titleFont
+      titleRow.getCell(1).alignment = centerAlignment
+      worksheet.mergeCells(`A1:P1`)
+
+      // ⭐ 新增：生成时间信息
+      const generatedRow = worksheet.getRow(2)
+      generatedRow.height = 20
+      generatedRow.getCell(1).value = `Generated on: ${reportDate.toLocaleString()}`
+      generatedRow.getCell(1).font = { name: 'Calibri', size: 10, italic: true }
+      generatedRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
+      worksheet.mergeCells(`A2:P2`)
+
+      // ⭐ 新增：统计信息行
+      const statsRow = worksheet.getRow(3)
+      statsRow.height = 20
+      const totalJobs = yearJobs.length
+      const totalOrder = yearJobs.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
+      const totalDuration = yearJobs.reduce((sum, job) => {
+        const start = job.starttime ? moment(job.starttime) : null
+        const end = job.endtime ? moment(job.endtime) : null
+        if (start && end) {
+          return sum + end.diff(start, 'hours', true)
+        }
+        return sum
+      }, 0)
+      
+      statsRow.getCell(1).value = `Total Jobs: ${totalJobs} | Total Order: ${totalOrder.toLocaleString()} | Total Duration: ${totalDuration.toFixed(1)} hrs`
+      statsRow.getCell(1).font = { name: 'Calibri', size: 10, bold: true }
+      statsRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
+      worksheet.mergeCells(`A3:P3`)
+
+      // 表头行（现在在第4行）
+      const headerRow = worksheet.getRow(4)
+      headerRow.height = 25
+      const headers = [
+        'No.', 'Job Code', 'Lot No', 'Material', 'Color Code', 
+        'Start Time', 'End Time', 'Duration (hrs)', 'Total Order',
+        'Downtime', 'Operating Time', 'Prod Lead Time', 'Availability',
+        'Performance', 'Quality', 'OEE'
+      ]
+      
+      headers.forEach((header, index) => {
+        const cell = headerRow.getCell(index + 1)
+        cell.value = header
+        cell.font = headerFont
+        cell.alignment = centerAlignment
         cell.border = borderStyle
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE0E0E0' }
+        }
       })
 
-      rowIndex++
-    })
+      // 数据行（从第5行开始）
+      let rowIndex = 5
+      yearJobs.forEach((job, index) => {
+        const row = worksheet.getRow(rowIndex)
+        row.height = 20
+        
+        const startTime = job.starttime ? moment(job.starttime).format('YYYY-MM-DD HH:mm') : ''
+        const endTime = job.endtime ? moment(job.endtime).format('YYYY-MM-DD HH:mm') : ''
+        
+        // 计算持续时间
+        let duration = 0
+        if (job.starttime && job.endtime) {
+          const start = moment(job.starttime)
+          const end = moment(job.endtime)
+          duration = end.diff(start, 'hours', true)
+        }
 
-    // ⭐ 新增：启用筛选功能
-    // 设置筛选范围从表头行（第4行）到最后一行的所有列
-    if (yearJobs.length > 0) {
-      const lastRow = rowIndex - 1 // 最后一行数据
-      worksheet.autoFilter = {
-        from: { row: 4, column: 1 }, // 从第4行第1列开始（表头）
-        to: { row: lastRow, column: 16 } // 到最后一行第16列结束
+        const rowData = [
+          index + 1,
+          job.code || '',
+          job.lotno || '',
+          job.material || '',
+          job.colourcode || '',
+          startTime,
+          endTime,
+          duration.toFixed(1),
+          job.totalorder || 0,
+          job.downtime || 0,
+          job.operatingtime || 0,
+          job.prodleadtime || 0,
+          job.availability ? (job.availability * 100).toFixed(1) + '%' : '0%',
+          job.performance ? (job.performance * 100).toFixed(1) + '%' : '0%',
+          job.quality ? (job.quality * 100).toFixed(1) + '%' : '0%',
+          job.oee ? (job.oee * 100).toFixed(1) + '%' : '0%'
+        ]
+
+        rowData.forEach((value, colIndex) => {
+          const cell = row.getCell(colIndex + 1)
+          cell.value = value
+          cell.font = defaultFont
+          cell.alignment = colIndex >= 5 ? centerAlignment : leftAlignment
+          cell.border = borderStyle
+        })
+
+        rowIndex++
+      })
+
+      // ⭐ 新增：启用筛选功能
+      // 设置筛选范围从表头行（第4行）到最后一行的所有列
+      if (yearJobs.length > 0) {
+        const lastRow = rowIndex - 1 // 最后一行数据
+        worksheet.autoFilter = {
+          from: { row: 4, column: 1 }, // 从第4行第1列开始（表头）
+          to: { row: lastRow, column: 16 } // 到最后一行第16列结束
+        }
       }
+
+      // 如果没有数据，添加提示行
+      if (yearJobs.length === 0) {
+        const row = worksheet.getRow(rowIndex)
+        row.getCell(1).value = `No job data for ${reportYear}`
+        worksheet.mergeCells(`A${rowIndex}:P${rowIndex}`)
+        row.getCell(1).alignment = centerAlignment
+        row.getCell(1).font = { ...defaultFont, italic: true }
+        rowIndex++
+      }
+
+      // ⭐ 新增：添加筛选说明
+      if (yearJobs.length > 0) {
+        const filterNoteRow = worksheet.getRow(rowIndex + 1)
+        filterNoteRow.getCell(1).value = `Note: Use filter icons in column headers to sort and filter data`
+        filterNoteRow.getCell(1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: 'FF666666' } }
+        filterNoteRow.getCell(1).alignment = leftAlignment
+        worksheet.mergeCells(`A${rowIndex + 1}:P${rowIndex + 1}`)
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      })
+      
+      // 生成带时间戳的文件名
+      const fileName = `Job_Production_Schedule_${reportYear}_${dateStr}_${timeStr}.xlsx`
+      
+      return { blob, fileName, reportYear }
+
+    } catch (error) {
+      console.error('Error generating Excel report:', error)
+      throw error
     }
-
-    // 如果没有数据，添加提示行
-    if (yearJobs.length === 0) {
-      const row = worksheet.getRow(rowIndex)
-      row.getCell(1).value = `No job data for ${reportYear}`
-      worksheet.mergeCells(`A${rowIndex}:P${rowIndex}`)
-      row.getCell(1).alignment = centerAlignment
-      row.getCell(1).font = { ...defaultFont, italic: true }
-      rowIndex++
-    }
-
-    // ⭐ 新增：添加筛选说明
-    if (yearJobs.length > 0) {
-      const filterNoteRow = worksheet.getRow(rowIndex + 1)
-      filterNoteRow.getCell(1).value = `Note: Use filter icons in column headers to sort and filter data`
-      filterNoteRow.getCell(1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: 'FF666666' } }
-      filterNoteRow.getCell(1).alignment = leftAlignment
-      worksheet.mergeCells(`A${rowIndex + 1}:P${rowIndex + 1}`)
-    }
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    })
-    
-    const date = moment().format('YYYY_MM_DD')
-    saveAs(blob, `Job_Production_Schedule_${reportYear}_${date}.xlsx`)
-
-  } catch (error) {
-    console.error('Error generating Excel report:', error)
-    alert('Failed to generate Excel report. Please try again.')
   }
-}
+
+  // 保存到文件服务器的函数 - 使用 FormData
+  const saveToFileServer = async () => {
+    try {
+      // 显示 Modal 并设置状态为保存中
+      setShowSaveModal(true)
+      setSaveStatus('saving')
+      setSaveMessage('Generating...')
+      setSaveDetails({ fileName: '', path: '' })
+
+      // 首先生成 Excel 文件
+      const result = await generateJobReport()
+      const { blob, fileName } = result
+
+      // 更新状态
+      setSaveMessage('Saving...')
+      setSaveDetails(prev => ({ ...prev, fileName }))
+
+      // 创建 FormData 对象
+      const formData = new FormData()
+      formData.append('file', blob, fileName)
+      formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
+
+      // 发送到后端 API 保存到文件服务器
+      const response = await fetch('/api/file/save-excel', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSaveStatus('success')
+        setSaveMessage('Success！')
+        setSaveDetails({
+          fileName,
+          path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
+        })
+
+      } else {
+        setSaveStatus('error')
+        setSaveMessage(`Failed: ${data.message || 'Error'}`)
+        setSaveDetails({
+          fileName,
+          path: 'Failed'
+        })
+      }
+
+    } catch (error) {
+      console.error('Error saving to file server:', error)
+      setSaveStatus('error')
+      setSaveMessage('error')
+      setSaveDetails({
+        fileName: 'unknown',
+        path: 'error'
+      })
+    }
+  }
+
+  // 处理下载到本地
+  const handleDownloadReport = async () => {
+    try {
+      const result = await generateJobReport()
+      const { blob, fileName } = result
+      saveAs(blob, fileName)
+
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      // 可以添加错误提示
+      alert('Failed to download report. Please try again.')
+    }
+  }
+
+  // 处理手动下载（当服务器保存失败时）
+  const handleManualDownload = () => {
+    handleDownloadReport()
+    setShowSaveModal(false)
+  }
+
+  // 关闭保存 Modal
+  const closeSaveModal = () => {
+    setShowSaveModal(false)
+    // 重置状态，但保留一小段时间以便用户看到结果
+    setTimeout(() => {
+      setSaveStatus('')
+      setSaveMessage('')
+      setSaveDetails({ fileName: '', path: '' })
+    }, 300)
+  }
+
+  // 确认保存到服务器
+  const confirmSaveToServer = () => {
+    setShowConfirmModal(true)
+  }
+
+  // 实际执行保存
+  const executeSaveToServer = () => {
+    setShowConfirmModal(false)
+    saveToFileServer()
+  }
+
   const eventStyleGetter = (event) => {
     // 根据 Job Code 分配不同的颜色
     const jobCode = event.resource.code || 'L1'
@@ -1555,11 +1672,18 @@ const generateJobReport = async () => {
             Go Jobs
           </Button>
           <Button 
-            onClick={generateJobReport}
+            onClick={handleDownloadReport}
             color="green"
             className='cursor-pointer'
           >
             Report
+          </Button>
+          <Button 
+            onClick={confirmSaveToServer}
+            color="blue"
+            className='cursor-pointer'
+          >
+            Save to Server
           </Button>
         </div>
       </div>
@@ -1598,11 +1722,142 @@ const generateJobReport = async () => {
         {/* 统一在这里渲染所有弹窗 */}
         <DayEventsModal />
         <JobDetailsModal />
+        {/* 新增保存相关弹窗 */}
+        <ConfirmSaveModal />
+        <SaveStatusModal />
         
         <StatsCards />
       </Card>
     </div>
   )
+
+  // 新增：确认保存 Modal 组件
+  function ConfirmSaveModal() {
+    return (
+      <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
+        <ModalHeader>Server</ModalHeader>
+        <ModalBody>
+          <div className="space-y-3">
+            <p className="text-gray-700 dark:text-gray-300">
+              Are you sure want to save into server?
+            </p>
+            <div className={`p-3 rounded-lg ${
+              theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'border border-gray-600'
+            }`}>
+              <p className={`text-sm font-semibold`}>File path:</p>
+              <p className="text-sm mt-1 text-blue-600 dark:text-blue-400">
+                Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+              </p>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button className='cursor-pointer' color="gray" onClick={() => setShowConfirmModal(false)}>
+            Cancel
+          </Button>
+          <Button className='cursor-pointer' color="blue" onClick={executeSaveToServer}>
+            Save
+          </Button>
+        </ModalFooter>
+      </Modal>
+    )
+  }
+
+  // 新增：保存状态 Modal 组件
+  function SaveStatusModal() {
+    return (
+      <Modal show={showSaveModal} onClose={closeSaveModal} size="md">
+        <ModalHeader>
+          {saveStatus === 'saving' ? 'Saving...' : 
+           saveStatus === 'success' ? 'Success' : 
+           saveStatus === 'error' ? 'Failed' : 'Saving'}
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4">
+            {/* 状态图标 */}
+            <div className="flex justify-center">
+              {saveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              )}
+              {saveStatus === 'success' && (
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* 消息 */}
+            <p className="text-center text-gray-700 dark:text-gray-300">
+              {saveMessage}
+            </p>
+            
+            {/* 详细信息 */}
+            {saveDetails.fileName && (
+              <div className={`p-3 rounded-lg ${
+                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+              }`}>
+                <p className="text-sm font-semibold">Document information:</p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">File name:</span> {saveDetails.fileName}
+                </p>
+                {saveDetails.path && (
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">File path:</span> {saveDetails.path}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* 错误时的额外选项 */}
+            {saveStatus === 'error' && (
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Failed to save into server, Please save as manual into server
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className='cursor-pointer'
+                    fullSized 
+                    color="blue" 
+                    onClick={handleManualDownload}
+                  >
+                    Download manual
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          {saveStatus === 'saving' ? (
+            <Button color="gray" disabled>
+              Please wait...
+            </Button>
+          ) : (
+            <Button 
+              className='cursor-pointer'
+              color='gray' 
+              onClick={closeSaveModal}
+            >
+              Cancel
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
+    )
+  }
 }
 
 export default Statistics
