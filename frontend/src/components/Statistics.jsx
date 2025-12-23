@@ -982,7 +982,7 @@ const generateJobReport = async () => {
     return (
       <div className="mt-4">
         <div className="mb-2 flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Production Statistics for {calendarYear}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Statistics for {calendarYear}</h3>
           <Badge color="blue" size="sm">
             Year {calendarYear}
           </Badge>
