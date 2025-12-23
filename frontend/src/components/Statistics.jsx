@@ -1141,7 +1141,7 @@ const generateJobReport = async () => {
               <h4></h4>
               <div className="flex items-center space-x-2">
                 <Badge color="gray" size="sm">
-                  {sortedJobsByCode.length} Job Codes
+                  {sortedJobsByCode.length} Ext ID
                 </Badge>
                 
                 {/* 排序选择器 */}
@@ -1541,9 +1541,9 @@ const generateJobReport = async () => {
     <div className="min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Production Statistics</h1>
+          <h1 className="text-2xl font-semibold">Statistics</h1>
           <p className={`${theme === 'light' ? ' text-gray-900' : 'text-gray-300'}`}>
-            Showing production schedule and statistics for {calendarYear}
+            Showing Statistics for {calendarYear}
           </p>
         </div>
         <div className="flex space-x-2">
@@ -1559,7 +1559,7 @@ const generateJobReport = async () => {
             color="green"
             className='cursor-pointer'
           >
-            Generate Report
+            Report
           </Button>
         </div>
       </div>
