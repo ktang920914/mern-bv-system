@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, ModalFooter, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
@@ -27,6 +27,13 @@ const Suppliers = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    
+    // Modal 状态
+    const [showSaveModal, setShowSaveModal] = useState(false)
+    const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
+    const [saveMessage, setSaveMessage] = useState('')
+    const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
+    const [showConfirmModal, setShowConfirmModal] = useState(false)
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -324,7 +331,8 @@ const Suppliers = () => {
     )
 
     // 生成Excel报告的函数
-    const generateExcelReport = async () => {
+    // 修改 Suppliers.jsx 中的 generateExcelReport 函数
+const generateExcelReport = async () => {
   try {
     // 使用 ExcelJS 替代 XLSX
     const workbook = new ExcelJS.Workbook()
@@ -367,6 +375,11 @@ const Suppliers = () => {
     const centerAlignment = { horizontal: 'center', vertical: 'middle' }
     const leftAlignment = { horizontal: 'left', vertical: 'middle' }
 
+    // 使用当前日期作为报告日期
+    const reportDate = new Date();
+    const dateStr = reportDate.toISOString().split('T')[0];
+    const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+
     // 标题行
     const titleRow = worksheet.getRow(1)
     titleRow.height = 30
@@ -375,8 +388,16 @@ const Suppliers = () => {
     titleRow.getCell(1).alignment = centerAlignment
     worksheet.mergeCells('A1:J1')
 
+    // 副标题行 - 添加生成时间
+    const subtitleRow = worksheet.getRow(2)
+    subtitleRow.height = 20
+    subtitleRow.getCell(1).value = `Generated on: ${reportDate.toLocaleString()}`
+    subtitleRow.getCell(1).font = { ...defaultFont, italic: true }
+    subtitleRow.getCell(1).alignment = centerAlignment
+    worksheet.mergeCells('A2:J2')
+
     // 表头行
-    const headerRow = worksheet.getRow(2)
+    const headerRow = worksheet.getRow(3)
     headerRow.height = 25
     const headers = [
       'No.', 'Supplier', 'Contact', 'Description', 'Address', 
@@ -392,7 +413,7 @@ const Suppliers = () => {
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' } // 浅灰色背景
+        fgColor: { argb: 'FFE0E0E0' }
       }
     })
 
@@ -424,7 +445,7 @@ const Suppliers = () => {
     }))
 
     // 数据行
-    let rowIndex = 3
+    let rowIndex = 4  // 从第4行开始
     excelData.forEach((supplier, index) => {
       const row = worksheet.getRow(rowIndex)
       row.height = 20
@@ -449,28 +470,28 @@ const Suppliers = () => {
         cell.border = borderStyle
         
         // 不同的列对齐方式
-        if (colIndex === 0 || colIndex === 7) { // No. 和 Status 列居中
+        if (colIndex === 0 || colIndex === 7) {
           cell.alignment = centerAlignment
-        } else if (colIndex === 3 || colIndex === 4) { // Description 和 Address 列左对齐
+        } else if (colIndex === 3 || colIndex === 4) {
           cell.alignment = leftAlignment
         } else {
           cell.alignment = centerAlignment
         }
         
         // 为状态列添加颜色
-        if (colIndex === 7) { // Status 列
+        if (colIndex === 7) {
           if (value === 'Active') {
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',
-              fgColor: { argb: 'FFC6EFCE' } // 浅绿色
+              fgColor: { argb: 'FFC6EFCE' }
             }
             cell.font = { ...defaultFont, bold: true, color: { argb: 'FF006100' } }
           } else if (value === 'Inactive') {
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',
-              fgColor: { argb: 'FFFFC7CE' } // 浅红色
+              fgColor: { argb: 'FFFFC7CE' }
             }
             cell.font = { ...defaultFont, bold: true, color: { argb: 'FF9C0006' } }
           }
@@ -478,11 +499,11 @@ const Suppliers = () => {
         
         // 隔行着色
         if (rowIndex % 2 === 0) {
-          if (colIndex !== 7) { // 保持状态列的颜色
+          if (colIndex !== 7) {
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',
-              fgColor: { argb: 'FFF8F8F8' } // 更浅的灰色
+              fgColor: { argb: 'FFF8F8F8' }
             }
           }
         }
@@ -501,10 +522,20 @@ const Suppliers = () => {
       row.getCell(1).fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFFFEB9C' } // 浅黄色
+        fgColor: { argb: 'FFFFEB9C' }
       }
       row.getCell(1).border = borderStyle
       rowIndex++
+    }
+
+    // 添加自动筛选器
+    if (excelData.length > 0) {
+      const autoFilterRange = {
+        from: { row: 3, column: 1 },  // 从第3行（表头）开始
+        to: { row: rowIndex - 1, column: 10 }  // 到最后一行
+      };
+      
+      worksheet.autoFilter = autoFilterRange;
     }
 
     // 添加总计行
@@ -518,7 +549,7 @@ const Suppliers = () => {
     totalRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFDDEBF7' } // 浅蓝色
+      fgColor: { argb: 'FFDDEBF7' }
     }
     
     totalRow.getCell(8).value = excelData.length
@@ -531,18 +562,19 @@ const Suppliers = () => {
       fgColor: { argb: 'FFDDEBF7' }
     }
 
+
+
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], { 
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
     })
     
-    // 使用当前日期作为文件名
-    const date = new Date().toISOString().split('T')[0].replace(/-/g, '_')
-    saveAs(blob, `Suppliers_Report_${date}.xlsx`)
+    // 使用日期和时间作为文件名
+    return { blob, fileName: `Suppliers_Report_${dateStr}_${timeStr}.xlsx` }
 
   } catch (error) {
     console.error('Error generating Excel report:', error)
-    alert('Failed to generate Excel report. Please try again.')
+    throw error
   }
 }
 
@@ -582,6 +614,106 @@ const setupWorksheetPrint = (worksheet, options = {}) => {
   }
 }
 
+    // 保存到文件服务器的函数 - 使用 FormData
+    const saveToFileServer = async () => {
+      try {
+        // 显示 Modal 并设置状态为保存中
+        setShowSaveModal(true)
+        setSaveStatus('saving')
+        setSaveMessage('Generating...')
+        setSaveDetails({ fileName: '', path: '' })
+
+        // 首先生成 Excel 文件
+        const result = await generateExcelReport()
+        const { blob, fileName } = result
+
+        // 更新状态
+        setSaveMessage('Saving...')
+        setSaveDetails(prev => ({ ...prev, fileName }))
+
+        // 创建 FormData 对象
+        const formData = new FormData()
+        formData.append('file', blob, fileName)
+        formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
+
+        // 发送到后端 API 保存到文件服务器
+        const response = await fetch('/api/file/save-excel', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          setSaveStatus('success')
+          setSaveMessage('Success！')
+          setSaveDetails({
+            fileName,
+            path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
+          })
+          
+          console.log('File saved to server:', data)
+        } else {
+          setSaveStatus('error')
+          setSaveMessage(`Failed: ${data.message || 'Error'}`)
+          setSaveDetails({
+            fileName,
+            path: 'Failed'
+          })
+        }
+
+      } catch (error) {
+        console.error('Error saving to file server:', error)
+        setSaveStatus('error')
+        setSaveMessage('error')
+        setSaveDetails({
+          fileName: 'unknown',
+          path: 'error'
+        })
+      }
+    }
+
+    // 处理下载到本地
+    const handleDownloadReport = async () => {
+      try {
+        const result = await generateExcelReport()
+        const { blob, fileName } = result
+        saveAs(blob, fileName)
+        console.log('Excel report downloaded successfully!')
+      } catch (error) {
+        console.error('Error downloading report:', error)
+        alert('Failed to download report. Please try again.')
+      }
+    }
+
+    // 处理手动下载（当服务器保存失败时）
+    const handleManualDownload = () => {
+      handleDownloadReport()
+      setShowSaveModal(false)
+    }
+
+    // 关闭保存 Modal
+    const closeSaveModal = () => {
+      setShowSaveModal(false)
+      // 重置状态，但保留一小段时间以便用户看到结果
+      setTimeout(() => {
+        setSaveStatus('')
+        setSaveMessage('')
+        setSaveDetails({ fileName: '', path: '' })
+      }, 300)
+    }
+
+    // 确认保存到服务器
+    const confirmSaveToServer = () => {
+      setShowConfirmModal(true)
+    }
+
+    // 实际执行保存
+    const executeSaveToServer = () => {
+      setShowConfirmModal(false)
+      saveToFileServer()
+    }
+
   return (
     <div className='min-h-screen'>
         <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
@@ -598,8 +730,15 @@ const setupWorksheetPrint = (worksheet, options = {}) => {
                 <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateSupplier}>
                     Create Supplier
                 </Button>
-                <Button className='cursor-pointer flex-1 sm:flex-none' color='green' onClick={generateExcelReport}>
+                <Button className='cursor-pointer flex-1 sm:flex-none' color='green' onClick={handleDownloadReport}>
                     Report
+                </Button>
+                <Button 
+                    className='cursor-pointer flex-1 sm:flex-none' 
+                    color='blue' 
+                    onClick={confirmSaveToServer}
+                >
+                    Save to Server
                 </Button>
             </div>
         </div>
@@ -838,6 +977,126 @@ const setupWorksheetPrint = (worksheet, options = {}) => {
                     }
                 </div>
             </ModalBody>
+        </Modal>
+
+        {/* 确认保存 Modal */}
+        <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
+            <ModalHeader>Server</ModalHeader>
+            <ModalBody>
+                <div className="space-y-3">
+                    <p className="text-gray-700 dark:text-gray-300">
+                        Are you sure want to save into server?
+                    </p>
+                    <div className={`p-3 rounded-lg ${
+                        theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'border border-gray-600'
+                    }`}>
+                        <p className={`text-sm font-semibold`}>File path:</p>
+                        <p className="text-sm mt-1 text-blue-600 dark:text-blue-400">
+                            Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                        </p>
+                    </div>
+                </div>
+            </ModalBody>
+            <ModalFooter>
+                <Button className='cursor-pointer' color="gray" onClick={() => setShowConfirmModal(false)}>
+                    Cancel
+                </Button>
+                <Button className='cursor-pointer' color="blue" onClick={executeSaveToServer}>
+                    Save
+                </Button>
+            </ModalFooter>
+        </Modal>
+
+        {/* 保存状态 Modal */}
+        <Modal show={showSaveModal} onClose={closeSaveModal} size="md">
+            <ModalHeader>
+                {saveStatus === 'saving' ? 'Saving...' : 
+                 saveStatus === 'success' ? 'Success' : 
+                 saveStatus === 'error' ? 'Failed' : 'Saving'}
+            </ModalHeader>
+            <ModalBody>
+                <div className="space-y-4">
+                    {/* 状态图标 */}
+                    <div className="flex justify-center">
+                        {saveStatus === 'saving' && (
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        )}
+                        {saveStatus === 'success' && (
+                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        )}
+                        {saveStatus === 'error' && (
+                            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* 消息 */}
+                    <p className="text-center text-gray-700 dark:text-gray-300">
+                        {saveMessage}
+                    </p>
+                    
+                    {/* 详细信息 */}
+                    {saveDetails.fileName && (
+                        <div className={`p-3 rounded-lg ${
+                            theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+                        }`}>
+                            <p className="text-sm font-semibold">Document information:</p>
+                            <p className="text-sm mt-1">
+                                <span className="font-medium">File name:</span> {saveDetails.fileName}
+                            </p>
+                            {saveDetails.path && (
+                                <p className="text-sm mt-1">
+                                    <span className="font-medium">File path:</span> {saveDetails.path}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                    
+                    {/* 错误时的额外选项 */}
+                    {saveStatus === 'error' && (
+                        <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                Failed to save into server, Please save as manual into server
+                            </p>
+                            <div className="space-y-2">
+                                <Button 
+                                    className='cursor-pointer'
+                                    fullSized 
+                                    color="blue" 
+                                    onClick={handleManualDownload}
+                                >
+                                    Download manual
+                                </Button>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </ModalBody>
+            <ModalFooter>
+                {saveStatus === 'saving' ? (
+                    <Button color="gray" disabled>
+                        Please wait...
+                    </Button>
+                ) : (
+                    <Button 
+                        className='cursor-pointer'
+                        color='gray' 
+                        onClick={closeSaveModal}
+                    >
+                        Cancel
+                    </Button>
+                )}
+            </ModalFooter>
         </Modal>
     </div>
   )
