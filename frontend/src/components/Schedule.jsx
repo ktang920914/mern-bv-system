@@ -20,6 +20,13 @@ const Schedule = () => {
   const [preventiveData, setPreventiveData] = useState([])
   const [calendarYear, setCalendarYear] = useState(moment().year())
   const [parentActivities, setParentActivities] = useState({})
+  
+  // 新增：保存到服务器的状态
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -128,10 +135,17 @@ const Schedule = () => {
     }
   }
 
+  // 修改后的生成Excel报告函数 - 返回 blob 和 fileName
   const generateScheduleReport = async () => {
     try {
       const workbook = new ExcelJS.Workbook()
       const reportYear = calendarYear
+      
+      // 生成带时间戳的文件名
+      const reportDate = new Date();
+      const dateStr = reportDate.toISOString().split('T')[0];
+      const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+      
       const worksheet = workbook.addWorksheet(reportYear.toString())
       
       setupWorksheetPrint(worksheet, {
@@ -487,13 +501,115 @@ const Schedule = () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       })
       
-      const date = moment().format('YYYY_MM_DD')
-      saveAs(blob, `Maintenance_Schedule_${reportYear}_${date}.xlsx`)
+      // 生成带时间戳的文件名
+      const fileName = `Maintenance_Schedule_${reportYear}_${dateStr}_${timeStr}.xlsx`
+      
+      return { blob, fileName }
 
     } catch (error) {
       console.error('Error generating Excel report:', error)
-      alert('Failed to generate Excel report. Please try again.')
+      throw error
     }
+  }
+
+  // 保存到文件服务器的函数 - 使用 FormData
+  const saveToFileServer = async () => {
+    try {
+      // 显示 Modal 并设置状态为保存中
+      setShowSaveModal(true)
+      setSaveStatus('saving')
+      setSaveMessage('Generating...')
+      setSaveDetails({ fileName: '', path: '' })
+
+      // 首先生成 Excel 文件
+      const result = await generateScheduleReport()
+      const { blob, fileName } = result
+
+      // 更新状态
+      setSaveMessage('Saving...')
+      setSaveDetails(prev => ({ ...prev, fileName }))
+
+      // 创建 FormData 对象
+      const formData = new FormData()
+      formData.append('file', blob, fileName)
+      formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
+
+      // 发送到后端 API 保存到文件服务器
+      const response = await fetch('/api/file/save-excel', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSaveStatus('success')
+        setSaveMessage('Success！')
+        setSaveDetails({
+          fileName,
+          path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
+        })
+        
+        console.log('File saved to server:', data)
+      } else {
+        setSaveStatus('error')
+        setSaveMessage(`Failed: ${data.message || 'Error'}`)
+        setSaveDetails({
+          fileName,
+          path: 'Failed'
+        })
+      }
+
+    } catch (error) {
+      console.error('Error saving to file server:', error)
+      setSaveStatus('error')
+      setSaveMessage('error')
+      setSaveDetails({
+        fileName: 'unknown',
+        path: 'error'
+      })
+    }
+  }
+
+  // 处理下载到本地
+  const handleDownloadReport = async () => {
+    try {
+      const result = await generateScheduleReport()
+      const { blob, fileName } = result
+      saveAs(blob, fileName)
+      console.log('Excel report downloaded successfully!')
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      alert('Failed to download report. Please try again.')
+    }
+  }
+
+  // 处理手动下载（当服务器保存失败时）
+  const handleManualDownload = () => {
+    handleDownloadReport()
+    setShowSaveModal(false)
+  }
+
+  // 关闭保存 Modal
+  const closeSaveModal = () => {
+    setShowSaveModal(false)
+    // 重置状态，但保留一小段时间以便用户看到结果
+    setTimeout(() => {
+      setSaveStatus('')
+      setSaveMessage('')
+      setSaveDetails({ fileName: '', path: '' })
+    }, 300)
+  }
+
+  // 确认保存到服务器
+  const confirmSaveToServer = () => {
+    setShowConfirmModal(true)
+  }
+
+  // 实际执行保存
+  const executeSaveToServer = () => {
+    setShowConfirmModal(false)
+    saveToFileServer()
   }
 
   const eventStyleGetter = (event) => {
@@ -980,11 +1096,18 @@ const Schedule = () => {
             Go Todos
           </Button>
           <Button 
-            onClick={generateScheduleReport}
+            onClick={handleDownloadReport}
             color="green"
             className='cursor-pointer'
           >
             Report
+          </Button>
+          <Button 
+            onClick={confirmSaveToServer}
+            color="blue"
+            className='cursor-pointer'
+          >
+            Save to Server
           </Button>
         </div>
       </div>
@@ -1026,6 +1149,126 @@ const Schedule = () => {
         
         <StatsCards />
       </Card>
+
+      {/* 确认保存 Modal */}
+      <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
+        <ModalHeader>Server</ModalHeader>
+        <ModalBody>
+          <div className="space-y-3">
+            <p className="text-gray-700 dark:text-gray-300">
+              Are you sure want to save into server?
+            </p>
+            <div className={`p-3 rounded-lg ${
+              theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'border border-gray-600'
+            }`}>
+              <p className={`text-sm font-semibold`}>File path:</p>
+              <p className="text-sm mt-1 text-blue-600 dark:text-blue-400">
+                Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+              </p>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button className='cursor-pointer' color="gray" onClick={() => setShowConfirmModal(false)}>
+            Cancel
+          </Button>
+          <Button className='cursor-pointer' color="blue" onClick={executeSaveToServer}>
+            Save
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* 保存状态 Modal */}
+      <Modal show={showSaveModal} onClose={closeSaveModal} size="md">
+        <ModalHeader>
+          {saveStatus === 'saving' ? 'Saving...' : 
+           saveStatus === 'success' ? 'Success' : 
+           saveStatus === 'error' ? 'Failed' : 'Saving'}
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4">
+            {/* 状态图标 */}
+            <div className="flex justify-center">
+              {saveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              )}
+              {saveStatus === 'success' && (
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* 消息 */}
+            <p className="text-center text-gray-700 dark:text-gray-300">
+              {saveMessage}
+            </p>
+            
+            {/* 详细信息 */}
+            {saveDetails.fileName && (
+              <div className={`p-3 rounded-lg ${
+                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+              }`}>
+                <p className="text-sm font-semibold">Document information:</p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">File name:</span> {saveDetails.fileName}
+                </p>
+                {saveDetails.path && (
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">File path:</span> {saveDetails.path}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* 错误时的额外选项 */}
+            {saveStatus === 'error' && (
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Failed to save into server, Please save as manual into server
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className='cursor-pointer'
+                    fullSized 
+                    color="blue" 
+                    onClick={handleManualDownload}
+                  >
+                    Download manual
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          {saveStatus === 'saving' ? (
+            <Button color="gray" disabled>
+              Please wait...
+            </Button>
+          ) : (
+            <Button 
+              className='cursor-pointer'
+              color='gray' 
+              onClick={closeSaveModal}
+            >
+              Cancel
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
