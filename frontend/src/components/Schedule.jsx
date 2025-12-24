@@ -984,7 +984,7 @@ const Schedule = () => {
             color="green"
             className='cursor-pointer'
           >
-            Schedule Report
+            Report
           </Button>
         </div>
       </div>

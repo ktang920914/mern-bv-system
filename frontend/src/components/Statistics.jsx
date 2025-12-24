@@ -1636,7 +1636,7 @@ const Statistics = () => {
             className='cursor-pointer'
             onClick={() => window.location.href = '/?tab=Jobs'}
           >
-            Go Jobs
+            Jobs
           </Button>
         </ModalFooter>
       </Modal>
@@ -1669,7 +1669,7 @@ const Statistics = () => {
             color="blue"
             className='cursor-pointer'
           >
-            Go Jobs
+            Jobs
           </Button>
           <Button 
             onClick={handleDownloadReport}
@@ -1683,7 +1683,7 @@ const Statistics = () => {
             color="blue"
             className='cursor-pointer'
           >
-            Save to Server
+            Save
           </Button>
         </div>
       </div>

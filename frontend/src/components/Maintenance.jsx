@@ -4,7 +4,6 @@ import { HiOutlineExclamationCircle } from "react-icons/hi";
 import useUserstore from '../store'
 import useThemeStore from '../themeStore';
 import { useSearchParams } from 'react-router-dom';
-import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import ExcelJS from 'exceljs'
 
@@ -38,6 +37,13 @@ const Maintenance = () => {
   const [mfrSaveMessage, setMfrSaveMessage] = useState('')
   const [mfrSaveDetails, setMfrSaveDetails] = useState({ fileName: '', path: '' })
   const [showMfrSaveModal, setShowMfrSaveModal] = useState(false)
+
+  // 新增：Excel 报告保存状态
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -391,6 +397,139 @@ const Maintenance = () => {
   const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
   const showingTo = Math.min(indexOfLastItem, totalEntries)
   const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+  // 移动端简洁分页组件 - 只显示 Previous/Next
+  const MobileSimplePagination = () => (
+    <div className="flex items-center justify-center space-x-4">
+      <Button
+        size="sm"
+        disabled={currentPage === 1}
+        onClick={() => handlePageChange(currentPage - 1)}
+        className="flex items-center"
+      >
+        <span>‹</span>
+        <span className="ml-1">Previous</span>
+      </Button>
+
+      <Button
+        size="sm"
+        disabled={currentPage === totalPages}
+        onClick={() => handlePageChange(currentPage + 1)}
+        className="flex items-center"
+      >
+        <span className="mr-1">Next</span>
+        <span>›</span>
+      </Button>
+    </div>
+  )
+
+  // 移动端卡片组件
+  const MaintenanceCard = ({ maintenance }) => (
+    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+      theme === 'light' 
+        ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+        : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+    }`}>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Job Date</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.jobdate}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Completion Date</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.completiondate}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Status</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.status}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Cost</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.cost}</p>
+        </div>
+      </div>
+      
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Job Type</p>
+        <Popover 
+          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+          content={
+            <div className="p-3 max-w-xs">
+              <p className="font-semibold text-sm">Job detail:</p>
+              <p className="text-xs mb-2">{maintenance.jobdetail}</p>
+            </div>
+          }
+          trigger='hover'
+          placement="top"
+          arrow={false}
+        >
+          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+          }`}>
+            {maintenance.jobtype}
+          </span>
+        </Popover>
+      </div>
+
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Item Code</p>
+        <Popover 
+          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+          content={
+            <div className="p-3 max-w-xs">
+              <p className="font-semibold text-sm">Problem:</p>
+              <p className="text-xs mb-2">{maintenance.problem}</p>
+              <p className="font-semibold text-sm">Root cause:</p>
+              <p className="text-xs mb-2">{maintenance.rootcause}</p>
+            </div>
+          }
+          trigger='hover'
+          placement="top"
+          arrow={false}
+        >
+          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+          }`}>
+            {maintenance.code}
+          </span>
+        </Popover>
+      </div>
+
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Supplier</p>
+        <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.supplier}</p>
+      </div>
+
+      <div className="flex gap-2">
+        <Button 
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => handleUpdate(maintenance)}
+        >
+          Edit
+        </Button>
+        <Button 
+          color='blue'
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => handleMRFClick(maintenance)}
+        >
+          MRF
+        </Button>
+        <Button 
+          color='red' 
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => {
+            setMaintenanceIdToDelete(maintenance._id)
+            setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+    </div>
+  )
 
   // 页面设置辅助函数
   const setupWorksheetPrint = (worksheet, options = {}) => {
@@ -997,51 +1136,56 @@ const Maintenance = () => {
     }
   }
 
-  // 页面设置辅助函数 - 为报表单独设置
-  const setupWorksheetPrintForReport = (worksheet, options = {}) => {
-    const {
-      paperSize = 9,
-      orientation = 'landscape',
-      margins = {
-        left: 0.25,
-        right: 0.25,
-        top: 0.75,
-        bottom: 0.75,
-        header: 0.3,
-        footer: 0.3
-      },
-      horizontalCentered = true,
-      verticalCentered = false,
-      fitToPage = true,
-      fitToHeight = 1,
-      fitToWidth = 1,
-      scale = 100
-    } = options
-
-    worksheet.pageSetup = {
-      paperSize,
-      orientation,
-      margins,
-      horizontalCentered,
-      verticalCentered,
-      fitToPage,
-      fitToHeight,
-      fitToWidth,
-      scale,
-      showGridLines: false,
-      blackAndWhite: false
-    }
-  }
-
-  // 生成Excel报告的函数 - 完全重写，类似于 orders.jsx 的版本
-  const generateExcelReport = async () => {
+  // 修改后的 generateExcelReport 函数 - 添加时间戳文件名并返回对象
+  const generateExcelReport = async (returnBlob = false) => {
     try {
       // 使用 ExcelJS
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Maintenance Jobs Report')
+      
+      // 生成带时间戳的文件名
+      const reportDate = new Date();
+      const dateStr = reportDate.toISOString().split('T')[0];
+      const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+      
+      const worksheet = workbook.addWorksheet(`Maintenance Jobs Report ${dateStr}`)
       
       // 设置工作表打印选项
-      setupWorksheetPrintForReport(worksheet, {
+      const setupWorksheetPrint = (worksheet, options = {}) => {
+        const {
+          paperSize = 9,
+          orientation = 'landscape',
+          margins = {
+            left: 0.25,
+            right: 0.25,
+            top: 0.75,
+            bottom: 0.75,
+            header: 0.3,
+            footer: 0.3
+          },
+          horizontalCentered = true,
+          verticalCentered = false,
+          fitToPage = true,
+          fitToHeight = 1,
+          fitToWidth = 1,
+          scale = 100
+        } = options
+
+        worksheet.pageSetup = {
+          paperSize,
+          orientation,
+          margins,
+          horizontalCentered,
+          verticalCentered,
+          fitToPage,
+          fitToHeight,
+          fitToWidth,
+          scale,
+          showGridLines: false,
+          blackAndWhite: false
+        }
+      }
+      
+      setupWorksheetPrint(worksheet, {
         fitToHeight: 1,
         fitToWidth: 1,
         horizontalCentered: true,
@@ -1090,8 +1234,39 @@ const Maintenance = () => {
       titleRow.getCell(1).alignment = centerAlignment
       worksheet.mergeCells('A1:M1')
 
+      // 生成时间行
+      const generatedRow = worksheet.getRow(2)
+      generatedRow.height = 20
+      generatedRow.getCell(1).value = `Generated on: ${reportDate.toLocaleString()}`
+      generatedRow.getCell(1).font = { name: 'Calibri', size: 10, italic: true }
+      generatedRow.getCell(1).alignment = leftAlignment
+      worksheet.mergeCells('A2:M2')
+
+      // 添加过滤信息行
+      const filterRow = worksheet.getRow(3)
+      filterRow.height = 20
+      
+      // 如果有搜索词，显示过滤条件
+      if (searchTerm) {
+        filterRow.getCell(1).value = `Filter: "${searchTerm}"`
+        worksheet.mergeCells('A3:M3')
+        filterRow.getCell(1).font = { name: 'Calibri', size: 10, italic: true }
+        filterRow.getCell(1).alignment = leftAlignment
+        filterRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFFCC' } // 浅黄色背景
+        }
+        filterRow.getCell(1).border = {
+          bottom: { style: 'thin' }
+        }
+      }
+
+      // 计算表头行号（考虑是否有过滤行）
+      const headerRowNum = searchTerm ? 4 : 3
+      
       // 表头行 - 添加过滤器
-      const headerRow = worksheet.getRow(2)
+      const headerRow = worksheet.getRow(headerRowNum)
       headerRow.height = 25
       const headers = [
         'No.', 'Job Date', 'Job Type', 'Item Code', 'Problem', 
@@ -1142,14 +1317,8 @@ const Maintenance = () => {
         })
       }))
 
-      // 添加自动过滤器到整个数据范围
-      worksheet.autoFilter = {
-        from: 'A2',  // 从A2单元格开始（表头行）
-        to: `M${2 + excelData.length}`  // 到M列，数据行数+2（标题行+表头行+数据行）
-      }
-
       // 数据行
-      let rowIndex = 3
+      let rowIndex = headerRowNum + 1
       let totalCost = 0
       
       excelData.forEach((maintenance, index) => {
@@ -1256,156 +1425,131 @@ const Maintenance = () => {
         rowIndex++
       }
 
-      // 生成Excel文件并下载
+      // 添加自动筛选功能
+      if (excelData.length > 0) {
+        const filterRange = `A${headerRowNum}:M${rowIndex - 1}`
+        worksheet.autoFilter = filterRange
+      }
+
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       })
       
-      // 使用当前日期作为文件名（包含时间戳）
-      const now = new Date()
-      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_')
-      const timeStr = now.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
-      saveAs(blob, `Maintenance_Jobs_Report_${dateStr}_${timeStr}.xlsx`)
+      // 生成带时间戳的文件名
+      const fileName = `Maintenance_Jobs_Report_${dateStr}_${timeStr}.xlsx`
+      
+      if (returnBlob) {
+        return { blob, fileName }
+      } else {
+        saveAs(blob, fileName)
+        return null
+      }
 
     } catch (error) {
       console.error('Error generating Excel report:', error)
-      alert('Failed to generate Excel report. Please try again.')
+      if (!returnBlob) {
+        alert('Failed to generate Excel report. Please try again.')
+      }
+      throw error
     }
   }
 
-  // 移动端简洁分页组件 - 只显示 Previous/Next
-  const MobileSimplePagination = () => (
-    <div className="flex items-center justify-center space-x-4">
-      <Button
-        size="sm"
-        disabled={currentPage === 1}
-        onClick={() => handlePageChange(currentPage - 1)}
-        className="flex items-center"
-      >
-        <span>‹</span>
-        <span className="ml-1">Previous</span>
-      </Button>
+  // 保存到文件服务器的函数 - 使用 FormData
+  const saveToFileServer = async () => {
+    try {
+      // 显示 Modal 并设置状态为保存中
+      setShowSaveModal(true)
+      setSaveStatus('saving')
+      setSaveMessage('Generating...')
+      setSaveDetails({ fileName: '', path: '' })
 
-      <Button
-        size="sm"
-        disabled={currentPage === totalPages}
-        onClick={() => handlePageChange(currentPage + 1)}
-        className="flex items-center"
-      >
-        <span className="mr-1">Next</span>
-        <span>›</span>
-      </Button>
-    </div>
-  )
+      // 首先生成 Excel 文件
+      const result = await generateExcelReport(true)
+      const { blob, fileName } = result
 
-  // 移动端卡片组件
-  const MaintenanceCard = ({ maintenance }) => (
-    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
-      theme === 'light' 
-        ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
-        : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
-    }`}>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Job Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.jobdate}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Completion Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.completiondate}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Status</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.status}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Cost</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.cost}</p>
-        </div>
-      </div>
-      
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Job Type</p>
-        <Popover 
-          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-          content={
-            <div className="p-3 max-w-xs">
-              <p className="font-semibold text-sm">Job detail:</p>
-              <p className="text-xs mb-2">{maintenance.jobdetail}</p>
-            </div>
-          }
-          trigger='hover'
-          placement="top"
-          arrow={false}
-        >
-          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-          }`}>
-            {maintenance.jobtype}
-          </span>
-        </Popover>
-      </div>
+      // 更新状态
+      setSaveMessage('Saving...')
+      setSaveDetails(prev => ({ ...prev, fileName }))
 
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Item Code</p>
-        <Popover 
-          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-          content={
-            <div className="p-3 max-w-xs">
-              <p className="font-semibold text-sm">Problem:</p>
-              <p className="text-xs mb-2">{maintenance.problem}</p>
-              <p className="font-semibold text-sm">Root cause:</p>
-              <p className="text-xs mb-2">{maintenance.rootcause}</p>
-            </div>
-          }
-          trigger='hover'
-          placement="top"
-          arrow={false}
-        >
-          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-          }`}>
-            {maintenance.code}
-          </span>
-        </Popover>
-      </div>
+      // 创建 FormData 对象
+      const formData = new FormData()
+      formData.append('file', blob, fileName)
+      formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
 
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Supplier</p>
-        <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.supplier}</p>
-      </div>
+      // 发送到后端 API 保存到文件服务器
+      const response = await fetch('/api/file/save-excel', {
+        method: 'POST',
+        body: formData,
+      })
 
-      <div className="flex gap-2">
-        <Button 
-          outline 
-          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => handleUpdate(maintenance)}
-        >
-          Edit
-        </Button>
-        <Button 
-          color='blue'
-          outline 
-          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => handleMRFClick(maintenance)}
-        >
-          MRF
-        </Button>
-        <Button 
-          color='red' 
-          outline 
-          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => {
-            setMaintenanceIdToDelete(maintenance._id)
-            setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)
-          }}
-        >
-          Delete
-        </Button>
-      </div>
-    </div>
-  )
+      const data = await response.json()
+
+      if (response.ok) {
+        setSaveStatus('success')
+        setSaveMessage('Success！')
+        setSaveDetails({
+          fileName,
+          path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
+        })
+
+      } else {
+        setSaveStatus('error')
+        setSaveMessage(`Failed: ${data.message || 'Error'}`)
+        setSaveDetails({
+          fileName,
+          path: 'Failed'
+        })
+      }
+
+    } catch (error) {
+      console.error('Error saving to file server:', error)
+      setSaveStatus('error')
+      setSaveMessage('error')
+      setSaveDetails({
+        fileName: 'unknown',
+        path: 'error'
+      })
+    }
+  }
+
+  // 处理下载到本地
+  const handleDownloadReport = async () => {
+    try {
+      await generateExcelReport(false)
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      setErrorMessage('Failed to download report. Please try again.')
+    }
+  }
+
+  // 处理手动下载（当服务器保存失败时）
+  const handleManualDownload = () => {
+    handleDownloadReport()
+    setShowSaveModal(false)
+  }
+
+  // 关闭保存 Modal
+  const closeSaveModal = () => {
+    setShowSaveModal(false)
+    // 重置状态，但保留一小段时间以便用户看到结果
+    setTimeout(() => {
+      setSaveStatus('')
+      setSaveMessage('')
+      setSaveDetails({ fileName: '', path: '' })
+    }, 300)
+  }
+
+  // 确认保存到服务器
+  const confirmSaveToServer = () => {
+    setShowConfirmModal(true)
+  }
+
+  // 实际执行保存
+  const executeSaveToServer = () => {
+    setShowConfirmModal(false)
+    saveToFileServer()
+  }
 
   return (
     <div className='min-h-screen'>
@@ -1423,8 +1567,19 @@ const Maintenance = () => {
           <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateJob}>
             Create job
           </Button>
-          <Button className='cursor-pointer flex-1 sm:flex-none' onClick={generateExcelReport} color='green'>
+          <Button 
+            className='cursor-pointer flex-1 sm:flex-none' 
+            onClick={handleDownloadReport} 
+            color='green'
+          >
             Report
+          </Button>
+          <Button 
+            className='cursor-pointer flex-1 sm:flex-none' 
+            onClick={confirmSaveToServer}
+            color='blue'
+          >
+            Save to Server
           </Button>
         </div>
       </div>
@@ -1919,6 +2074,126 @@ const Maintenance = () => {
               className='cursor-pointer'
               color='gray' 
               onClick={closeMfrSaveModal}
+            >
+              Cancel
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
+
+      {/* 新增：确认保存 Modal */}
+      <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
+        <ModalHeader>Server</ModalHeader>
+        <ModalBody>
+          <div className="space-y-3">
+            <p className="text-gray-700 dark:text-gray-300">
+              Are you sure want to save into server?
+            </p>
+            <div className={`p-3 rounded-lg ${
+              theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'border border-gray-600'
+            }`}>
+              <p className={`text-sm font-semibold`}>File path:</p>
+              <p className="text-sm mt-1 text-blue-600 dark:text-blue-400">
+                Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+              </p>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button className='cursor-pointer' color="gray" onClick={() => setShowConfirmModal(false)}>
+            Cancel
+          </Button>
+          <Button className='cursor-pointer' color="blue" onClick={executeSaveToServer}>
+            Save
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* 新增：保存状态 Modal */}
+      <Modal show={showSaveModal} onClose={closeSaveModal} size="md">
+        <ModalHeader>
+          {saveStatus === 'saving' ? 'Saving...' : 
+           saveStatus === 'success' ? 'Success' : 
+           saveStatus === 'error' ? 'Failed' : 'Saving'}
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4">
+            {/* 状态图标 */}
+            <div className="flex justify-center">
+              {saveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              )}
+              {saveStatus === 'success' && (
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* 消息 */}
+            <p className="text-center text-gray-700 dark:text-gray-300">
+              {saveMessage}
+            </p>
+            
+            {/* 详细信息 */}
+            {saveDetails.fileName && (
+              <div className={`p-3 rounded-lg ${
+                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+              }`}>
+                <p className="text-sm font-semibold">Document information:</p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">File name:</span> {saveDetails.fileName}
+                </p>
+                {saveDetails.path && (
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">File path:</span> {saveDetails.path}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* 错误时的额外选项 */}
+            {saveStatus === 'error' && (
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Failed to save into server, Please save as manual into server
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className='cursor-pointer'
+                    fullSized 
+                    color="blue" 
+                    onClick={handleManualDownload}
+                  >
+                    Download manual
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          {saveStatus === 'saving' ? (
+            <Button color="gray" disabled>
+              Please wait...
+            </Button>
+          ) : (
+            <Button 
+              className='cursor-pointer'
+              color='gray' 
+              onClick={closeSaveModal}
             >
               Cancel
             </Button>
