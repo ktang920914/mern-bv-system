@@ -1107,7 +1107,7 @@ const Schedule = () => {
             color="blue"
             className='cursor-pointer'
           >
-            Save to Server
+            Save
           </Button>
         </div>
       </div>
