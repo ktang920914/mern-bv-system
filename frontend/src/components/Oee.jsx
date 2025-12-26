@@ -801,7 +801,7 @@ const Oee = () => {
                             className='cursor-pointer w-full sm:w-auto'
                             onClick={confirmSaveToServer}
                         >
-                            Save to Server
+                            Save
                         </Button>
                     </div>
                 </div>

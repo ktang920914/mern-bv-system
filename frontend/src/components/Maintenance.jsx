@@ -1579,7 +1579,7 @@ const Maintenance = () => {
             onClick={confirmSaveToServer}
             color='blue'
           >
-            Save to Server
+            Save
           </Button>
         </div>
       </div>
@@ -1984,7 +1984,7 @@ const Maintenance = () => {
             color="blue" 
             onClick={saveMFRToServer}
           >
-            Save to Server
+            Save
           </Button>
         </ModalFooter>
       </Modal>

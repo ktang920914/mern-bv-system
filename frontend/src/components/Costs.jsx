@@ -1354,7 +1354,7 @@ const Costs = () => {
                       onClick={confirmSaveToServer}
                       disabled={costs.length === 0}
                     >
-                        Save to Server
+                        Save
                     </Button>
                 </div>
             </div>

@@ -738,7 +738,7 @@ const setupWorksheetPrint = (worksheet, options = {}) => {
                     color='blue' 
                     onClick={confirmSaveToServer}
                 >
-                    Save to Server
+                    Save
                 </Button>
             </div>
         </div>

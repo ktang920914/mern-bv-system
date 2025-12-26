@@ -813,7 +813,7 @@ const generateExcelReport = async () => {
                         color='blue' 
                         onClick={confirmSaveToServer}
                     >
-                        Save to Server
+                        Save
                     </Button>
                 </div>
             </div>

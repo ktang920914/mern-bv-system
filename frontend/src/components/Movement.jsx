@@ -834,7 +834,7 @@ const Movement = () => {
             onClick={confirmSaveToServer}
             color='blue'
           >
-            Save to Server
+            Save
           </Button>
         </div>
       </div>

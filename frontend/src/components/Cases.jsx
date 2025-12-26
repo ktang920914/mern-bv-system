@@ -1209,7 +1209,7 @@ const Cases = () => {
                         onClick={confirmSaveToServer}
                         disabled={tableData.length === 0}
                     >
-                        Save to Server
+                        Save
                     </Button>
                 </div>
             </div>

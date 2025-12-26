@@ -955,7 +955,7 @@ const ToDoListPreventive = () => {
                             className='cursor-pointer flex-1 sm:flex-none' 
                             onClick={confirmSaveToServer}
                         >
-                            Save to Server
+                            Save
                         </Button>
                     </div>
                 </div>
