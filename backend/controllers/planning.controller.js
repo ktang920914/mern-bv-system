@@ -300,7 +300,7 @@ export const updatePlanning = async (req, res, next) => {
         const newActivity = new Activity({
             date: currentDate,
             activity: 'Update planning',
-            detail: `${req.user.username} updated planning for lot ${lotno} (IPQC auto-set to ${ipqc}, Setup auto-set to ${setup})`
+            detail: `${req.user.username}`
         });
         await newActivity.save();
 
