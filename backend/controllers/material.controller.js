@@ -18,6 +18,7 @@ const updateQRCode = async (material) => {
     };
 
     const qrCodeContent = JSON.stringify({
+        lotno: product.lotno,
         material: material.material,
         quantity: material.quantity,
         palletno: material.palletno,
@@ -34,8 +35,8 @@ const updateQRCode = async (material) => {
 
 export const material = async (req,res,next) => {
     try {
-        const {material, quantity, palletno, location, user, status} = req.body
-        const existingMaterial = await Material.findOne({material})
+        const {lotno, material, quantity, palletno, location, user, status} = req.body
+        const existingMaterial = await Material.findOne({lotno})
         if(existingMaterial){
             return next(errorHandler(404, 'Material is exists'))
         }
@@ -55,6 +56,7 @@ export const material = async (req,res,next) => {
         };
 
         const qrCodeContent = JSON.stringify({
+            lotno,
             material,
             quantity: materialQuantity,
             palletno,
@@ -65,6 +67,7 @@ export const material = async (req,res,next) => {
         })
 
         const newMaterial = new Material({
+            lotno,
             material,
             quantity: materialQuantity,
             palletno,
@@ -135,7 +138,7 @@ export const deleteMaterial = async (req,res,next) => {
 export const updateMaterial = async (req,res,next) => {
     try {
         const existingMaterial = await Material.findOne({ 
-            material: req.body.material,
+            lotno: req.body.lotno,
             _id: { $ne: req.params.materialId } 
         });
         
@@ -146,6 +149,7 @@ export const updateMaterial = async (req,res,next) => {
         // 更新字段并重新生成 QR 码
         const updatedMaterial = await Material.findByIdAndUpdate(req.params.materialId, {
             $set: {
+                lotno: req.body.lotno,
                 material: req.body.material,
                 location: req.body.location,
                 user: req.body.user,

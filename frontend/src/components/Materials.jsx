@@ -157,6 +157,7 @@ const Materials = () => {
     setMaterialIdToUpdate(m._id)
     setOpenModalUpdateMaterial(!openModalUpdateMaterial)
     setUpdateFormData({
+      lotno:m.lotno, 
       material: m.material, 
       quantity: m.quantity, 
       location: m.location,
@@ -169,7 +170,7 @@ const Materials = () => {
   }
 
   const handleUpdateChange = (e) => {
-    if(e.target.id === 'material'|| e.target.id === 'palletno'){
+    if(e.target.id === 'material'|| e.target.id === 'palletno' || e.target.id === 'lotno'){
       setUpdateFormData({...updateFormData, [e.target.id]: e.target.value})
     }else{
       setUpdateFormData({...updateFormData, [e.target.id]: e.target.value.trim()})
@@ -217,6 +218,7 @@ const Materials = () => {
     material.material.toLowerCase().includes(searchTerm) || 
     material.quantity.toString().toLowerCase().includes(searchTerm) ||
     material.location.toLowerCase().includes(searchTerm) || 
+    material.lotno.toLowerCase().includes(searchTerm) ||
     material.user.toLowerCase().includes(searchTerm) || 
     material.palletno.toLowerCase().includes(searchTerm) ||
     material.status.toLowerCase().includes(searchTerm) && material.status.toString().toLowerCase() === searchTerm
@@ -271,6 +273,7 @@ const Materials = () => {
     return JSON.stringify({
       material: material?.material || '',
       quantity: material?.quantity !== undefined ? material.quantity : 0,
+      lotno: material?.lotno || '',
       palletno: material?.palletno || '',
       location: material?.location || '',
       user: material?.user || '',
@@ -322,6 +325,10 @@ const Materials = () => {
           <p className="text-sm font-semibold text-gray-500">User</p>
           <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{material.user}</p>
         </div>
+        <div>
+                    <p className="text-sm font-semibold text-gray-500">Lot No</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{material.lotno}</p>
+                </div>
         <div>
           <p className="text-sm font-semibold text-gray-500">Pallet No</p>
           <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{material.palletno}</p>
@@ -506,6 +513,7 @@ const Materials = () => {
       // 准备数据
       const excelData = materials.map(material => ({
         'Material': material.material,
+        'Lot No': product.lotno,
         'Quantity': Number(material.quantity) || 0,
         'Pallet No': material.palletno,
         'Location': material.location,
@@ -801,6 +809,7 @@ const Materials = () => {
           <TableHead>
             <TableRow>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Material</TableHeadCell>
+              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Quantity</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Location</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>User</TableHeadCell>
@@ -830,6 +839,7 @@ const Materials = () => {
                     </span>
                   </Popover>
                 </TableCell>
+                <TableCell className="align-middle">{m.lotno}</TableCell>
                 <TableCell className="align-middle">{m.quantity}</TableCell>
                 <TableCell className="align-middle">
                   <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
@@ -908,6 +918,11 @@ const Materials = () => {
                   <TextInput id="material" className='mb-4' placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required></TextInput>
                 </div>
               </div>
+
+              <div className="mb-4 block">
+                  <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Lot no</Label>
+                  <TextInput id="lotno" className='mb-4' placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required></TextInput>
+              </div>  
                 
               {/*<div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
@@ -1013,6 +1028,11 @@ const Materials = () => {
                   <TextInput value={updateFormData.material} id="material" className='mb-4' placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
                 </div>
               </div>
+
+              <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Lot no</Label>
+                            <TextInput value={updateFormData.lotno} id="lotno" className='mb-4' placeholder='Enter lotno' onChange={handleUpdateChange} onFocus={handleFocus} required></TextInput>
+                        </div>
                 
               {/*<div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
