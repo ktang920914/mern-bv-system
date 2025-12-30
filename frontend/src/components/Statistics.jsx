@@ -1351,7 +1351,7 @@ const Statistics = () => {
                             index === 2 ? "orange" : "info"
                           }
                           size="sm"
-                          className="min-w-[24px] text-center font-bold"
+                          className="min-w-[24px] text-center font-bold text-gray-900"
                         >
                           #{index + 1}
                         </Badge>
