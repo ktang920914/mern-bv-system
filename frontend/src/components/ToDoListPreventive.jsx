@@ -21,6 +21,7 @@ const ToDoListPreventive = () => {
     const [updateFormData,setUpdateFormData] = useState({})
     const [extruders,setExtruders] = useState([])
     const [items,setItems] = useState([])
+    const [others,setOthers] = useState([])
     const [allItems, setAllItems] = useState([])
     const [todos,setTodos] = useState([])
     const [todoIdToDelete,setTodoIdToDelete] = useState('')
@@ -100,6 +101,24 @@ const ToDoListPreventive = () => {
     },[currentUser._id])
 
     useEffect(() => {
+        const fetchOthers = async () => {
+            try {
+                const res = await fetch('/api/rest/getOthers')
+                const data = await res.json()
+                if(data.success === false){
+                    console.log(data.message)
+                }
+                if(res.ok){
+                    setOthers(data)
+                }
+            } catch (error) {
+                console.log(error.message)
+            }
+        }
+        fetchOthers()
+    },[currentUser._id])
+
+    useEffect(() => {
         const combined = [
             ...extruders.map(extruder => ({
                 ...extruder,
@@ -110,10 +129,15 @@ const ToDoListPreventive = () => {
                 ...item,
                 type: 'Inventory',
                 displayText: `${item.code} --- ${item.type} --- ${item.status}`
+            })),
+            ...others.map(other => ({
+                ...other,
+                type: 'Other',
+                displayText: `${other.code} --- ${other.type} --- ${other.status}`
             }))
         ]
         setAllItems(combined)
-    }, [extruders, items])
+    }, [extruders, items, others])
 
     useEffect(() => {
         const fetchTodos = async () => {
