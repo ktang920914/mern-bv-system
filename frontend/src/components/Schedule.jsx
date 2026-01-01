@@ -135,7 +135,7 @@ const Schedule = () => {
     }
   }
 
-  // 修改后的生成Excel报告函数 - 返回 blob 和 fileName
+  // 修改后的生成Excel报告函数 - 动态处理行数
   const generateScheduleReport = async () => {
     try {
       const workbook = new ExcelJS.Workbook()
@@ -198,6 +198,7 @@ const Schedule = () => {
         wrapText: true
       }
 
+      // 第1行：标题
       const row1 = worksheet.getRow(1)
       row1.height = 35.2
 
@@ -214,6 +215,7 @@ const Schedule = () => {
       row1.getCell(3).alignment = centerAlignment
       worksheet.mergeCells(`C1:O1`)
 
+      // 第2行：表头
       const row2 = worksheet.getRow(2)
       row2.height = 22.5
       const headers = ['No.', 'Activity', 'Frequency', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -414,6 +416,7 @@ const Schedule = () => {
       const scheduleData = processDataForExcel(preventiveData, reportYear)
       const dataToUse = scheduleData.length > 0 ? scheduleData : []
 
+      // 从第3行开始动态添加数据行
       let rowIndex = 3
       dataToUse.forEach((item) => {
         const row = worksheet.getRow(rowIndex)
@@ -446,29 +449,38 @@ const Schedule = () => {
         rowIndex++
       })
 
-      while (rowIndex <= 21) {
-        const row = worksheet.getRow(rowIndex)
-        row.height = 44.1
-        
-        for (let col = 1; col <= 15; col++) {
-          const cell = row.getCell(col)
-          if (col === 1) {
-            cell.value = rowIndex - 2
-            cell.font = defaultFont
-            cell.alignment = wrapTextCenterAlignment
-          } else if (col === 2) {
-            cell.value = ''
-            cell.alignment = wrapTextAlignment
-          } else if (col >= 3 && col <= 15) {
-            cell.value = ''
-            cell.alignment = wrapTextCenterAlignment
+      // 如果需要保持最少21行（包括标题和表头）
+      // 可以取消下面的注释来启用最小行数
+      /*
+      const minTotalRows = 21 // 包括标题行和表头行
+      if (rowIndex < minTotalRows + 1) { // +1 因为 rowIndex 从3开始
+        while (rowIndex <= minTotalRows + 1) {
+          const row = worksheet.getRow(rowIndex)
+          row.height = 44.1
+          
+          for (let col = 1; col <= 15; col++) {
+            const cell = row.getCell(col)
+            if (col === 1) {
+              cell.value = rowIndex - 2
+              cell.font = defaultFont
+              cell.alignment = wrapTextCenterAlignment
+            } else if (col === 2) {
+              cell.value = ''
+              cell.alignment = wrapTextAlignment
+            } else if (col >= 3 && col <= 15) {
+              cell.value = ''
+              cell.alignment = wrapTextCenterAlignment
+            }
+            cell.border = borderStyle
           }
-          cell.border = borderStyle
+          rowIndex++
         }
-        rowIndex++
       }
+      */
 
-      const row22 = worksheet.getRow(22)
+      // 签名行放在数据行之后
+      const signatureRowIndex = rowIndex
+      const row22 = worksheet.getRow(signatureRowIndex)
       row22.height = 30.9
 
       row22.getCell(1).value = 'Prepared by :'
@@ -476,7 +488,7 @@ const Schedule = () => {
         horizontal: 'left',
         vertical: 'bottom'
       }
-      worksheet.mergeCells(`A22:B22`)
+      worksheet.mergeCells(`A${signatureRowIndex}:B${signatureRowIndex}`)
 
       row22.getCell(12).value = 'Approved by :'
       row22.getCell(12).alignment = {
@@ -485,12 +497,12 @@ const Schedule = () => {
       }
       row22.getCell(12).font = defaultFont
 
-      const row23 = worksheet.getRow(23)
+      const row23 = worksheet.getRow(signatureRowIndex + 1)
       row23.height = 18.7
 
       row23.getCell(1).value = 'Date :'
       row23.getCell(1).alignment = leftAlignment
-      worksheet.mergeCells(`A23:B23`)
+      worksheet.mergeCells(`A${signatureRowIndex + 1}:B${signatureRowIndex + 1}`)
 
       row23.getCell(12).value = 'Date :'
       row23.getCell(12).alignment = leftAlignment
