@@ -1,3 +1,4 @@
+
 import { Alert, Button, Label, Modal, ModalBody, ModalFooter, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -2024,19 +2025,29 @@ const Maintenance = () => {
               {mfrSaveMessage}
             </p>
             
-            {/* 详细信息 */}
+            {/* 详细信息 - 修复长文本超出问题 */}
             {mfrSaveDetails.fileName && (
               <div className={`p-3 rounded-lg ${
                 theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
               }`}>
-                <p className="text-sm font-semibold">Document information:</p>
-                <p className="text-sm mt-1">
-                  <span className="font-medium">File name:</span> {mfrSaveDetails.fileName}
-                </p>
+                <p className="text-sm font-semibold mb-2">Document information:</p>
+                
+                {/* 文件名 - 不超出容器 */}
+                <div className="mb-2">
+                  <span className="text-sm font-medium">File name:</span>
+                  <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                    {mfrSaveDetails.fileName}
+                  </div>
+                </div>
+                
+                {/* 文件路径 - 不超出容器 */}
                 {mfrSaveDetails.path && (
-                  <p className="text-sm mt-1">
-                    <span className="font-medium">File path:</span> {mfrSaveDetails.path}
-                  </p>
+                  <div>
+                    <span className="text-sm font-medium">File path:</span>
+                    <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                      {mfrSaveDetails.path}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -2144,19 +2155,29 @@ const Maintenance = () => {
               {saveMessage}
             </p>
             
-            {/* 详细信息 */}
+            {/* 详细信息 - 修复长文本超出问题 */}
             {saveDetails.fileName && (
               <div className={`p-3 rounded-lg ${
                 theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
               }`}>
-                <p className="text-sm font-semibold">Document information:</p>
-                <p className="text-sm mt-1">
-                  <span className="font-medium">File name:</span> {saveDetails.fileName}
-                </p>
+                <p className="text-sm font-semibold mb-2">Document information:</p>
+                
+                {/* 文件名 - 不超出容器 */}
+                <div className="mb-2">
+                  <span className="text-sm font-medium">File name:</span>
+                  <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                    {saveDetails.fileName}
+                  </div>
+                </div>
+                
+                {/* 文件路径 - 不超出容器 */}
                 {saveDetails.path && (
-                  <p className="text-sm mt-1">
-                    <span className="font-medium">File path:</span> {saveDetails.path}
-                  </p>
+                  <div>
+                    <span className="text-sm font-medium">File path:</span>
+                    <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                      {saveDetails.path}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
