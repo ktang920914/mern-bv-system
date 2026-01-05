@@ -146,6 +146,412 @@ const calculateSetup = async (code, starttime, colourcode, material) => {
     return 0;
 };
 
+// Helper function to update IPQC for jobs after the inserted job
+const updateSubsequentJobsIPQC = async (code, insertedStartTime) => {
+    try {
+        // Find all jobs with the same extruder code that start AFTER the inserted job
+        const subsequentJobs = await Job.find({
+            code: code,
+            starttime: { $gt: insertedStartTime }
+        }).sort({ starttime: 1 }); // Sort by start time ascending
+        
+        for (const job of subsequentJobs) {
+            // Recalculate IPQC for this job
+            const newIPQC = await calculateIPQC(
+                job.code,
+                job.starttime,
+                job.colourcode,
+                job.material
+            );
+            
+            // Update the job with new IPQC
+            await Job.findByIdAndUpdate(job._id, {
+                $set: { ipqc: newIPQC }
+            });
+            
+            // Also update in Productivity and Planning
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { ipqc: newIPQC } }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { ipqc: newIPQC } }
+            );
+            
+            // Recalculate planprodtime
+            const productivity = await Productivity.findOne({ lotno: job.lotno });
+            const totalorder = Number(job.totalorder) || 0;
+            const irr = productivity ? Number(productivity.irr) || 0 : 0;
+            const setup = job.setup || 0;
+            
+            let newPlanProdTime = 0;
+            if (irr > 0) {
+                newPlanProdTime = Math.round((totalorder / irr) + newIPQC + setup);
+            } else {
+                newPlanProdTime = Math.round(newIPQC + setup);
+            }
+            
+            // Update planprodtime in all models
+            await Job.findByIdAndUpdate(job._id, {
+                $set: { planprodtime: newPlanProdTime }
+            });
+            
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { planprodtime: newPlanProdTime } }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { planprodtime: newPlanProdTime } }
+            );
+            
+            // Recalculate OEE metrics
+            const totaloutput = productivity ? Number(productivity.totaloutput) || 0 : 0;
+            const reject = productivity ? Number(productivity.reject) || 0 : 0;
+            
+            // Calculate availability
+            let availability = 0;
+            if (newPlanProdTime > 0) {
+                availability = Number((job.operatingtime / newPlanProdTime).toFixed(2));
+            }
+            
+            // Calculate performance
+            let performance = 0;
+            if (job.operatingtime > 0 && irr > 0) {
+                performance = Number(((totaloutput / job.operatingtime) / irr).toFixed(2));
+            }
+            
+            // Calculate quality
+            let quality = 0;
+            if (totaloutput > 0) {
+                quality = Number(((totaloutput - reject) / totaloutput).toFixed(2));
+            }
+            
+            // Calculate OEE
+            let oee = 0;
+            if (availability > 0 && performance > 0 && quality > 0) {
+                oee = Number((availability * performance * quality).toFixed(2));
+            }
+            
+            // Update OEE metrics
+            await Job.findByIdAndUpdate(job._id, {
+                $set: {
+                    availability: availability,
+                    performance: performance,
+                    quality: quality,
+                    oee: oee
+                }
+            });
+            
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        availability: availability,
+                        performance: performance,
+                        quality: quality,
+                        oee: oee
+                    }
+                }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        availability: availability,
+                        performance: performance,
+                        quality: quality,
+                        oee: oee
+                    }
+                }
+            );
+        }
+    } catch (error) {
+        console.error("Error updating subsequent jobs IPQC:", error);
+    }
+};
+
+// Helper function to update Setup for jobs after the inserted job
+const updateSubsequentJobsSetup = async (code, insertedStartTime) => {
+    try {
+        // Find all jobs with the same extruder code that start AFTER the inserted job
+        const subsequentJobs = await Job.find({
+            code: code,
+            starttime: { $gt: insertedStartTime }
+        }).sort({ starttime: 1 }); // Sort by start time ascending
+        
+        for (const job of subsequentJobs) {
+            // Recalculate Setup for this job
+            const newSetup = await calculateSetup(
+                job.code,
+                job.starttime,
+                job.colourcode,
+                job.material
+            );
+            
+            // Update the job with new Setup
+            await Job.findByIdAndUpdate(job._id, {
+                $set: { setup: newSetup }
+            });
+            
+            // Also update in Productivity and Planning
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { setup: newSetup } }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { setup: newSetup } }
+            );
+            
+            // Recalculate planprodtime
+            const productivity = await Productivity.findOne({ lotno: job.lotno });
+            const totalorder = Number(job.totalorder) || 0;
+            const irr = productivity ? Number(productivity.irr) || 0 : 0;
+            const ipqc = job.ipqc || 0;
+            
+            let newPlanProdTime = 0;
+            if (irr > 0) {
+                newPlanProdTime = Math.round((totalorder / irr) + ipqc + newSetup);
+            } else {
+                newPlanProdTime = Math.round(ipqc + newSetup);
+            }
+            
+            // Update planprodtime in all models
+            await Job.findByIdAndUpdate(job._id, {
+                $set: { planprodtime: newPlanProdTime }
+            });
+            
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { planprodtime: newPlanProdTime } }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { planprodtime: newPlanProdTime } }
+            );
+            
+            // Recalculate OEE metrics
+            const totaloutput = productivity ? Number(productivity.totaloutput) || 0 : 0;
+            const reject = productivity ? Number(productivity.reject) || 0 : 0;
+            
+            // Calculate availability
+            let availability = 0;
+            if (newPlanProdTime > 0) {
+                availability = Number((job.operatingtime / newPlanProdTime).toFixed(2));
+            }
+            
+            // Calculate performance
+            let performance = 0;
+            if (job.operatingtime > 0 && irr > 0) {
+                performance = Number(((totaloutput / job.operatingtime) / irr).toFixed(2));
+            }
+            
+            // Calculate quality
+            let quality = 0;
+            if (totaloutput > 0) {
+                quality = Number(((totaloutput - reject) / totaloutput).toFixed(2));
+            }
+            
+            // Calculate OEE
+            let oee = 0;
+            if (availability > 0 && performance > 0 && quality > 0) {
+                oee = Number((availability * performance * quality).toFixed(2));
+            }
+            
+            // Update OEE metrics
+            await Job.findByIdAndUpdate(job._id, {
+                $set: {
+                    availability: availability,
+                    performance: performance,
+                    quality: quality,
+                    oee: oee
+                }
+            });
+            
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        availability: availability,
+                        performance: performance,
+                        quality: quality,
+                        oee: oee
+                    }
+                }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        availability: availability,
+                        performance: performance,
+                        quality: quality,
+                        oee: oee
+                    }
+                }
+            );
+        }
+    } catch (error) {
+        console.error("Error updating subsequent jobs Setup:", error);
+    }
+};
+
+// Helper function to recalculate all IPQC and Setup for a specific code
+const recalculateAllJobsForCode = async (code) => {
+    try {
+        // Find all jobs for this extruder code, sorted by starttime
+        const allJobs = await Job.find({
+            code: code
+        }).sort({ starttime: 1 }); // Sort by start time ascending
+        
+        for (const job of allJobs) {
+            // Recalculate IPQC for this job
+            const newIPQC = await calculateIPQC(
+                job.code,
+                job.starttime,
+                job.colourcode,
+                job.material
+            );
+            
+            // Recalculate Setup for this job
+            const newSetup = await calculateSetup(
+                job.code,
+                job.starttime,
+                job.colourcode,
+                job.material
+            );
+            
+            // Update the job
+            await Job.findByIdAndUpdate(job._id, {
+                $set: {
+                    ipqc: newIPQC,
+                    setup: newSetup
+                }
+            });
+            
+            // Also update in Productivity and Planning
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        ipqc: newIPQC,
+                        setup: newSetup
+                    }
+                }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        ipqc: newIPQC,
+                        setup: newSetup
+                    }
+                }
+            );
+            
+            // Recalculate planprodtime
+            const productivity = await Productivity.findOne({ lotno: job.lotno });
+            const totalorder = Number(job.totalorder) || 0;
+            const irr = productivity ? Number(productivity.irr) || 0 : 0;
+            
+            let newPlanProdTime = 0;
+            if (irr > 0) {
+                newPlanProdTime = Math.round((totalorder / irr) + newIPQC + newSetup);
+            } else {
+                newPlanProdTime = Math.round(newIPQC + newSetup);
+            }
+            
+            // Update planprodtime
+            await Job.findByIdAndUpdate(job._id, {
+                $set: { planprodtime: newPlanProdTime }
+            });
+            
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { planprodtime: newPlanProdTime } }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                { $set: { planprodtime: newPlanProdTime } }
+            );
+            
+            // Recalculate OEE metrics
+            const totaloutput = productivity ? Number(productivity.totaloutput) || 0 : 0;
+            const reject = productivity ? Number(productivity.reject) || 0 : 0;
+            
+            // Calculate availability
+            let availability = 0;
+            if (newPlanProdTime > 0) {
+                availability = Number((job.operatingtime / newPlanProdTime).toFixed(2));
+            }
+            
+            // Calculate performance
+            let performance = 0;
+            if (job.operatingtime > 0 && irr > 0) {
+                performance = Number(((totaloutput / job.operatingtime) / irr).toFixed(2));
+            }
+            
+            // Calculate quality
+            let quality = 0;
+            if (totaloutput > 0) {
+                quality = Number(((totaloutput - reject) / totaloutput).toFixed(2));
+            }
+            
+            // Calculate OEE
+            let oee = 0;
+            if (availability > 0 && performance > 0 && quality > 0) {
+                oee = Number((availability * performance * quality).toFixed(2));
+            }
+            
+            // Update OEE metrics
+            await Job.findByIdAndUpdate(job._id, {
+                $set: {
+                    availability: availability,
+                    performance: performance,
+                    quality: quality,
+                    oee: oee
+                }
+            });
+            
+            await Productivity.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        availability: availability,
+                        performance: performance,
+                        quality: quality,
+                        oee: oee
+                    }
+                }
+            );
+            
+            await Planning.findOneAndUpdate(
+                { lotno: job.lotno },
+                {
+                    $set: {
+                        availability: availability,
+                        performance: performance,
+                        quality: quality,
+                        oee: oee
+                    }
+                }
+            );
+        }
+    } catch (error) {
+        console.error("Error recalculating all jobs for code:", error);
+    }
+};
+
 export const job = async (req, res, next) => {
     const { code, starttime, endtime, orderdate, lotno, colourcode, material, totalorder, downtime } = req.body;
     try {
@@ -302,6 +708,11 @@ export const job = async (req, res, next) => {
         await newProductivity.save();
         await newPlanning.save();
         await newJob.save();
+        
+        // AFTER saving the new job, update subsequent jobs
+        await updateSubsequentJobsIPQC(code, starttime);
+        await updateSubsequentJobsSetup(code, starttime);
+        
         res.status(201).json({ 
             message: 'Register successfully', 
             operatingtime, 
@@ -335,9 +746,18 @@ export const deleteJob = async (req,res,next) => {
         if (!jobToDelete) {
             return next(errorHandler(404, 'Job not found'));
         }
+        
+        const jobCode = jobToDelete.code;
+        const jobStartTime = jobToDelete.starttime;
+        
+        // Delete the job and related documents
         await Job.findByIdAndDelete(req.params.jobId)
         await Productivity.findOneAndDelete({ lotno: jobToDelete.lotno });
         await Planning.findOneAndDelete({ lotno: jobToDelete.lotno });
+        
+        // After deletion, recalculate all subsequent jobs
+        await recalculateAllJobsForCode(jobCode);
+        
         const currentDate = new Date().toLocaleString();
         const newActivity = new Activity({
             date: currentDate,
@@ -372,6 +792,10 @@ export const updateJob = async (req,res,next) => {
             return next(errorHandler(404, 'Job not found'));
         }
 
+        // Store old values to check if starttime or code changed
+        const oldStartTime = oldJob.starttime;
+        const oldCode = oldJob.code;
+        
         // Calculate IPQC for updated job (with material)
         const ipqc = await calculateIPQC(
             req.body.code || oldJob.code,
@@ -566,6 +990,25 @@ export const updateJob = async (req,res,next) => {
                 },
                 { new: true }
             );
+        }
+        
+        // Get new values
+        const newStartTime = req.body.starttime ? formatDateTime(req.body.starttime) : oldJob.starttime;
+        const newCode = req.body.code || oldJob.code;
+        
+        // Check if starttime or code changed
+        if (newStartTime !== oldStartTime || newCode !== oldCode) {
+            // Recalculate all jobs for the OLD code (if code changed or starttime changed significantly)
+            await recalculateAllJobsForCode(oldCode);
+            
+            // If code changed, also recalculate for the NEW code
+            if (newCode !== oldCode) {
+                await recalculateAllJobsForCode(newCode);
+            }
+        } else {
+            // If only other fields changed, just update subsequent jobs
+            await updateSubsequentJobsIPQC(newCode, newStartTime);
+            await updateSubsequentJobsSetup(newCode, newStartTime);
         }
 
         const currentDate = new Date().toLocaleString();
