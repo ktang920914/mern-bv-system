@@ -21,11 +21,12 @@ const Statistics = () => {
   const [calendarYear, setCalendarYear] = useState(moment().year())
   const [selectedJob, setSelectedJob] = useState(null)
   const [showJobDetails, setShowJobDetails] = useState(false)
-  // 新增：排序选项状态
+  // 排序选项状态
   const [sortBy, setSortBy] = useState('jobs') // 默认按工作数量排序
+  const [selectedMonth, setSelectedMonth] = useState('all') // 新增：选择月份状态，默认显示全部月份
   const [sortOrder, setSortOrder] = useState('desc') // 默认降序
   
-  // 新增：保存到服务器的状态
+  // 保存到服务器的状态
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
   const [saveMessage, setSaveMessage] = useState('')
@@ -891,7 +892,27 @@ const Statistics = () => {
   }
 
   const StatsCards = () => {
-    // ⭐ 重点修改：根据结束时间（endtime）的年份过滤
+    // 月份选项
+    const monthOptions = [
+      { value: 'all', label: 'All Months' },
+      { value: '1', label: 'January' },
+      { value: '2', label: 'February' },
+      { value: '3', label: 'March' },
+      { value: '4', label: 'April' },
+      { value: '5', label: 'May' },
+      { value: '6', label: 'June' },
+      { value: '7', label: 'July' },
+      { value: '8', label: 'August' },
+      { value: '9', label: 'September' },
+      { value: '10', label: 'October' },
+      { value: '11', label: 'November' },
+      { value: '12', label: 'December' }
+    ]
+    
+    // 获取选中的月份名称
+    const selectedMonthName = monthOptions.find(m => m.value === selectedMonth)?.label || 'All Months'
+    
+    // ⭐ 重点修改：根据结束时间（endtime）的年份和选择的月份过滤
     const yearlyData = jobsData.filter(job => {
       // 优先使用 endtime，如果没有 endtime 则使用 starttime
       const jobDate = job.endtime 
@@ -902,7 +923,15 @@ const Statistics = () => {
       
       if (!jobDate) return false
       
-      return jobDate.year() === calendarYear
+      // 首先检查年份
+      if (jobDate.year() !== calendarYear) return false
+      
+      // 然后检查月份（如果选择了特定月份）
+      if (selectedMonth !== 'all' && jobDate.month() + 1 !== parseInt(selectedMonth)) {
+        return false
+      }
+      
+      return true
     })
     
     // 基础统计
@@ -930,7 +959,13 @@ const Statistics = () => {
     const totalProdLeadTime = yearlyData.reduce((sum, job) => sum + (Number(job.prodleadtime) || 0), 0)
     
     // 统计跨天工作数量
-    const multiDayJobs = events.filter(event => event.resource.isMultiDay).length
+    const multiDayJobs = events.filter(event => {
+      const eventStart = moment(event.resource.actualStart || event.resource.starttime)
+      if (selectedMonth !== 'all') {
+        return event.resource.isMultiDay && eventStart.month() + 1 === parseInt(selectedMonth) && eventStart.year() === calendarYear
+      }
+      return event.resource.isMultiDay && eventStart.year() === calendarYear
+    }).length
     
     // 性能指标平均
     const avgAvailability = yearlyData.length > 0 
@@ -1098,11 +1133,76 @@ const Statistics = () => {
 
     return (
       <div className="mt-4">
+        {/* 修改：添加月份过滤和标题 */}
         <div className="mb-2 flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Statistics for {calendarYear}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Statistics for {calendarYear} {selectedMonth !== 'all' && `- ${selectedMonthName}`}
+          </h3>
           <Badge color="blue" size="sm">
-            Year {calendarYear}
+            {selectedMonth === 'all' ? `Year ${calendarYear}` : `${selectedMonthName} ${calendarYear}`}
           </Badge>
+        </div>
+        
+        {/* 修改：添加月份过滤卡片 */}
+        <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-lg shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="font-semibold text-gray-700 dark:text-gray-300">Month Filter</h4>
+              
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {/* 月份选择器 */}
+              <select 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className={"text-sm border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 min-w-[180px]"}
+              >
+                {monthOptions.map(month => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+              
+              {/* 如果选择了特定月份，显示该月份的数据统计 */}
+              {selectedMonth !== 'all' && (
+                <Badge color="green" size="sm">
+                  {sortedJobsByCode.length} Ext ID in {selectedMonthName}
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {/* 月份数据概览 */}
+          {selectedMonth !== 'all' && (
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm">
+                <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  {totalJobs}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Jobs in {selectedMonthName}</div>
+              </div>
+              <div className="text-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm">
+                <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                  {totalOrder.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Total Order</div>
+              </div>
+              <div className="text-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm">
+                <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                  {totalDuration.toFixed(1)}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Hours</div>
+              </div>
+              <div className="text-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm">
+                <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                  {sortedJobsByCode.length}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Extrusion Lines</div>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* 基础统计卡片 */}
@@ -1255,10 +1355,15 @@ const Statistics = () => {
         {sortedJobsByCode.length > 0 && (
           <div className="mt-4">
             <div className="flex justify-between items-center mb-3">
-              <h4></h4>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                
+              </h4>
               <div className="flex items-center space-x-2">
-                <Badge color="gray" size="sm">
-                  {sortedJobsByCode.length} Ext ID
+                <Badge color={selectedMonth === 'all' ? "blue" : "green"} size="sm">
+                  {selectedMonth === 'all' 
+                    ? `${sortedJobsByCode.length} Ext ID` 
+                    : `${sortedJobsByCode.length} Ext ID`
+                  }
                 </Badge>
                 
                 {/* 排序选择器 */}
@@ -1293,7 +1398,7 @@ const Statistics = () => {
             </div>
             
             {/* 排名说明 */}
-            <div className="mb-3 flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400">
+            <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <span>1st Place</span>
@@ -1306,121 +1411,158 @@ const Statistics = () => {
                 <div className="w-3 h-3 rounded-full bg-orange-500"></div>
                 <span>3rd Place</span>
               </div>
+              {selectedMonth !== 'all' && (
+                <div className="ml-auto flex items-center space-x-1">
+                  <Badge color="blue" size="xs">
+                    {selectedMonthName} Ranking
+                  </Badge>
+                </div>
+              )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {sortedJobsByCode.map((jobData, index) => {
-                const percentage = (jobData.count / totalJobs * 100).toFixed(1)
-                const colorMap = {
-                  'L1': 'border-blue-500',
-                  'L2': 'border-green-500',
-                  'L3': 'border-purple-500',
-                  'L5': 'border-yellow-500',
-                  'L6': 'border-red-500',
-                  'L9': 'border-pink-500',
-                  'L10': 'border-cyan-500',
-                  'L11': 'border-lime-500',
-                  'L12': 'border-orange-500'
-                }
-                const rankBgClass = getRankColor(index)
-                const borderColor = colorMap[jobData.code] || 'border-gray-500'
-                const bgClass = `${rankBgClass} ${borderColor}`
-                
-                // 计算废品率（使用 positive wastage）
-                const wastageRate = jobData.totalOutput > 0 
-                  ? ((jobData.totalWastage / jobData.totalOutput) * 100).toFixed(2)
-                  : '0.00'
-                
-                // 计算平均生产前置时间
-                const avgProdLeadTime = jobData.count > 0 
-                  ? (jobData.totalProdLeadTime / jobData.count).toFixed(1)
-                  : '0.0'
-                
-                return (
-                  <div 
-                    key={jobData.code} 
-                    className={`p-3 rounded-lg border-l-4 ${bgClass} transition-all duration-300 hover:shadow-md`}
-                  >
-                    {/* 头部信息 - 添加排名徽章 */}
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Badge 
-                          color={
-                            index === 0 ? "yellow" : 
-                            index === 1 ? "gray" : 
-                            index === 2 ? "orange" : "info"
-                          }
-                          size="sm"
-                          className="min-w-[24px] text-center font-bold text-gray-900"
-                        >
-                          #{index + 1}
-                        </Badge>
-                        <div>
-                          <div className="text-lg font-bold text-gray-900 dark:text-white">{jobData.code}</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {jobData.count} jobs • {percentage}%
+            {/* 如果没有数据，显示提示 */}
+            {selectedMonth !== 'all' && sortedJobsByCode.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-gray-400 dark:text-gray-500 mb-2">
+                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400">
+                  No job data for {selectedMonthName} {calendarYear}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                  Select "All Months" to see yearly data
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {sortedJobsByCode.map((jobData, index) => {
+                  const percentage = (jobData.count / totalJobs * 100).toFixed(1)
+                  const colorMap = {
+                    'L1': 'border-blue-500',
+                    'L2': 'border-green-500',
+                    'L3': 'border-purple-500',
+                    'L5': 'border-yellow-500',
+                    'L6': 'border-red-500',
+                    'L9': 'border-pink-500',
+                    'L10': 'border-cyan-500',
+                    'L11': 'border-lime-500',
+                    'L12': 'border-orange-500'
+                  }
+                  const rankBgClass = getRankColor(index)
+                  const borderColor = colorMap[jobData.code] || 'border-gray-500'
+                  const bgClass = `${rankBgClass} ${borderColor}`
+                  
+                  // 计算废品率（使用 positive wastage）
+                  const wastageRate = jobData.totalOutput > 0 
+                    ? ((jobData.totalWastage / jobData.totalOutput) * 100).toFixed(2)
+                    : '0.00'
+                  
+                  // 计算平均生产前置时间
+                  const avgProdLeadTime = jobData.count > 0 
+                    ? (jobData.totalProdLeadTime / jobData.count).toFixed(1)
+                    : '0.0'
+                  
+                  return (
+                    <div 
+                      key={jobData.code} 
+                      className={`p-3 rounded-lg border-l-4 ${bgClass} transition-all duration-300 hover:shadow-md`}
+                    >
+                      {/* 头部信息 - 添加排名徽章 */}
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Badge 
+                            color={
+                              index === 0 ? "yellow" : 
+                              index === 1 ? "gray" : 
+                              index === 2 ? "orange" : "info"
+                            }
+                            size="sm"
+                            className="min-w-[24px] text-center font-bold text-gray-900"
+                          >
+                            #{index + 1}
+                          </Badge>
+                          <div>
+                            <div className="text-lg font-bold text-gray-900 dark:text-white">{jobData.code}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {jobData.count} jobs • {percentage}%
+                            </div>
+                            {/* 添加月份信息 */}
+                            {selectedMonth !== 'all' && (
+                              <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
+                                {selectedMonthName} Ranking
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                      <Badge color="info" size="sm">
-                        {jobData.totalDuration.toFixed(1)}h
-                      </Badge>
-                    </div>
-                    
-                    {/* 产量信息 */}
-                    <div className="space-y-1 text-xs mb-3">
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="font-medium text-green-600 dark:text-green-400">Order:</div>
-                        <div className="text-green-600 dark:text-green-400">{jobData.totalOrder.toLocaleString()}</div>
-                        
-                        <div className="font-medium text-green-600 dark:text-green-400">Output:</div>
-                        <div className="text-green-600 dark:text-green-400">{jobData.totalOutput.toLocaleString()}</div>
-                        
-                        <div className="font-medium text-red-600 dark:text-red-400">Wastage:</div>
-                        <div className="text-red-600 dark:text-red-400">
-                          {jobData.totalWastage.toLocaleString()} ({wastageRate}%)
-                        </div>
-                        
-                        <div className="font-medium text-red-600 dark:text-red-400">Screw Out:</div>
-                        <div className="text-red-600 dark:text-red-400">{jobData.totalScrewOut.toLocaleString()}</div>
-                        
-                        <div className="font-medium text-gray-800 dark:text-gray-300">Lead Time:</div>
-                        <div className='text-gray-800 dark:text-gray-300'>{avgProdLeadTime} days</div>
-                      </div>
-                    </div>
-                    
-                    {/* 性能指标 */}
-                    <div className="space-y-1 text-xs">
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="font-medium text-yellow-600 dark:text-yellow-400">OEE:</div>
-                        <div className="text-yellow-600 dark:text-yellow-400">{jobData.avgOEE.toFixed(1)}%</div>
-                        
-                        <div className="font-medium text-blue-600 dark:text-blue-400">Avail:</div>
-                        <div className="text-blue-600 dark:text-blue-400">{jobData.avgAvailability.toFixed(1)}%</div>
-                        
-                        <div className="font-medium text-green-600 dark:text-green-400">Perf:</div>
-                        <div className="text-green-600 dark:text-green-400">{jobData.avgPerformance.toFixed(1)}%</div>
-                        
-                        <div className="font-medium text-purple-600 dark:text-purple-400">Quality:</div>
-                        <div className="text-purple-600 dark:text-purple-400">{jobData.avgQuality.toFixed(1)}%</div>
-                      </div>
-                    </div>
-                    
-                    {/* 底部信息 */}
-                    <div className="mt-2 flex justify-between items-center">
-                      {jobData.multiDayCount > 0 && (
-                        <Badge color="blue" size="xs">
-                          {jobData.multiDayCount} multi-day
+                        <Badge color="info" size="sm">
+                          {jobData.totalDuration.toFixed(1)}h
                         </Badge>
-                      )}
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Rank by: {sortBy}
+                      </div>
+                      
+                      {/* 产量信息 */}
+                      <div className="space-y-1 text-xs mb-3">
+                        <div className="grid grid-cols-2 gap-1">
+                          <div className="font-medium text-green-600 dark:text-green-400">Order:</div>
+                          <div className="text-green-600 dark:text-green-400">{jobData.totalOrder.toLocaleString()}</div>
+                          
+                          <div className="font-medium text-green-600 dark:text-green-400">Output:</div>
+                          <div className="text-green-600 dark:text-green-400">{jobData.totalOutput.toLocaleString()}</div>
+                          
+                          <div className="font-medium text-red-600 dark:text-red-400">Wastage:</div>
+                          <div className="text-red-600 dark:text-red-400">
+                            {jobData.totalWastage.toLocaleString()} ({wastageRate}%)
+                          </div>
+                          
+                          <div className="font-medium text-red-600 dark:text-red-400">Screw Out:</div>
+                          <div className="text-red-600 dark:text-red-400">{jobData.totalScrewOut.toLocaleString()}</div>
+                          
+                          <div className="font-medium text-gray-800 dark:text-gray-300">Lead Time:</div>
+                          <div className='text-gray-800 dark:text-gray-300'>{avgProdLeadTime} days</div>
+                        </div>
+                      </div>
+                      
+                      {/* 性能指标 */}
+                      <div className="space-y-1 text-xs">
+                        <div className="grid grid-cols-2 gap-1">
+                          <div className="font-medium text-yellow-600 dark:text-yellow-400">OEE:</div>
+                          <div className="text-yellow-600 dark:text-yellow-400">{jobData.avgOEE.toFixed(1)}%</div>
+                          
+                          <div className="font-medium text-blue-600 dark:text-blue-400">Avail:</div>
+                          <div className="text-blue-600 dark:text-blue-400">{jobData.avgAvailability.toFixed(1)}%</div>
+                          
+                          <div className="font-medium text-green-600 dark:text-green-400">Perf:</div>
+                          <div className="text-green-600 dark:text-green-400">{jobData.avgPerformance.toFixed(1)}%</div>
+                          
+                          <div className="font-medium text-purple-600 dark:text-purple-400">Quality:</div>
+                          <div className="text-purple-600 dark:text-purple-400">{jobData.avgQuality.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      
+                      {/* 底部信息 */}
+                      <div className="mt-2 flex justify-between items-center">
+                        <div className="flex items-center space-x-2">
+                          {jobData.multiDayCount > 0 && (
+                            <Badge color="blue" size="xs">
+                              {jobData.multiDayCount} multi-day
+                            </Badge>
+                          )}
+                          {selectedMonth !== 'all' && (
+                            <span className="text-xs text-blue-600 dark:text-blue-400">
+                              {selectedMonthName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Rank by: {sortBy}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
