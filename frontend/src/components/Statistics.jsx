@@ -1165,12 +1165,7 @@ const Statistics = () => {
                 ))}
               </select>
               
-              {/* 如果选择了特定月份，显示该月份的数据统计 */}
-              {selectedMonth !== 'all' && (
-                <Badge color="green" size="sm">
-                  {sortedJobsByCode.length} Ext ID in {selectedMonthName}
-                </Badge>
-              )}
+              
             </div>
           </div>
           
