@@ -25,6 +25,9 @@ const maintenanceSchema = new mongoose.Schema({
     completiondate:{
         type:String,
     },
+    jobtime: {  // 新增字段
+        type: Number, // 单位：分钟
+    },
     supplier:{
         type:String,
     },
