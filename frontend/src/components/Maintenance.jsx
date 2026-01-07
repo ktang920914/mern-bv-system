@@ -1,4 +1,3 @@
-
 import { Alert, Button, Label, Modal, ModalBody, ModalFooter, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Textarea, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -45,6 +44,63 @@ const Maintenance = () => {
   const [saveMessage, setSaveMessage] = useState('')
   const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  // 日期时间格式化函数
+  const formatDateTimeForDisplay = (dateTimeString) => {
+    if (!dateTimeString) return 'N/A';
+    
+    try {
+      // 将 ISO 格式的日期时间转换为本地格式
+      const date = new Date(dateTimeString);
+      
+      // 如果无法解析为有效日期，直接返回原字符串
+      if (isNaN(date.getTime())) {
+        return dateTimeString;
+      }
+      
+      // 格式化为: YYYY-MM-DD HH:MM
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    } catch (error) {
+      return dateTimeString;
+    }
+  };
+
+  const formatDateTimeForInput = (dateTimeString) => {
+    if (!dateTimeString) return '';
+    
+    try {
+      // 将各种格式的日期时间转换为 datetime-local 输入格式
+      const date = new Date(dateTimeString);
+      
+      if (isNaN(date.getTime())) {
+        // 尝试解析为 "YYYY-MM-DD HH:MM" 格式
+        if (dateTimeString.includes(' ')) {
+          const [datePart, timePart] = dateTimeString.split(' ');
+          if (timePart && timePart.includes(':')) {
+            return datePart + 'T' + timePart;
+          }
+        }
+        return dateTimeString;
+      }
+      
+      // 格式化为: YYYY-MM-DDTHH:MM
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+      return dateTimeString;
+    }
+  };
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -219,9 +275,17 @@ const Maintenance = () => {
 
   const handleUpdate = (maintenance) => {
     setMaintenanceIdToUpdate(maintenance._id)
-    setUpdateFormData({jobdate: maintenance.jobdate, code: maintenance.code, problem:maintenance.problem,
-      jobdetail:maintenance.jobdetail, rootcause: maintenance.rootcause, supplier:maintenance.supplier, status:maintenance.status,
-      cost:maintenance.cost, completiondate:maintenance.completiondate, jobtype:maintenance.jobtype
+    setUpdateFormData({
+      jobdate: formatDateTimeForInput(maintenance.jobdate), 
+      code: maintenance.code, 
+      problem:maintenance.problem,
+      jobdetail:maintenance.jobdetail, 
+      rootcause: maintenance.rootcause, 
+      supplier:maintenance.supplier, 
+      status:maintenance.status,
+      cost:maintenance.cost, 
+      completiondate: formatDateTimeForInput(maintenance.completiondate), 
+      jobtype:maintenance.jobtype
     })
     setOpenModalUpdateMaintenance(!openModalUpdateMaintenance)
     setErrorMessage(null)
@@ -434,11 +498,15 @@ const Maintenance = () => {
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
           <p className="text-sm font-semibold text-gray-500">Job Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.jobdate}</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
+            {formatDateTimeForDisplay(maintenance.jobdate)}
+          </p>
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-500">Completion Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.completiondate}</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
+            {formatDateTimeForDisplay(maintenance.completiondate)}
+          </p>
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-500">Status</p>
@@ -570,6 +638,26 @@ const Maintenance = () => {
 
   // 生成维护请求表格Excel文件 - 使用exceljs
   const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) => {
+    // 日期时间格式化函数
+    const formatDateTimeForMRF = (dateTimeString) => {
+      if (!dateTimeString) return '';
+      
+      try {
+        const date = new Date(dateTimeString);
+        if (isNaN(date.getTime())) return dateTimeString;
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+      } catch (error) {
+        return dateTimeString;
+      }
+    };
+    
     // 创建工作簿
     const workbook = new ExcelJS.Workbook()
     
@@ -660,8 +748,8 @@ const Maintenance = () => {
     // A5-B5: 当前用户名
     row5.getCell(1).value = currentUser.username || 'N/A'
     row5.getCell(1).font = defaultFont
-    // C5-D5: 作业日期
-    row5.getCell(3).value = maintenance.jobdate || 'N/A'
+    // C5-D5: 作业日期（带时间）
+    row5.getCell(3).value = formatDateTimeForMRF(maintenance.jobdate) || 'N/A'
     row5.getCell(3).font = defaultFont
     worksheet.mergeCells(`A${row5.number}:B${row5.number}`)
     worksheet.mergeCells(`C${row5.number}:D${row5.number}`)
@@ -724,8 +812,8 @@ const Maintenance = () => {
     // A13-B13: 供应商
     row13.getCell(1).value = maintenance.supplier || 'N/A'
     row13.getCell(1).font = defaultFont
-    // C13-D13: 完成日期
-    row13.getCell(3).value = maintenance.completiondate || 'N/A'
+    // C13-D13: 完成日期（带时间）
+    row13.getCell(3).value = formatDateTimeForMRF(maintenance.completiondate) || 'N/A'
     row13.getCell(3).font = defaultFont
     worksheet.mergeCells(`A${row13.number}:B${row13.number}`)
     worksheet.mergeCells(`C${row13.number}:D${row13.number}`)
@@ -1151,52 +1239,29 @@ const Maintenance = () => {
       const worksheet = workbook.addWorksheet(`Maintenance Jobs Report ${dateStr}`)
       
       // 设置工作表打印选项
-      const setupWorksheetPrint = (worksheet, options = {}) => {
-        const {
-          paperSize = 9,
-          orientation = 'landscape',
-          margins = {
-            left: 0.25,
-            right: 0.25,
-            top: 0.75,
-            bottom: 0.75,
-            header: 0.3,
-            footer: 0.3
-          },
-          horizontalCentered = true,
-          verticalCentered = false,
-          fitToPage = true,
-          fitToHeight = 1,
-          fitToWidth = 1,
-          scale = 100
-        } = options
-
-        worksheet.pageSetup = {
-          paperSize,
-          orientation,
-          margins,
-          horizontalCentered,
-          verticalCentered,
-          fitToPage,
-          fitToHeight,
-          fitToWidth,
-          scale,
-          showGridLines: false,
-          blackAndWhite: false
-        }
-      }
-      
       setupWorksheetPrint(worksheet, {
+        paperSize: 9,
+        orientation: 'landscape',
+        margins: {
+          left: 0.25,
+          right: 0.25,
+          top: 0.75,
+          bottom: 0.75,
+          header: 0.3,
+          footer: 0.3
+        },
+        horizontalCentered: true,
+        verticalCentered: false,
+        fitToPage: true,
         fitToHeight: 1,
         fitToWidth: 1,
-        horizontalCentered: true,
-        verticalCentered: false
+        scale: 100
       })
       
       // 设置列宽
       worksheet.columns = [
         { width: 5 },    // No.
-        { width: 12 },   // Job Date
+        { width: 15 },   // Job Date
         { width: 15 },   // Job Type
         { width: 15 },   // Item Code
         { width: 25 },   // Problem
@@ -1288,9 +1353,28 @@ const Maintenance = () => {
         }
       })
 
-      // 准备数据
+      // 准备数据 - 添加日期时间格式化
+      const formatDateTimeForExcel = (dateTimeString) => {
+        if (!dateTimeString) return '';
+        
+        try {
+          const date = new Date(dateTimeString);
+          if (isNaN(date.getTime())) return dateTimeString;
+          
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          
+          return `${year}-${month}-${day} ${hours}:${minutes}`;
+        } catch (error) {
+          return dateTimeString;
+        }
+      };
+
       const excelData = maintenances.map(maintenance => ({
-        'Job Date': maintenance.jobdate,
+        'Job Date': formatDateTimeForExcel(maintenance.jobdate),
         'Job Type': maintenance.jobtype,
         'Item Code': maintenance.code,
         'Problem': maintenance.problem,
@@ -1298,7 +1382,7 @@ const Maintenance = () => {
         'Root Cause': maintenance.rootcause,
         'Supplier': maintenance.supplier,
         'Cost': Number(maintenance.cost) || 0,
-        'Completion Date': maintenance.completiondate,
+        'Completion Date': formatDateTimeForExcel(maintenance.completiondate),
         'Status': maintenance.status,
         'Created At': new Date(maintenance.createdAt).toLocaleString('en-US', {
           year: 'numeric',
@@ -1307,7 +1391,7 @@ const Maintenance = () => {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false
-        }),
+        }).replace(',', ''),
         'Updated At': new Date(maintenance.updatedAt).toLocaleString('en-US', {
           year: 'numeric',
           month: '2-digit',
@@ -1315,7 +1399,7 @@ const Maintenance = () => {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false
-        })
+        }).replace(',', '')
       }))
 
       // 数据行
@@ -1604,7 +1688,7 @@ const Maintenance = () => {
           <TableBody>
             {currentMaintenances.map((maintenance) => (
               <TableRow key={maintenance._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                <TableCell className="align-middle">{maintenance.jobdate}</TableCell>
+                <TableCell className="align-middle">{formatDateTimeForDisplay(maintenance.jobdate)}</TableCell>
                 <TableCell className="align-middle">
                   <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                     content={
@@ -1658,7 +1742,7 @@ const Maintenance = () => {
                     </span>
                   </Popover>
                 </TableCell>
-                <TableCell className="align-middle">{maintenance.completiondate}</TableCell>
+                <TableCell className="align-middle">{formatDateTimeForDisplay(maintenance.completiondate)}</TableCell>
                 <TableCell className="align-middle">{maintenance.status}</TableCell>
                 <TableCell className="align-middle">
                   <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'  onClick={() => {handleUpdate(maintenance)}}>Edit</Button>
@@ -1745,7 +1829,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job date</Label>
-                <TextInput  type='date' id="jobdate"  onChange={handleChange} onFocus={handleFocus} required/>
+                <TextInput type='datetime-local' id="jobdate" onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -1780,7 +1864,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Completion date</Label>
-                <TextInput  type='date' id="completiondate"  onChange={handleChange} onFocus={handleFocus} required/>
+                <TextInput type='datetime-local' id="completiondate" onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -1852,7 +1936,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
-                <Select  value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                <Select value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                   <option></option>
                   {items.map((item) => (
                     <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
@@ -1865,7 +1949,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job date</Label>
-                <TextInput value={updateFormData.jobdate} type='date' id="jobdate"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <TextInput value={updateFormData.jobdate} type='datetime-local' id="jobdate" onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -1900,7 +1984,7 @@ const Maintenance = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Completion date</Label>
-                <TextInput value={updateFormData.completiondate}  type='date' id="completiondate"  onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <TextInput value={updateFormData.completiondate} type='datetime-local' id="completiondate" onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -1953,6 +2037,9 @@ const Maintenance = () => {
                 </p>
                 <p className="text-sm mt-1">
                   <span className="font-medium">Problem:</span> {selectedMaintenanceForMFR.problem.substring(0, 50)}...
+                </p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Job Date:</span> {formatDateTimeForDisplay(selectedMaintenanceForMFR.jobdate)}
                 </p>
               </div>
             )}
