@@ -47,18 +47,18 @@ const Maintenance = () => {
 
   // 将分钟转换为易读的时间格式
   const formatJobTime = (minutes) => {
-    if (minutes === null || minutes === undefined || minutes === 0) return '0分钟';
+    if (minutes === null || minutes === undefined || minutes === 0) return '0m';
     
     if (minutes < 60) {
-      return `${minutes}分钟`;
+      return `${minutes}m`;
     } else {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
       
       if (remainingMinutes === 0) {
-        return `${hours}小时`;
+        return `${hours}h`;
       } else {
-        return `${hours}小时${remainingMinutes}分钟`;
+        return `${hours}h${remainingMinutes}m`;
       }
     }
   };
