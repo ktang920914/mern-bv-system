@@ -22,6 +22,8 @@ const Maintenance = () => {
   const [updateFormData,setUpdateFormData] = useState({})
   const [extruders,setExtruders] = useState([])
   const [items,setItems] = useState([])
+  const [spareparts,setSpareparts] = useState([])
+  const [others,setOthers] = useState([])
   const [suppliers,setSuppliers] = useState([])
   const [maintenances,setMaintenances] = useState([])
   const [maintenanceIdToDelete,setMaintenanceIdToDelete] = useState('')
@@ -208,6 +210,42 @@ const Maintenance = () => {
       }
     }
     fetchItems()
+  },[currentUser._id])
+
+  useEffect(() => {
+    const fetchSpareparts = async () => {
+      try {
+        const res = await fetch('/api/other/getSpareparts')
+        const data = await res.json()
+        if(data.success === false){
+          console.log(data.message)
+        }
+        if(res.ok){
+          setSpareparts(data)
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+    }
+    fetchSpareparts()
+  },[currentUser._id])
+
+  useEffect(() => {
+    const fetchOthers = async () => {
+      try {
+        const res = await fetch('/api/rest/getOthers')
+        const data = await res.json()
+        if(data.success === false){
+          console.log(data.message)
+        }
+        if(res.ok){
+          setOthers(data)
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+    }
+    fetchOthers()
   },[currentUser._id])
 
   useEffect(() => {
@@ -1908,10 +1946,16 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                 <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
                   {extruders.map((extruder) => (
-                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                    <option key={extruder._id} value={extruder.code}>{`EXTRUDER ${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                   ))}
                   {items.map((item) => (
-                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                    <option key={item._id} value={item.code}>{`ITEM ${item.code} --- ${item.type} --- ${item.status}`}</option>
+                  ))}
+                  {spareparts.map((s) => (
+                    <option key={s._id} value={s.code}>{`SPAREPART ${s.code} --- ${s.type} --- ${s.status}`}</option>
+                  ))}
+                  {others.map((o) => (
+                    <option key={o._id} value={o.code}>{`OTHER ${o.code} --- ${o.type} --- ${o.status}`}</option>
                   ))}
                 </Select>
               </div>
@@ -2030,10 +2074,16 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                 <Select value={updateFormData.code} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
                   <option></option>
                   {items.map((item) => (
-                    <option key={item._id} value={item.code}>{`${item.code} --- ${item.type} --- ${item.status}`}</option>
+                    <option key={item._id} value={item.code}>{`ITEM ${item.code} --- ${item.type} --- ${item.status}`}</option>
+                  ))}
+                  {spareparts.map((s) => (
+                    <option key={s._id} value={s.code}>{`SPAREPART ${s.code} --- ${s.type} --- ${s.status}`}</option>
                   ))}
                   {extruders.map((extruder) => (
-                    <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                    <option key={extruder._id} value={extruder.code}>{`EXTRUDER ${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                  ))}
+                  {others.map((o) => (
+                    <option key={o._id} value={o.code}>{`OTHER ${o.code} --- ${o.type} --- ${o.status}`}</option>
                   ))}
                 </Select>
               </div>
