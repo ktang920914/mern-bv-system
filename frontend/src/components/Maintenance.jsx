@@ -2181,6 +2181,82 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
         </ModalHeader>
         <ModalBody>
           {/* ... 保存状态显示内容 ... */}
+          <div className="space-y-4">
+            {/* 状态图标 */}
+            <div className="flex justify-center">
+              {mfrSaveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              )}
+              {mfrSaveStatus === 'success' && (
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              )}
+              {mfrSaveStatus === 'error' && (
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* 消息 */}
+            <p className="text-center text-gray-700 dark:text-gray-300">
+              {mfrSaveMessage}
+            </p>
+            
+            {/* 详细信息 - 修复长文本超出问题 */}
+            {mfrSaveDetails.fileName && (
+              <div className={`p-3 rounded-lg ${
+                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+              }`}>
+                <p className="text-sm font-semibold mb-2">Document information:</p>
+                
+                {/* 文件名 - 不超出容器 */}
+                <div className="mb-2">
+                  <span className="text-sm font-medium">File name:</span>
+                  <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                    {mfrSaveDetails.fileName}
+                  </div>
+                </div>
+                
+                {/* 文件路径 - 不超出容器 */}
+                {mfrSaveDetails.path && (
+                  <div>
+                    <span className="text-sm font-medium">File path:</span>
+                    <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                      {mfrSaveDetails.path}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 错误时的额外选项 */}
+            {mfrSaveStatus === 'error' && (
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Failed to save into server, Please save as manual into server
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className='cursor-pointer'
+                    fullSized 
+                    color="blue" 
+                    onClick={handleManualMFRDownload}
+                  >
+                    Download manual
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)\MRF Forms
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </ModalBody>
         <ModalFooter>
           {mfrSaveStatus === 'saving' ? (
@@ -2236,6 +2312,82 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
         </ModalHeader>
         <ModalBody>
           {/* ... 保存状态显示内容 ... */}
+          <div className="space-y-4">
+            {/* 状态图标 */}
+            <div className="flex justify-center">
+              {saveStatus === 'saving' && (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              )}
+              {saveStatus === 'success' && (
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* 消息 */}
+            <p className="text-center text-gray-700 dark:text-gray-300">
+              {saveMessage}
+            </p>
+            
+            {/* 详细信息 - 修复长文本超出问题 */}
+            {saveDetails.fileName && (
+              <div className={`p-3 rounded-lg ${
+                theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
+              }`}>
+                <p className="text-sm font-semibold mb-2">Document information:</p>
+                
+                {/* 文件名 - 不超出容器 */}
+                <div className="mb-2">
+                  <span className="text-sm font-medium">File name:</span>
+                  <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                    {saveDetails.fileName}
+                  </div>
+                </div>
+                
+                {/* 文件路径 - 不超出容器 */}
+                {saveDetails.path && (
+                  <div>
+                    <span className="text-sm font-medium">File path:</span>
+                    <div className="text-sm mt-0.5 break-all break-words overflow-hidden">
+                      {saveDetails.path}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 错误时的额外选项 */}
+            {saveStatus === 'error' && (
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Failed to save into server, Please save as manual into server
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className='cursor-pointer'
+                    fullSized 
+                    color="blue" 
+                    onClick={handleManualDownload}
+                  >
+                    Download manual
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    File path: Z:\Document\FACTORY DEPT\Maintenance Department (MAINT)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </ModalBody>
         <ModalFooter>
           {saveStatus === 'saving' ? (
