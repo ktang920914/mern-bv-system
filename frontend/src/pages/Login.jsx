@@ -87,9 +87,9 @@ const Login = () => {
                             className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
                         >
                             {showPassword ? (
-                                <HiEyeOff size={20} /> // 如果显示密码，显示"闭眼"图标
+                                <HiEye size={20} /> // 如果显示密码，显示"闭眼"图标
                             ) : (
-                                <HiEye size={20} />    // 如果隐藏密码，显示"睁眼"图标
+                                <HiEyeOff size={20} />    // 如果隐藏密码，显示"睁眼"图标
                             )}
                         </button>
                     </div>
