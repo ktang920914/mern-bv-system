@@ -2,6 +2,8 @@ import { Button, Label, TextInput, Alert, Spinner } from 'flowbite-react'
 import { useNavigate } from 'react-router-dom'
 import useUserstore from '../store'
 import { useEffect, useState } from 'react'
+// 1. 引入图标 (这里使用 HeroIcons，风格和 Flowbite 很搭)
+import { HiEye, HiEyeOff } from 'react-icons/hi' 
 
 const Login = () => {
 
@@ -9,6 +11,8 @@ const Login = () => {
     const [formData,setFormData] = useState({})
     const [errorMessage,setErrorMessage] = useState(null)
     const [loading,setLoading] = useState(false)
+    // 2. 添加控制密码显示的 state
+    const [showPassword, setShowPassword] = useState(false) 
     const {signInSuccess} = useUserstore()
 
     const handleChange = (e) => {
@@ -20,6 +24,11 @@ const Login = () => {
         setLoading(false)
     }
 
+    // 3. 切换密码显示的函数
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword)
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         
@@ -28,6 +37,7 @@ const Login = () => {
             return
         }
         try {
+            // ... (保持原有的 fetch 逻辑不变)
             const res = await fetch('/api/auth/login',{
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
@@ -58,9 +68,31 @@ const Login = () => {
                     <TextInput type='text' id='username' placeholder='Enter username' onChange={handleChange} onFocus={handleFocus}/>
                 </div>
 
+                {/* 4. 修改 Password 部分 */}
                 <div className='mt-4'>
                     <Label value='Password'/>
-                    <TextInput type='password' id='password' placeholder='Enter password' onChange={handleChange} onFocus={handleFocus}/>
+                    <div className='relative'>
+                        <TextInput 
+                            // 动态切换 type
+                            type={showPassword ? 'text' : 'password'} 
+                            id='password' 
+                            placeholder='Enter password' 
+                            onChange={handleChange} 
+                            onFocus={handleFocus}
+                        />
+                        {/* 绝对定位的图标按钮 */}
+                        <button
+                            type="button" // 必须加上 type="button"，防止触发表单提交
+                            onClick={togglePasswordVisibility}
+                            className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
+                        >
+                            {showPassword ? (
+                                <HiEyeOff size={20} /> // 如果显示密码，显示"闭眼"图标
+                            ) : (
+                                <HiEye size={20} />    // 如果隐藏密码，显示"睁眼"图标
+                            )}
+                        </button>
+                    </div>
                 </div>
                 
                 <Button className='w-full mt-4 cursor-pointer' type='submit' disabled={loading}>
