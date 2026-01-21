@@ -109,43 +109,64 @@ const Dashboard = () => {
     return parseFloat(num.toFixed(2));
   }
 
-  // 获取 Outputs 可用的 Job Code 列表
+  // --- 修改重点 1: 获取 Outputs 可用的 Job Code ---
+  // 依赖加入了 displayYear，且在前端强制过滤年份
   useEffect(() => {
     const fetchOutputAvailableCodes = async () => {
       try {
-        const res = await fetch('/api/analysis/getjobs');
+        // 尝试传参 (假设后端将来支持)，即使后端不支持，下面也会有前端过滤兜底
+        const res = await fetch(`/api/analysis/getjobs?year=${displayYear}`);
         const data = await res.json();
-        if (res.ok) {
-          const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
+        
+        if (res.ok && Array.isArray(data)) {
+          // 前端强制过滤：只保留 starttime 是当前年份的数据
+          const currentYearJobs = data.filter(item => 
+            item.starttime && item.starttime.startsWith(displayYear)
+          );
+
+          const jobCodes = [...new Set(currentYearJobs.map(item => item.code))].filter(Boolean);
           setOutputAvailableCodes(jobCodes);
+
+          // 自动清理：如果已选的 code 在新的一年不存在，则移除
+          setSelectedCodes(prev => prev.filter(code => jobCodes.includes(code)));
         }
       } catch (error) {
         console.error('Error fetching output job codes:', error);
-        setOutputAvailableCodes(jobCodeOptions);
+        setOutputAvailableCodes([]); // 出错重置
       }
     };
     fetchOutputAvailableCodes();
-  }, []);
+  }, [displayYear]); // 依赖 displayYear
 
-  // 获取 Cases 可用的 Job Code 列表
+  // --- 修改重点 2: 获取 Cases 可用的 Job Code ---
   useEffect(() => {
     const fetchCasesAvailableCodes = async () => {
       try {
-        const res = await fetch('/api/maintenance/getmaintenances');
+        // 这里使用 maintenance 接口来获取列表
+        const res = await fetch(`/api/maintenance/getmaintenances?year=${displayYear}`);
         const data = await res.json();
-        if (res.ok) {
-          const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
+        
+        if (res.ok && Array.isArray(data)) {
+          // 前端双重保险过滤
+          const currentYearCases = data.filter(item => 
+            item.jobdate && (item.jobdate.startsWith(displayYear) || item.jobdate.includes(displayYear))
+          );
+
+          const jobCodes = [...new Set(currentYearCases.map(item => item.code))].filter(Boolean);
           setCasesAvailableCodes(jobCodes);
+
+          // 自动清理：如果已选的 code 在新的一年不存在，则移除
+          setCasesSelectedCodes(prev => prev.filter(code => jobCodes.includes(code)));
         }
       } catch (error) {
         console.error('Error fetching cases job codes:', error);
-        setCasesAvailableCodes(jobCodeOptions);
+        setCasesAvailableCodes([]);
       }
     };
     fetchCasesAvailableCodes();
-  }, []);
+  }, [displayYear]); // 依赖 displayYear
 
-  // 当年份改变时重新获取所有数据
+  // 当年份改变时重新获取所有 Dashboard 数据
   useEffect(() => {
     fetchDashboardData()
   }, [displayYear])
@@ -230,7 +251,7 @@ const Dashboard = () => {
     }
   }
 
-  // 修改后的 fetchCasesData 函数，支持静默更新
+  // 支持静默更新 Cases 数据
   const fetchCasesData = async (silent = false) => {
     try {
       if (!silent) {
@@ -260,7 +281,7 @@ const Dashboard = () => {
     }
   }
 
-  // 修改后的 handleUpdateCasesStats 函数，支持静默更新
+  // 支持静默更新统计 (如果是手动触发按钮)
   const handleUpdateCasesStats = async (silent = false) => {
     try {
       if (!silent) {
@@ -295,9 +316,9 @@ const Dashboard = () => {
     }
   }
 
-  // 在组件加载和依赖变化时自动更新 Cases 数据
+  // 初始加载触发一次静默更新
   useEffect(() => {
-    handleUpdateCasesStats(true) // 静默更新
+    handleUpdateCasesStats(true) 
   }, [displayYear, casesSelectedCodes])
 
   // 处理函数
@@ -338,7 +359,7 @@ const Dashboard = () => {
 
   const clearCasesSelectedCodes = () => setCasesSelectedCodes([])
 
-  // 修复后的图表数据准备函数
+  // 图表数据准备函数
   const prepareOutputsChartData = () => {
     if (outputsData.length === 0) return null
     const selectedData = outputsData.find(output => output.dataType === selectedOutputDataType)
@@ -350,16 +371,13 @@ const Dashboard = () => {
       return formatNumber(value)
     })
 
-    // 修复后的饼图插件配置
     const piePlugins = {
       legend: { 
         position: 'top',
         labels: {
           usePointStyle: true,
           padding: 15,
-          font: {
-            size: 11
-          }
+          font: { size: 11 }
         }
       },
       tooltip: {
@@ -368,7 +386,6 @@ const Dashboard = () => {
             const label = context.label || '';
             const value = context.raw || 0;
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            // 修复：处理浮点数精度
             const roundedValue = formatNumber(value);
             const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
             return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
@@ -407,9 +424,7 @@ const Dashboard = () => {
           y: { 
             beginAtZero: true,
             ticks: {
-              callback: function(value) {
-                return formatNumber(value);
-              }
+              callback: function(value) { return formatNumber(value); }
             }
           } 
         } : undefined
@@ -444,16 +459,13 @@ const Dashboard = () => {
       return formatNumber(value)
     })
 
-    // 修复后的饼图插件配置
     const piePlugins = {
       legend: { 
         position: 'top',
         labels: {
           usePointStyle: true,
           padding: 15,
-          font: {
-            size: 11
-          }
+          font: { size: 11 }
         }
       },
       tooltip: {
@@ -462,7 +474,6 @@ const Dashboard = () => {
             const label = context.label || '';
             const value = context.raw || 0;
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            // 修复：处理浮点数精度
             const roundedValue = formatNumber(value);
             const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
             return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
@@ -501,9 +512,7 @@ const Dashboard = () => {
           y: { 
             beginAtZero: true,
             ticks: {
-              callback: function(value) {
-                return formatNumber(value);
-              }
+              callback: function(value) { return formatNumber(value); }
             }
           } 
         } : undefined
@@ -539,16 +548,13 @@ const Dashboard = () => {
       return formatNumber(value)
     })
 
-    // 修复后的饼图插件配置
     const piePlugins = {
       legend: { 
         position: 'top',
         labels: {
           usePointStyle: true,
           padding: 15,
-          font: {
-            size: 11
-          }
+          font: { size: 11 }
         }
       },
       tooltip: {
@@ -557,7 +563,6 @@ const Dashboard = () => {
             const label = context.label || '';
             const value = context.raw || 0;
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            // 修复：处理浮点数精度
             const roundedValue = formatNumber(value);
             const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
             return `${label}: ${roundedValue} (${percentage.toFixed(1)}%)`;
@@ -596,9 +601,7 @@ const Dashboard = () => {
           y: { 
             beginAtZero: true,
             ticks: {
-              callback: function(value) {
-                return formatNumber(value);
-              }
+              callback: function(value) { return formatNumber(value); }
             }
           } 
         } : undefined
