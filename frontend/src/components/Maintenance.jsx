@@ -33,7 +33,7 @@ const Maintenance = () => {
   const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [itemsPage] = useState(10)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  
+   
   // MFR 保存状态
   const [mfrSaveStatus, setMfrSaveStatus] = useState('')
   const [mfrSaveMessage, setMfrSaveMessage] = useState('')
@@ -620,7 +620,7 @@ const Maintenance = () => {
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-500">Job Time</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
+          <p className={`font-bold ${(maintenance.jobtime || 0) > 360 ? 'text-red-500' : 'text-green-500'}`}>
             {formatJobTime(maintenance.jobtime)}
           </p>
         </div>
@@ -753,7 +753,6 @@ const Maintenance = () => {
   }
 
   // 生成维护请求表格Excel文件
-  // 生成维护请求表格Excel文件
 const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) => {
   const formatDateTimeForMRF = (dateTimeString) => {
     if (!dateTimeString) return '';
@@ -773,10 +772,10 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
       return dateTimeString;
     }
   };
-  
+   
   const workbook = new ExcelJS.Workbook()
   const worksheet = workbook.addWorksheet('Maintenance Request Form')
-  
+   
   setupWorksheetPrint(worksheet, {
     fitToHeight: 1,
     fitToWidth: 1,
@@ -791,7 +790,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
       footer: 0.3
     }
   })
-  
+   
   worksheet.columns = [
     { width: 4.45 },
     { width: 40.67 },
@@ -814,7 +813,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
 
   // 开始创建表格行
   let rowIndex = 1
-  
+   
   // 第1行: 公司名称和文档编号
   const row1 = worksheet.getRow(rowIndex++)
   row1.height = 16.5
@@ -825,14 +824,14 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row1.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
   row1.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' }
   worksheet.mergeCells(`A${row1.number}:C${row1.number}`)
-  
+   
   // 第2行: 空行和修订号
   const row2 = worksheet.getRow(rowIndex++)
   row2.height = 17.3
   row2.getCell(4).value = 'Rev.20170612'
   row2.getCell(4).font = smallFont
   row2.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' }
-  
+   
   // 第3行: 标题
   const row3 = worksheet.getRow(rowIndex++)
   row3.height = 29.3
@@ -840,7 +839,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row3.getCell(1).font = titleFont
   row3.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
   worksheet.mergeCells(`A${row3.number}:D${row3.number}`)
-  
+   
   // 第4行: 请求人和日期/时间
   const row4 = worksheet.getRow(rowIndex++)
   row4.height = 16.5
@@ -850,7 +849,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row4.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row4.number}:B${row4.number}`)
   worksheet.mergeCells(`C${row4.number}:D${row4.number}`)
-  
+   
   // 第5行: 填写请求人和日期/时间
   const row5 = worksheet.getRow(rowIndex++)
   row5.height = 16.5
@@ -862,14 +861,14 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row5.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row5.number}:B${row5.number}`)
   worksheet.mergeCells(`C${row5.number}:D${row5.number}`)
-  
+   
   // 第6行: 机器/项目
   const row6 = worksheet.getRow(rowIndex++)
   row6.height = 16.5
   row6.getCell(1).value = 'MACHINE / ITEM:'
   row6.getCell(1).font = headerFont
   worksheet.mergeCells(`A${row6.number}:D${row6.number}`)
-  
+   
   // 第7行: 填写机器/项目
   const row7 = worksheet.getRow(rowIndex++)
   row7.height = 16.5
@@ -878,7 +877,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row7.getCell(1).value = itemInfo
   row7.getCell(1).font = defaultFont
   worksheet.mergeCells(`A${row7.number}:D${row7.number}`)
-  
+   
   // 第8行: 编号和问题描述
   const row8 = worksheet.getRow(rowIndex++)
   row8.height = 16.5
@@ -893,18 +892,18 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row9.height = 16.5
   worksheet.mergeCells(`A${row9.number}:A${row9.number + 2}`)
   worksheet.mergeCells(`B${row9.number}:D${row9.number + 2}`)
-  
+   
   // 在B9单元格填写问题描述
   row9.getCell(2).value = maintenance.problem || 'No problem description provided'
   row9.getCell(2).font = defaultFont
   row9.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
-  
+   
   // 设置第10-11行的行高
   const row10 = worksheet.getRow(rowIndex++)
   row10.height = 16.5
   const row11 = worksheet.getRow(rowIndex++)
   row11.height = 16.5
-  
+   
   // 第12行: 处理人和日期/时间
   const row12 = worksheet.getRow(rowIndex++)
   row12.height = 16.5
@@ -914,7 +913,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row12.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row12.number}:B${row12.number}`)
   worksheet.mergeCells(`C${row12.number}:D${row12.number}`)
-  
+   
   // 第13行: 填写处理人和完成日期
   const row13 = worksheet.getRow(rowIndex++)
   row13.height = 16.5
@@ -926,7 +925,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row13.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row13.number}:B${row13.number}`)
   worksheet.mergeCells(`C${row13.number}:D${row13.number}`)
-  
+   
   // 第14行: 编号、根本原因和纠正措施
   const row14 = worksheet.getRow(rowIndex++)
   row14.height = 16.5
@@ -960,7 +959,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row16.height = 16.5
   const row17 = worksheet.getRow(rowIndex++)
   row17.height = 16.5
-  
+   
   // 第18行: 预防措施评论
   const row18 = worksheet.getRow(rowIndex++)
   row18.height = 16.5
@@ -972,13 +971,13 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   const row19 = worksheet.getRow(rowIndex++)
   row19.height = 16.5
   worksheet.mergeCells(`A${row19.number}:D${row19.number + 2}`)
-  
+   
   // 设置第20-21行的行高
   const row20 = worksheet.getRow(rowIndex++)
   row20.height = 16.5
   const row21 = worksheet.getRow(rowIndex++)
   row21.height = 16.5
-  
+   
   // 第22行: 检查人和验证人
   const row22 = worksheet.getRow(rowIndex++)
   row22.height = 16.5
@@ -988,7 +987,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row22.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row22.number}:B${row22.number}`)
   worksheet.mergeCells(`C${row22.number}:D${row22.number}`)
-  
+   
   // 第23-24行: 空行
   worksheet.mergeCells(`A${rowIndex}:B${rowIndex + 1}`)
   worksheet.mergeCells(`C${rowIndex}:D${rowIndex + 1}`)
@@ -997,7 +996,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
     const row = worksheet.getRow(rowIndex++)
     row.height = 16.5
   }
-  
+   
   // 第25行: 状态和评论
   const row25 = worksheet.getRow(rowIndex++)
   row25.height = 16.5
@@ -1007,7 +1006,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row25.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row25.number}:B${row25.number}`)
   worksheet.mergeCells(`C${row25.number}:D${row25.number}`)
-  
+   
   // 第26-28行: 状态选项
   const row26 = worksheet.getRow(rowIndex++)
   row26.height = 16.5
@@ -1017,7 +1016,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row26.getCell(2).border = borderStyle
   row26.getCell(3).border = borderStyle
   row26.getCell(4).border = borderStyle
-  
+   
   const row27 = worksheet.getRow(rowIndex++)
   row27.height = 16.5
   row27.getCell(2).value = 'Job completed and need follow-up'
@@ -1026,7 +1025,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row27.getCell(2).border = borderStyle
   row27.getCell(3).border = borderStyle
   row27.getCell(4).border = borderStyle
-  
+   
   const row28 = worksheet.getRow(rowIndex++)
   row28.height = 16.5
   row28.getCell(2).value = 'Job not completed'
@@ -1035,14 +1034,14 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row28.getCell(2).border = borderStyle
   row28.getCell(3).border = borderStyle
   row28.getCell(4).border = borderStyle
-  
+   
   // 第29行: 空行
   const row29 = worksheet.getRow(rowIndex++)
   row29.height = 16.5
   worksheet.mergeCells(`A${row29.number}:B${row29.number}`)
 
   worksheet.mergeCells(`C${row26.number}:D${row29.number}`)
-  
+   
   // 第30行: 保留期限和处理方法
   const row30 = worksheet.getRow(rowIndex++)
   row30.height = 16.5
@@ -1053,7 +1052,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row30.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' }
   worksheet.mergeCells(`A${row30.number}:B${row30.number}`)
   worksheet.mergeCells(`C${row30.number}:D${row30.number}`)
-  
+   
   // 第31行: 空行
   const row31 = worksheet.getRow(rowIndex++)
   row31.height = 18
@@ -1069,14 +1068,14 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row32.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
   row32.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' }
   worksheet.mergeCells(`A${row32.number}:C${row32.number}`)
-  
+   
   // 第33行: 空行和修订号
   const row33 = worksheet.getRow(rowIndex++)
   row33.height = 17.3
   row33.getCell(4).value = 'Rev.20170612'
   row33.getCell(4).font = smallFont
   row33.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' }
-  
+   
   // 第34行: 标题
   const row34 = worksheet.getRow(rowIndex++)
   row34.height = 29.3
@@ -1084,7 +1083,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row34.getCell(1).font = titleFont
   row34.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
   worksheet.mergeCells(`A${row34.number}:D${row34.number}`)
-  
+   
   // 第35行: 请求人和日期/时间（空白）
   const row35 = worksheet.getRow(rowIndex++)
   row35.height = 16.5
@@ -1094,7 +1093,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row35.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row35.number}:B${row35.number}`)
   worksheet.mergeCells(`C${row35.number}:D${row35.number}`)
-  
+   
   // 第36行: 填写请求人和日期/时间（空白）
   const row36 = worksheet.getRow(rowIndex++)
   row36.height = 16.5
@@ -1104,21 +1103,21 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row36.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row36.number}:B${row36.number}`)
   worksheet.mergeCells(`C${row36.number}:D${row36.number}`)
-  
+   
   // 第37行: 机器/项目
   const row37 = worksheet.getRow(rowIndex++)
   row37.height = 16.5
   row37.getCell(1).value = 'MACHINE / ITEM:'
   row37.getCell(1).font = headerFont
   worksheet.mergeCells(`A${row37.number}:D${row37.number}`)
-  
+   
   // 第38行: 填写机器/项目（空白）
   const row38 = worksheet.getRow(rowIndex++)
   row38.height = 16.5
   row38.getCell(1).value = ''
   row38.getCell(1).font = defaultFont
   worksheet.mergeCells(`A${row38.number}:D${row38.number}`)
-  
+   
   // 第39行: 编号和问题描述
   const row39 = worksheet.getRow(rowIndex++)
   row39.height = 16.5
@@ -1133,16 +1132,16 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row40.height = 16.5
   worksheet.mergeCells(`A${row40.number}:A${row40.number + 2}`)
   worksheet.mergeCells(`B${row40.number}:D${row40.number + 2}`)
-  
+   
   row40.getCell(2).value = ''
   row40.getCell(2).font = defaultFont
   row40.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
-  
+   
   const row41 = worksheet.getRow(rowIndex++)
   row41.height = 16.5
   const row42 = worksheet.getRow(rowIndex++)
   row42.height = 16.5
-  
+   
   // 第43行: 处理人和日期/时间
   const row43 = worksheet.getRow(rowIndex++)
   row43.height = 16.5
@@ -1152,7 +1151,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row43.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row43.number}:B${row43.number}`)
   worksheet.mergeCells(`C${row43.number}:D${row43.number}`)
-  
+   
   // 第44行: 填写处理人和完成日期（空白）
   const row44 = worksheet.getRow(rowIndex++)
   row44.height = 16.5
@@ -1162,7 +1161,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row44.getCell(3).font = defaultFont
   worksheet.mergeCells(`A${row44.number}:B${row44.number}`)
   worksheet.mergeCells(`C${row44.number}:D${row44.number}`)
-  
+   
   // 第45行: 编号、根本原因和纠正措施
   const row45 = worksheet.getRow(rowIndex++)
   row45.height = 16.5
@@ -1193,7 +1192,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row47.height = 16.5
   const row48 = worksheet.getRow(rowIndex++)
   row48.height = 16.5
-  
+   
   // 第49行: 预防措施评论
   const row49 = worksheet.getRow(rowIndex++)
   row49.height = 16.5
@@ -1205,12 +1204,12 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   const row50 = worksheet.getRow(rowIndex++)
   row50.height = 16.5
   worksheet.mergeCells(`A${row50.number}:D${row50.number + 2}`)
-  
+   
   const row51 = worksheet.getRow(rowIndex++)
   row51.height = 16.5
   const row52 = worksheet.getRow(rowIndex++)
   row52.height = 16.5
-  
+   
   // 第53行: 检查人和验证人
   const row53 = worksheet.getRow(rowIndex++)
   row53.height = 16.5
@@ -1220,7 +1219,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row53.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row53.number}:B${row53.number}`)
   worksheet.mergeCells(`C${row53.number}:D${row53.number}`)
-  
+   
   // 第54-55行: 空行
   worksheet.mergeCells(`A${rowIndex}:B${rowIndex + 1}`)
   worksheet.mergeCells(`C${rowIndex}:D${rowIndex + 1}`)
@@ -1229,7 +1228,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
     const row = worksheet.getRow(rowIndex++)
     row.height = 16.5
   }
-  
+   
   // 第56行: 状态和评论
   const row56 = worksheet.getRow(rowIndex++)
   row56.height = 16.5
@@ -1239,7 +1238,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row56.getCell(3).font = headerFont
   worksheet.mergeCells(`A${row56.number}:B${row56.number}`)
   worksheet.mergeCells(`C${row56.number}:D${row56.number}`)
-  
+   
   // 第57-59行: 状态选项
   const row57 = worksheet.getRow(rowIndex++)
   row57.height = 16.5
@@ -1249,7 +1248,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row57.getCell(2).border = borderStyle
   row57.getCell(3).border = borderStyle
   row57.getCell(4).border = borderStyle
-  
+   
   const row58 = worksheet.getRow(rowIndex++)
   row58.height = 16.5
   row58.getCell(2).value = 'Job completed and need follow-up'
@@ -1258,7 +1257,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row58.getCell(2).border = borderStyle
   row58.getCell(3).border = borderStyle
   row58.getCell(4).border = borderStyle
-  
+   
   const row59 = worksheet.getRow(rowIndex++)
   row59.height = 16.5
   row59.getCell(2).value = 'Job not completed'
@@ -1267,14 +1266,14 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   row59.getCell(2).border = borderStyle
   row59.getCell(3).border = borderStyle
   row59.getCell(4).border = borderStyle
-  
+   
   // 第60行: 空行
   const row60 = worksheet.getRow(rowIndex++)
   row60.height = 16.5
   worksheet.mergeCells(`A${row60.number}:B${row60.number}`)
 
   worksheet.mergeCells(`C${row57.number}:D${row60.number}`)
-  
+   
   // 第61行: 保留期限和处理方法
   const row61 = worksheet.getRow(rowIndex++)
   row61.height = 16.5
@@ -1311,13 +1310,13 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   const blob = new Blob([buffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
   })
-  
+   
   const now = new Date()
   const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_')
   const timeStr = now.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
-  
+   
   const fileName = `Maintenance_Request_Form_${maintenance.code}_${dateStr}_${timeStr}.xlsx`
-  
+   
   if (returnBlob) {
     return { blob, fileName }
   } else {
@@ -1549,6 +1548,18 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
           // 为成本列添加货币格式
           if (colIndex === 8) {
             cell.numFmt = '#,##0.00'
+          }
+
+          // 为 Job Time 列添加颜色 (Index 10)
+          if (colIndex === 10) {
+            const rawMinutes = maintenances[index].jobtime || 0;
+            if (rawMinutes > 360) {
+              // 超过 6 小时：红色
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FFFF0000' } };
+            } else {
+              // 不超过 6 小时：青色 (Cyan - 接近 Tailwind 的 Cyan-600)
+              cell.font = { ...defaultFont, bold: true, color: { argb: 'FF0891B2' } };
+            }
           }
           
           // 为状态列添加颜色
@@ -1869,7 +1880,12 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                   </Popover>
                 </TableCell>
                 <TableCell className="align-middle">{formatDateTimeForDisplay(maintenance.completiondate)}</TableCell>
-                <TableCell className="align-middle">{formatDuration(maintenance.jobtime)}</TableCell>
+                
+                {/* 桌面端 Job Time 颜色修改 */}
+                <TableCell className={`align-middle font-bold ${(maintenance.jobtime || 0) > 360 ? 'text-red-500' : 'text-green-500'}`}>
+                    {formatDuration(maintenance.jobtime)}
+                </TableCell>
+
                 <TableCell className="align-middle">{maintenance.status}</TableCell>
                 <TableCell className="align-middle">
                   <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'  onClick={() => {handleUpdate(maintenance)}}>Edit</Button>
