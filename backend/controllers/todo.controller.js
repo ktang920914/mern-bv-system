@@ -264,7 +264,7 @@ export const updateTodo = async (req, res, next) => {
       const newActivity = new Activity({
         date: currentDate,
         activity: 'Update todo instance',
-        detail: `${req.user.username} updated instance date/status: ${req.params.todoId}`
+        detail: `${req.user.username}`
       });
       await newActivity.save();
 
@@ -313,7 +313,7 @@ export const updateTodo = async (req, res, next) => {
     const newActivity = new Activity({
       date: currentDate,
       activity: 'Update todo',
-      detail: `${req.user.username} updated main todo: ${req.params.todoId}`
+      detail: `${req.user.username}`
     });
     await newActivity.save();
     
