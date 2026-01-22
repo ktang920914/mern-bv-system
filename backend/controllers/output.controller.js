@@ -28,35 +28,35 @@ export const calculateOutputs = async (req, res, next) => {
             return res.status(400).json({ error: 'Year and data parameters are required' });
         }
         
+        // --- 核心优化部分 START ---
         // 构建查询条件
+        // 直接在数据库层面筛选：只查找 endtime 以指定年份 (e.g., "2025") 开头的数据
+        // 这样可以避免把整个数据库几年的数据都拉取到内存中
         let query = {
             endtime: {
                 $exists: true,
-                $ne: null
+                $ne: null,
+                $regex: `^${year}` // 正则匹配：例如 ^2025 匹配所有2025年的完工时间
             }
         };
+        // --- 核心优化部分 END ---
         
         // 如果提供了 Job Code，添加到查询条件
         if (codes && codes !== '') {
+            // 如果 codes 包含逗号，说明是多选；如果没有，就是一个单项数组
             const codeArray = codes.split(',');
             query.code = { $in: codeArray };
         }
         
-        // 获取符合条件的Job数据
-        const jobs = await Job.find(query);
+        // 获取符合条件的Job数据 (只获取当年的数据，量小且快)
+        const yearJobs = await Job.find(query);
         
-        // 过滤出指定年份的jobs
-        const yearJobs = jobs.filter(job => {
-            if (!job.endtime) return false;
-            const endTime = new Date(job.endtime);
-            return endTime.getFullYear() === parseInt(year);
-        });
-        
-        // 如果没有找到数据
+        // 如果没有找到数据，返回全0结构
         if (yearJobs.length === 0) {
             return res.status(200).json([{
                 year,
-                material: dataTypes.find(dt => dt.value === data)?.label || data,
+                dataType: data,
+                dataTypeLabel: dataTypes.find(dt => dt.value === data)?.label || data,
                 jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0,
                 jul: 0, aug: 0, sep: 0, oct: 0, nov: 0, dec: 0,
                 total: 0
@@ -76,63 +76,64 @@ export const calculateOutputs = async (req, res, next) => {
         // 特殊处理 wastage：只累加正值
         const isWastage = data === 'wastage';
         
-        // 初始化计数器和总和（用于计算平均值）
+        // 初始化计数器（用于计算平均值）
         const monthlyCounts = {
             jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0,
             jul: 0, aug: 0, sep: 0, oct: 0, nov: 0, dec: 0
         };
         
+        // 月份键名映射数组
+        const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+                          'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
         // 处理每个Job
         yearJobs.forEach(job => {
-            // 获取月份 (0-11)
+            // 确保使用 endtime (Prod End) 来确定月份归属
             const endTime = new Date(job.endtime);
-            const month = endTime.getMonth();
+            const monthIndex = endTime.getMonth(); // 0 = Jan, 1 = Feb...
             
-            // 映射月份到键名
-            const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
-                              'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-            const monthKey = monthKeys[month];
-            
-            // 获取当前Job的数据值
-            let value = job[data];
-            if (value === undefined || value === null) {
-                value = 0;
-            }
-            
-            // 如果是 wastage，只累加正值
-            if (isWastage) {
-                // 只累加大于 0 的值
-                if (value > 0) {
+            // 安全检查：确保月份有效
+            if (monthIndex >= 0 && monthIndex < 12) {
+                const monthKey = monthKeys[monthIndex];
+                
+                // 获取当前Job的数据值，确保转为数字
+                let value = job[data];
+                value = (value === undefined || value === null || value === '') ? 0 : Number(value);
+                
+                // 根据数据类型处理逻辑
+                if (isWastage) {
+                    // Wastage 规则：只累加大于 0 的值
+                    if (value > 0) {
+                        monthlyData[monthKey] += value;
+                    }
+                } else if (isAverage) {
+                    // 平均值规则：
+                    // 这里可以根据业务调整：是否要把 0 值计入平均分母？
+                    // 通常如果是 OEE, Availability 等，0 可能代表有数据但是是0，或者没跑数据。
+                    // 这里保守处理：只要该条记录存在，就计入（除非你需要过滤掉0值）
+                    monthlyData[monthKey] += value;
+                    monthlyCounts[monthKey]++;
+                } else {
+                    // 总和规则 (Total Output, Operating Time 等)：直接累加
                     monthlyData[monthKey] += value;
                 }
-                // 如果 value <= 0，直接忽略（不累加）
-            } else if (isAverage) {
-                // 对于平均值数据类型，累加值和计数
-                monthlyData[monthKey] += value;
-                monthlyCounts[monthKey]++;
-            } else {
-                // 对于其他总和数据类型，直接累加
-                monthlyData[monthKey] += value;
             }
         });
         
-        // 如果是平均值数据类型，计算每月平均值
+        // 后处理：计算平均值并格式化数字
         if (isAverage) {
+            // 计算每月平均值
             for (const monthKey in monthlyCounts) {
                 if (monthlyCounts[monthKey] > 0) {
-                    monthlyData[monthKey] = monthlyData[monthKey] / monthlyCounts[monthKey];
+                    const avg = monthlyData[monthKey] / monthlyCounts[monthKey];
+                    monthlyData[monthKey] = Number(avg.toFixed(2));
                 }
             }
-        }
-        
-        // 计算年度总计 - 修复后的逻辑
-        if (isAverage) {
-            // 对于平均值数据类型，计算各月平均值的年度平均（简单平均）
+
+            // 计算年度总平均 (Total Average)
+            // 逻辑：所有有数据的月份的平均值
             let validMonthSum = 0;
             let validMonthCount = 0;
-            
-            const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
-                              'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
             
             for (const monthKey of monthKeys) {
                 if (monthlyCounts[monthKey] > 0) {
@@ -141,26 +142,34 @@ export const calculateOutputs = async (req, res, next) => {
                 }
             }
             
-            monthlyData.total = validMonthCount > 0 ? validMonthSum / validMonthCount : 0;
+            monthlyData.total = validMonthCount > 0 ? Number((validMonthSum / validMonthCount).toFixed(2)) : 0;
+
         } else {
-            // 对于总和数据类型，直接累加所有月份
-            monthlyData.total = Object.values(monthlyData).reduce((sum, value, index) => {
-                // 跳过total字段本身（最后一个）
-                if (index < 12) { // 前12个是月份
-                    return sum + value;
-                }
-                return sum;
-            }, 0);
+            // 处理总和类型的格式化和年度总计
+            let yearTotal = 0;
+
+            for (const monthKey of monthKeys) {
+                // 格式化每月数据保留2位小数
+                monthlyData[monthKey] = Number(monthlyData[monthKey].toFixed(2));
+                yearTotal += monthlyData[monthKey];
+            }
+            
+            monthlyData.total = Number(yearTotal.toFixed(2));
         }
         
         // 创建输出对象
         const output = {
             year,
-            material: dataTypes.find(dt => dt.value === data)?.label || data,
+            dataType: data,
+            dataTypeLabel: dataTypes.find(dt => dt.value === data)?.label || data,
+            // 如果是比较模式 (Selected Codes)，前端可能需要 code 字段，但这里聚合后的数据通常不带单一 code
+            // 除非 codes 只有一个。这里保持原结构返回。
+            code: codes && !codes.includes(',') ? codes : null, 
             ...monthlyData
         };
         
         res.status(200).json([output]);
+
     } catch (error) {
         console.error('Error in calculateOutputs:', error);
         next(error);

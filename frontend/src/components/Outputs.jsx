@@ -139,23 +139,38 @@ const Outputs = () => {
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
-    // 获取可用的 Job Code 列表
+    // 修改：当 displayYear 变化时，重新获取该年份可用的 Job Codes
     useEffect(() => {
         const fetchAvailableCodes = async () => {
             try {
-                const res = await fetch('/api/analysis/getjobs');
+                // 使用新的 API，并传入当前显示的年份
+                const res = await fetch(`/api/analysis/get-codes-by-year?year=${displayYear}`);
                 const data = await res.json();
+                
                 if (res.ok) {
-                    const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
-                    setAvailableCodes(jobCodes);
+                    // 后端已经返回了去重且排序好的数组，直接使用
+                    setAvailableCodes(data);
+                    
+                    // 可选：如果当前选中的某些 code 在新的一年不存在了，是否要清除选中状态？
+                    // 如果你想自动清除在新年份不存在的选中项，可以取消下面注释：
+                    /*
+                    const newSelectedCodes = selectedCodes.filter(code => data.includes(code));
+                    if (newSelectedCodes.length !== selectedCodes.length) {
+                        setSelectedCodes(newSelectedCodes);
+                    }
+                    */
                 }
             } catch (error) {
                 console.error('Error fetching job codes:', error);
+                // 出错时的默认值
                 setAvailableCodes(['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']);
             }
         };
-        fetchAvailableCodes();
-    }, []);
+
+        if (displayYear) {
+            fetchAvailableCodes();
+        }
+    }, [displayYear]); // 关键：将 displayYear 加入依赖数组
 
     // 当 selectedCodes 或 comparisonMode 改变时自动获取数据
     useEffect(() => {

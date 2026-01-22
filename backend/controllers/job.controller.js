@@ -1024,3 +1024,30 @@ export const updateJob = async (req,res,next) => {
         next(error);
     }    
 };
+
+// ... 之前的代码 ...
+
+export const getJobCodesByYear = async (req, res, next) => {
+    try {
+        const { year } = req.query;
+        
+        if (!year) {
+            return next(errorHandler(400, 'Year is required'));
+        }
+
+        // 修改这里：查询条件从 starttime 改为 endtime
+        // 逻辑：只要 endtime 是以该年份开头，就算作该年份的 Job Code
+        const distinctCodes = await Job.find({
+            endtime: { $regex: `^${year}` } 
+        }).distinct('code');
+
+        // 排序逻辑保持不变
+        const sortedCodes = distinctCodes.sort((a, b) => {
+            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+        res.status(200).json(sortedCodes);
+    } catch (error) {
+        next(error);
+    }
+};
