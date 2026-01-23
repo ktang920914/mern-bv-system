@@ -114,15 +114,22 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchOutputAvailableCodes = async () => {
       try {
-        // 尝试传参 (假设后端将来支持)，即使后端不支持，下面也会有前端过滤兜底
         const res = await fetch(`/api/analysis/getjobs?year=${displayYear}`);
         const data = await res.json();
         
         if (res.ok && Array.isArray(data)) {
-          // 前端强制过滤：只保留 starttime 是当前年份的数据
+          // ======================= 修改开始 =======================
+          // 原来的代码 (可能): 是检查 starttime
+          // const currentYearJobs = data.filter(item => 
+          //   item.starttime && item.starttime.startsWith(displayYear)
+          // );
+
+          // 新代码: 强制只检查 endtime (结束时间)
+          // 逻辑: L10 (2025结束) 只会匹配 2025，不会匹配 2024
           const currentYearJobs = data.filter(item => 
-            item.starttime && item.starttime.startsWith(displayYear)
+            item.endtime && item.endtime.startsWith(displayYear)
           );
+          // ======================= 修改结束 =======================
 
           const jobCodes = [...new Set(currentYearJobs.map(item => item.code))].filter(Boolean);
           setOutputAvailableCodes(jobCodes);
@@ -132,11 +139,11 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Error fetching output job codes:', error);
-        setOutputAvailableCodes([]); // 出错重置
+        setOutputAvailableCodes([]); 
       }
     };
     fetchOutputAvailableCodes();
-  }, [displayYear]); // 依赖 displayYear
+  }, [displayYear]);
 
   // --- 修改重点 2: 获取 Cases 可用的 Job Code ---
   useEffect(() => {
