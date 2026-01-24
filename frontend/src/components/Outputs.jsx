@@ -628,7 +628,7 @@ const Outputs = () => {
         return { options, data: chartData, plugins };
     };
 
-    // 准备表格数据 - !!! 已修复逻辑 !!!
+    // 准备表格数据 - 修复多选 Job Code 不显示的问题
     const prepareTableData = () => {
         if (outputs.length === 0) return [];
 
@@ -650,20 +650,33 @@ const Outputs = () => {
             const dataTypeLabel = dataTypeOutputs[0]?.dataTypeLabel || 'Unknown';
             const isAverageType = averageDataTypes.includes(dataType);
 
-            if (comparisonMode && selectedCodes.length > 0) {
-                // 只过滤出当前选中的 job codes 的数据
-                const filteredOutputs = dataTypeOutputs.filter(output => 
-                    selectedCodes.includes(output.code)
-                );
+            // 只要选择了 Job Code
+            if (selectedCodes.length > 0) {
+                
+                // --- 核心修复点 START ---
+                // 普通模式下，后端返回的聚合数据 code 为 null
+                // 所以我们必须允许没有 code 的数据通过，或者匹配 code 的数据通过
+                const filteredOutputs = dataTypeOutputs.filter(output => {
+                    if (comparisonMode) {
+                        // 比较模式：必须严格匹配 code
+                        return output.code && selectedCodes.includes(output.code);
+                    } else {
+                        // 普通模式：接受没有 code (后端聚合) 或者 code 匹配 (单选)
+                        return !output.code || (output.code && selectedCodes.includes(output.code));
+                    }
+                });
+                // --- 核心修复点 END ---
 
                 if (filteredOutputs.length === 0) {
                     return;
                 }
 
+                // 2. 准备汇总数据对象
                 const aggregatedData = {
                     dataType,
                     dataTypeLabel,
-                    code: null,
+                    // 显示选中的 codes 供参考
+                    code: selectedCodes.join(', '), 
                     total: 0
                 };
 
@@ -672,8 +685,9 @@ const Outputs = () => {
                     aggregatedData[month.key] = 0;
                 });
 
+                // 3. 计算聚合数据
                 if (isAverageType) {
-                    // 对于平均值类型：计算每个月份的平均值
+                    // --- 平均值类型 (如 OEE, Availability) ---
                     monthFields.forEach(month => {
                         const monthKey = month.key;
                         let sum = 0;
@@ -706,7 +720,7 @@ const Outputs = () => {
                         aggregatedData.total = 0;
                     }
                 } else {
-                    // 对于总和类型：直接累加所有 job code 的值
+                    // --- 总和类型 (如 Total Output, Wastage) ---
                     filteredOutputs.forEach(output => {
                         monthFields.forEach(month => {
                             aggregatedData[month.key] += output[month.key] || 0;
@@ -715,24 +729,22 @@ const Outputs = () => {
                     });
                 }
 
-                // 格式化数字
+                // 4. 格式化数字
                 monthFields.forEach(month => {
                     aggregatedData[month.key] = formatNumber(aggregatedData[month.key]);
                 });
                 aggregatedData.total = formatNumber(aggregatedData.total);
+                
+                // 将聚合后的一行数据加入表格
                 tableData.push(aggregatedData);
+
             } else {
-                // --- 修复开始 ---
-                // 普通模式：
-                // 如果没有选 Job Code，显示总汇总 (output.code 为空)
-                // 如果选了 Job Code，显示匹配该 Job Code 的行
+                // 没有选择 Job Code (显示 Global Total)
                 dataTypeOutputs.forEach(output => {
-                    if ((selectedCodes.length === 0 && !output.code) || 
-                        (selectedCodes.length > 0 && selectedCodes.includes(output.code))) {
+                    if (!output.code) {
                         tableData.push(output);
                     }
                 });
-                // --- 修复结束 ---
             }
         });
 
