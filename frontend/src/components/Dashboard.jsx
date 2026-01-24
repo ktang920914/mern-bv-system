@@ -800,7 +800,7 @@ const Dashboard = () => {
             
             <div className="mb-3 p-2 bg-gray-50 rounded-lg dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
               <div className="flex items-center justify-between mb-1">
-                <Label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Job Code Filter</Label>
+                <Label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Code Filter</Label>
                 {casesSelectedCodes.length > 0 && (
                   <Button size="xs" color="light" onClick={clearCasesSelectedCodes} className="text-xs px-2 py-1">Clear</Button>
                 )}

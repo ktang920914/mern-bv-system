@@ -1223,7 +1223,7 @@ useEffect(() => {
             {/* Job Code 筛选器 */}
             <div className="mb-3 p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
                 <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-semibold">Filter by Job Code</Label>
+                    <Label className="text-sm font-semibold">Filter by Code</Label>
                     {selectedCodes.length > 0 && (
                         <Button size="xs" color="light" onClick={clearSelectedCodes}>
                             Clear All
