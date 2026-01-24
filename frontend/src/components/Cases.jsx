@@ -102,23 +102,29 @@ const Cases = () => {
         setSearchParams(params)
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
-    // 获取可用的 Job Code 列表
-    useEffect(() => {
-        const fetchAvailableCodes = async () => {
-            try {
-                const res = await fetch('/api/maintenance/getmaintenances');
-                const data = await res.json();
-                if (res.ok) {
-                    const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
-                    setAvailableCodes(jobCodes);
-                }
-            } catch (error) {
-                console.error('Error fetching job codes:', error);
-                setAvailableCodes(['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']);
+    // 修改：监听 displayYear 的变化，动态获取该年份可用的 Job Code
+useEffect(() => {
+    const fetchAvailableCodes = async () => {
+        try {
+            // 将年份传给后端，让后端只返回该年份存在的 codes
+            const res = await fetch(`/api/maintenance/getmaintenances?year=${displayYear}`);
+            const data = await res.json();
+            if (res.ok) {
+                // 提取该年份记录中所有的唯一 code
+                const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
+                setAvailableCodes(jobCodes);
+                
+                // 可选：如果当前选中的 code 不在新年份的可用列表中，则清除已选
+                setSelectedCodes(prev => prev.filter(code => jobCodes.includes(code)));
             }
-        };
-        fetchAvailableCodes();
-    }, []);
+        } catch (error) {
+            console.error('Error fetching job codes:', error);
+            // 失败时的保底选项
+            setAvailableCodes([]);
+        }
+    };
+    fetchAvailableCodes();
+}, [displayYear]); // 依赖项加上 displayYear
 
     // 当 selectedCodes 或 comparisonMode 改变时自动更新数据
     useEffect(() => {

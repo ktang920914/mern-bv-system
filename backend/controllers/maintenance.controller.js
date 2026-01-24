@@ -126,16 +126,25 @@ export const maintenance = async (req, res, next) => {
 };
 
 // 获取所有维护记录
+// 获取维护记录 - 支持按年份筛选
 export const getMaintenances = async (req, res, next) => {
     try {
-        const maintenances = await Maintenance.find().sort({ updatedAt: -1 });
+        const { year } = req.query; // 获取前端传来的年份参数
+        let query = {};
+
+        // 如果传了年份，利用正则匹配 jobdate 字段开头的年份
+        // 比如 year=2026，匹配 2026-xx-xx 或 2026/xx/xx
+        if (year) {
+            query.jobdate = { $regex: `^${year}` };
+        }
+
+        const maintenances = await Maintenance.find(query).sort({ updatedAt: -1 });
         
         // 格式化返回的日期时间并确保包含作业时间
         const formattedMaintenances = maintenances.map(maintenance => {
             const formattedJobdate = formatDateTime(maintenance.jobdate);
             const formattedCompletiondate = formatDateTime(maintenance.completiondate);
             
-            // 如果数据库中没有 jobtime，则重新计算
             let jobtime = maintenance.jobtime;
             if (jobtime === undefined || jobtime === null) {
                 jobtime = calculateJobTime(maintenance.jobdate, maintenance.completiondate);
@@ -145,7 +154,7 @@ export const getMaintenances = async (req, res, next) => {
                 ...maintenance._doc,
                 jobdate: formattedJobdate,
                 completiondate: formattedCompletiondate,
-                jobtime // 确保包含作业时间
+                jobtime 
             };
         });
         
