@@ -416,7 +416,7 @@ const Outputs = () => {
         }
     };
 
-    // 准备图表数据 - 支持比较模式
+    // 准备图表数据 - 优化了Pie Chart在Comparison Mode下的显示
     const prepareChartData = () => {
         if (outputs.length === 0) {
             return null;
@@ -450,37 +450,53 @@ const Outputs = () => {
         }
 
         // 月份标签
-        const labels = monthFields.map(month => month.name);
+        const monthLabels = monthFields.map(month => month.name);
         
-        // 图表数据
         let chartData;
         
         if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
-            // 比较模式：多个数据集（多个饼图 - 每个Job Code一个）
-            const datasets = selectedData.map((dataItem) => {
-                const data = monthFields.map(month => {
-                    const value = dataItem[month.key];
-                    return formatNumber(value);
+            
+            // --- 针对 Pie Chart 的 Comparison Mode 特殊处理 ---
+            // 逻辑：不再显示月份同心圆，而是显示 Job Code 的占比
+            if (selectedChartType === 'pie') {
+                const labels = selectedData.map(item => item.code || 'Total');
+                const data = selectedData.map(item => {
+                    // 确保是数字
+                    return typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0;
+                });
+                
+                const backgroundColors = selectedData.map(item => {
+                    return jobCodeColors[item.code]?.bg || 'rgba(200, 200, 200, 0.5)';
+                });
+                const borderColors = selectedData.map(item => {
+                    return jobCodeColors[item.code]?.border || 'rgba(200, 200, 200, 1)';
                 });
 
-                const jobCode = dataItem.code || 'All';
-                const color = jobCodeColors[jobCode] || { 
-                    bg: 'rgba(59, 130, 246, 0.5)', 
-                    border: 'rgba(59, 130, 246, 1)' 
+                chartData = {
+                    labels: labels,
+                    datasets: [{
+                        label: `Total ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        hoverOffset: 4
+                    }]
                 };
+            } else {
+                // Bar 和 Line Chart 保持原有的月份对比逻辑
+                const datasets = selectedData.map((dataItem) => {
+                    const data = monthFields.map(month => {
+                        const value = dataItem[month.key];
+                        return formatNumber(value);
+                    });
 
-                // 如果是饼图，需要为每个月份生成不同的颜色
-                if (selectedChartType === 'pie') {
-                    const pieColors = getPieChartColors(data.length);
-                    return {
-                        label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
-                        data,
-                        backgroundColor: pieColors.map(c => c.backgroundColor),
-                        borderColor: pieColors.map(c => c.borderColor),
-                        borderWidth: 2,
-                        hoverBackgroundColor: pieColors.map(c => c.hoverBackgroundColor),
+                    const jobCode = dataItem.code || 'All';
+                    const color = jobCodeColors[jobCode] || { 
+                        bg: 'rgba(59, 130, 246, 0.5)', 
+                        border: 'rgba(59, 130, 246, 1)' 
                     };
-                } else {
+
                     return {
                         label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
                         data,
@@ -490,15 +506,15 @@ const Outputs = () => {
                         fill: selectedChartType === 'line',
                         tension: selectedChartType === 'line' ? 0.1 : undefined
                     };
-                }
-            });
+                });
 
-            chartData = {
-                labels,
-                datasets
-            };
+                chartData = {
+                    labels: monthLabels,
+                    datasets
+                };
+            }
         } else {
-            // 普通模式：单个数据集
+            // 普通模式：单个数据集 (保持不变，显示月份分布)
             const singleData = Array.isArray(selectedData) ? selectedData[0] : selectedData;
             const jobCode = singleData.code || 'All';
             const color = jobCodeColors[jobCode] || { 
@@ -515,7 +531,7 @@ const Outputs = () => {
             if (selectedChartType === 'pie') {
                 const pieColors = getPieChartColors(data.length);
                 chartData = {
-                    labels,
+                    labels: monthLabels,
                     datasets: [
                         {
                             label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
@@ -529,7 +545,7 @@ const Outputs = () => {
                 };
             } else {
                 chartData = {
-                    labels,
+                    labels: monthLabels,
                     datasets: [
                         {
                             label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
@@ -574,7 +590,7 @@ const Outputs = () => {
 
         const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
-        // 图表配置 - 优化图例显示
+        // 图表配置
         const options = {
             responsive: true,
             maintainAspectRatio: false,
@@ -592,7 +608,9 @@ const Outputs = () => {
                 title: {
                     display: true,
                     text: comparisonMode 
-                        ? `${dataTypes.find(dt => dt.value === selectedDataType)?.label} Comparison - ${displayYear} (${selectedCodes.length} Job Codes)`
+                        ? (selectedChartType === 'pie' 
+                            ? `${dataTypes.find(dt => dt.value === selectedDataType)?.label} Comparison - ${displayYear}` 
+                            : `${dataTypes.find(dt => dt.value === selectedDataType)?.label} Comparison - ${displayYear}`)
                         : `${dataTypes.find(dt => dt.value === selectedDataType)?.label} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
@@ -628,7 +646,7 @@ const Outputs = () => {
         return { options, data: chartData, plugins };
     };
 
-    // 准备表格数据 - 修复多选 Job Code 不显示的问题
+    // 准备表格数据 - 已修复多选聚合逻辑
     const prepareTableData = () => {
         if (outputs.length === 0) return [];
 
