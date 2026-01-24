@@ -108,7 +108,7 @@ const Outputs = () => {
         }
 
         window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
+        window.removeEventListener('resize', handleResize)
     }, [])
 
     // 防抖优化 - 延迟处理选中的 Job Codes
@@ -150,15 +150,6 @@ const Outputs = () => {
                 if (res.ok) {
                     // 后端已经返回了去重且排序好的数组，直接使用
                     setAvailableCodes(data);
-                    
-                    // 可选：如果当前选中的某些 code 在新的一年不存在了，是否要清除选中状态？
-                    // 如果你想自动清除在新年份不存在的选中项，可以取消下面注释：
-                    /*
-                    const newSelectedCodes = selectedCodes.filter(code => data.includes(code));
-                    if (newSelectedCodes.length !== selectedCodes.length) {
-                        setSelectedCodes(newSelectedCodes);
-                    }
-                    */
                 }
             } catch (error) {
                 console.error('Error fetching job codes:', error);
@@ -170,7 +161,7 @@ const Outputs = () => {
         if (displayYear) {
             fetchAvailableCodes();
         }
-    }, [displayYear]); // 关键：将 displayYear 加入依赖数组
+    }, [displayYear]);
 
     // 当 selectedCodes 或 comparisonMode 改变时自动获取数据
     useEffect(() => {
@@ -637,7 +628,7 @@ const Outputs = () => {
         return { options, data: chartData, plugins };
     };
 
-    // 准备表格数据
+    // 准备表格数据 - !!! 已修复逻辑 !!!
     const prepareTableData = () => {
         if (outputs.length === 0) return [];
 
@@ -731,13 +722,17 @@ const Outputs = () => {
                 aggregatedData.total = formatNumber(aggregatedData.total);
                 tableData.push(aggregatedData);
             } else {
-                // 普通模式：显示汇总数据或不带 code 的数据
+                // --- 修复开始 ---
+                // 普通模式：
+                // 如果没有选 Job Code，显示总汇总 (output.code 为空)
+                // 如果选了 Job Code，显示匹配该 Job Code 的行
                 dataTypeOutputs.forEach(output => {
-                    // 在普通模式下，只显示汇总数据或不带 code 的数据
-                    if (!output.code || selectedCodes.length === 0) {
+                    if ((selectedCodes.length === 0 && !output.code) || 
+                        (selectedCodes.length > 0 && selectedCodes.includes(output.code))) {
                         tableData.push(output);
                     }
                 });
+                // --- 修复结束 ---
             }
         });
 
