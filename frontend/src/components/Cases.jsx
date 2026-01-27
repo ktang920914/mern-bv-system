@@ -103,28 +103,28 @@ const Cases = () => {
     }, [currentPage, searchTerm, searchParams, setSearchParams])
 
     // 修改：监听 displayYear 的变化，动态获取该年份可用的 Job Code
-useEffect(() => {
-    const fetchAvailableCodes = async () => {
-        try {
-            // 将年份传给后端，让后端只返回该年份存在的 codes
-            const res = await fetch(`/api/maintenance/getmaintenances?year=${displayYear}`);
-            const data = await res.json();
-            if (res.ok) {
-                // 提取该年份记录中所有的唯一 code
-                const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
-                setAvailableCodes(jobCodes);
-                
-                // 可选：如果当前选中的 code 不在新年份的可用列表中，则清除已选
-                setSelectedCodes(prev => prev.filter(code => jobCodes.includes(code)));
+    useEffect(() => {
+        const fetchAvailableCodes = async () => {
+            try {
+                // 将年份传给后端，让后端只返回该年份存在的 codes
+                const res = await fetch(`/api/maintenance/getmaintenances?year=${displayYear}`);
+                const data = await res.json();
+                if (res.ok) {
+                    // 提取该年份记录中所有的唯一 code
+                    const jobCodes = [...new Set(data.map(item => item.code))].filter(Boolean);
+                    setAvailableCodes(jobCodes);
+                    
+                    // 可选：如果当前选中的 code 不在新年份的可用列表中，则清除已选
+                    setSelectedCodes(prev => prev.filter(code => jobCodes.includes(code)));
+                }
+            } catch (error) {
+                console.error('Error fetching codes:', error);
+                // 失败时的保底选项
+                setAvailableCodes([]);
             }
-        } catch (error) {
-            console.error('Error fetching codes:', error);
-            // 失败时的保底选项
-            setAvailableCodes([]);
-        }
-    };
-    fetchAvailableCodes();
-}, [displayYear]); // 依赖项加上 displayYear
+        };
+        fetchAvailableCodes();
+    }, [displayYear]); // 依赖项加上 displayYear
 
     // 当 selectedCodes 或 comparisonMode 改变时自动更新数据
     useEffect(() => {
@@ -373,46 +373,79 @@ useEffect(() => {
 
         if (!selectedData || selectedData.length === 0) return null
 
-        const labels = monthFields.map(month => month.name)
+        const monthLabels = monthFields.map(month => month.name)
         
         // 图表数据
         let chartData;
         
         if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
-            // 比较模式：多个数据集
-            const colors = generateColors(selectedCodes.length);
             
-            const datasets = selectedCodes.map((code, index) => {
-                const codeData = selectedData.filter(item => item.code === code);
-                const data = monthFields.map(month => {
-                    const monthData = codeData.find(d => d.month === month.name);
-                    const value = monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0;
-                    return formatNumber(value);
+            // --- 针对 Pie Chart Comparison Mode 的修复 ---
+            // 逻辑：不再按月份显示，而是显示各个 Job Code 的年度总数 (Total)
+            if (selectedChartType === 'pie') {
+                // 1. Labels 是选中的 Job Codes
+                const labels = selectedCodes;
+
+                // 2. Data 是每个 Code 的年度总计
+                const data = selectedCodes.map(code => {
+                    // 找到该 code 下的所有记录 (该年份、该 case type)
+                    const codeItems = selectedData.filter(item => item.code === code);
+                    
+                    // 计算总和 (Cost 或 Count)
+                    const total = codeItems.reduce((sum, item) => {
+                        const val = dataType === 'cost' ? item.totalCost : item.count;
+                        return sum + (Number(val) || 0);
+                    }, 0);
+                    
+                    return formatNumber(total);
                 });
 
-                const color = colors[index];
+                // 3. 生成颜色
+                const colors = generateColors(selectedCodes.length);
 
-                return {
-                    label: `${code} - ${selectedCaseType}`,
-                    data,
-                    backgroundColor: selectedChartType === 'pie' 
-                        ? [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                          ]
-                        : color.bg,
-                    borderColor: color.border,
-                    borderWidth: 2,
-                    fill: selectedChartType === 'line',
-                    tension: selectedChartType === 'line' ? 0.1 : undefined
+                // 4. 构建 Dataset (Pie 图只需要一个 dataset)
+                chartData = {
+                    labels: labels,
+                    datasets: [{
+                        label: `Total ${selectedCaseType} (${dataType === 'cost' ? 'Cost' : 'Count'})`,
+                        data: data,
+                        backgroundColor: colors.map(c => c.bg),
+                        borderColor: colors.map(c => c.border),
+                        borderWidth: 1,
+                        hoverOffset: 4
+                    }]
                 };
-            });
 
-            chartData = {
-                labels,
-                datasets
-            };
+            } else {
+                // --- Bar 和 Line Chart 保持按月份对比 ---
+                const colors = generateColors(selectedCodes.length);
+                
+                const datasets = selectedCodes.map((code, index) => {
+                    const codeData = selectedData.filter(item => item.code === code);
+                    const data = monthFields.map(month => {
+                        const monthData = codeData.find(d => d.month === month.name);
+                        const value = monthData ? (dataType === 'cost' ? monthData.totalCost : monthData.count) : 0;
+                        return formatNumber(value);
+                    });
+
+                    const color = colors[index];
+
+                    return {
+                        label: `${code} - ${selectedCaseType}`,
+                        data,
+                        backgroundColor: color.bg,
+                        borderColor: color.border,
+                        borderWidth: 2,
+                        fill: selectedChartType === 'line',
+                        tension: selectedChartType === 'line' ? 0.1 : undefined
+                    };
+                });
+
+                chartData = {
+                    labels: monthLabels,
+                    datasets
+                };
+            }
         } else {
             // 普通模式：单个数据集
             const data = monthFields.map(month => {
@@ -422,7 +455,7 @@ useEffect(() => {
             });
 
             chartData = {
-                labels,
+                labels: monthLabels,
                 datasets: [
                     {
                         label: dataType === 'cost' ? `${selectedCaseType} Cost` : selectedCaseType,
@@ -452,6 +485,23 @@ useEffect(() => {
                     padding: 15,
                     font: {
                         size: 11
+                    },
+                    // 为 Comparison Pie 提供特殊的 label 生成逻辑
+                    generateLabels: function(chart) {
+                        const data = chart.data;
+                        if (data.labels.length && data.datasets.length) {
+                            return data.labels.map((label, i) => {
+                                return {
+                                    text: label, // 在 Comparison mode 下 label 已经是 Job Code
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    strokeStyle: data.datasets[0].borderColor ? data.datasets[0].borderColor[i] : '#fff',
+                                    lineWidth: 2,
+                                    hidden: isNaN(data.datasets[0].data[i]) || chart.getDatasetMeta(0).data[i].hidden,
+                                    index: i
+                                };
+                            });
+                        }
+                        return [];
                     }
                 }
             },
@@ -482,13 +532,18 @@ useEffect(() => {
                         boxWidth: 10,
                         font: {
                             size: comparisonMode && selectedCodes.length > 8 ? 10 : 12
-                        }
+                        },
+                        // 对于非 Pie 图表，使用默认或者自定义的 label generator
+                        // 这里我们只针对 Pie 图表使用 plugins 中的 generateLabels
+                        generateLabels: selectedChartType !== 'pie' ? undefined : undefined 
                     }
                 },
                 title: {
                     display: true,
                     text: comparisonMode 
-                        ? `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} Comparison - ${displayYear} (${selectedCodes.length} Codes)`
+                        ? (selectedChartType === 'pie'
+                            ? `${selectedCaseType} ${dataType === 'cost' ? 'Cost' : 'Count'} Distribution - ${displayYear}`
+                            : `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} Comparison - ${displayYear} (${selectedCodes.length} Codes)`)
                         : `${selectedCaseType} ${dataType === 'cost' ? 'Costs' : 'Cases'} - ${displayYear}${selectedCodes.length > 0 ? ` (${selectedCodes.join(', ')})` : ''}`,
                     font: {
                         size: 16
