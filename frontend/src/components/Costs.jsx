@@ -163,6 +163,23 @@ const Costs = () => {
         }
         return colors;
     };
+    
+    // 获取饼图颜色（为每个月份生成不同的颜色 - 用于Single Mode）
+    const getSingleModePieColors = (numColors) => {
+        const colors = [];
+        for (let i = 0; i < numColors; i++) {
+            const hue = (i * 360 / numColors) % 360;
+            const saturation = 70;
+            const lightness = 60;
+            
+            colors.push({
+                bg: `hsla(${hue}, ${saturation}%, ${lightness}%, 0.5)`,
+                border: `hsl(${hue}, ${saturation}%, ${lightness - 15}%)`,
+                hoverBg: `hsla(${hue}, ${saturation}%, ${lightness + 10}%, 0.9)`
+            });
+        }
+        return colors;
+    };
 
     // 获取类别简称
     const getCategoryShortName = (fullName) => {
@@ -429,48 +446,72 @@ const Costs = () => {
             return null;
         }
 
-        // 月份标签
-        const labels = monthFields.map(month => month.name);
+        // 月份标签 (用于Bar/Line)
+        const monthLabels = monthFields.map(month => month.name);
         
         let chartData;
         
         if (comparisonMode && Array.isArray(selectedData) && selectedData.length > 0) {
-            // 比较模式：多个数据集 - 使用简称
-            const colors = generateColors(selectedData.length);
             
-            const datasets = selectedData.map((costItem, index) => {
-                const data = monthFields.map(month => {
-                    const value = costItem[month.key];
-                    return formatNumber(value);
+            // --- 针对 Pie Chart 的 Comparison Mode 特殊处理 ---
+            // 逻辑：不再显示月份，而是显示各个 Category 的 Total 占比
+            if (selectedChartType === 'pie') {
+                // 1. 获取标签 (Categories)
+                const labels = selectedData.map(item => getCategoryShortName(item.type));
+                
+                // 2. 获取数据 (Totals)
+                const data = selectedData.map(item => {
+                     return typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0;
+                });
+                
+                // 3. 分配颜色
+                const colors = generateColors(selectedData.length);
+                
+                // 4. 构建数据集
+                chartData = {
+                    labels: labels,
+                    datasets: [{
+                        label: `Total Costs ${displayYear}`,
+                        data: data,
+                        backgroundColor: colors.map(c => c.bg),
+                        borderColor: colors.map(c => c.border),
+                        borderWidth: 1,
+                        hoverOffset: 4
+                    }]
+                };
+            } else {
+                // Bar 和 Line Chart 保持原有的月份对比逻辑
+                const colors = generateColors(selectedData.length);
+                
+                const datasets = selectedData.map((costItem, index) => {
+                    const data = monthFields.map(month => {
+                        const value = costItem[month.key];
+                        return formatNumber(value);
+                    });
+
+                    const color = colors[index];
+                    const categoryShort = getCategoryShortName(costItem.type);
+
+                    return {
+                        label: categoryShort,
+                        data,
+                        backgroundColor: color.bg,
+                        borderColor: color.border,
+                        borderWidth: 2,
+                        fill: selectedChartType === 'line',
+                        tension: selectedChartType === 'line' ? 0.1 : undefined
+                    };
                 });
 
-                const color = colors[index];
-                const categoryShort = getCategoryShortName(costItem.type);
-
-                return {
-                    label: categoryShort,
-                    data,
-                    backgroundColor: selectedChartType === 'pie' 
-                        ? [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                            '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                          ]
-                        : color.bg,
-                    borderColor: color.border,
-                    borderWidth: 2,
-                    fill: selectedChartType === 'line',
-                    tension: selectedChartType === 'line' ? 0.1 : undefined
+                chartData = {
+                    labels: monthLabels,
+                    datasets
                 };
-            });
-
-            chartData = {
-                labels,
-                datasets
-            };
+            }
         } else {
-            // 普通模式：单个数据集（汇总数据） - 使用简称
+            // 普通模式：单个数据集（汇总数据）
             const singleData = Array.isArray(selectedData) ? selectedData[0] : selectedData;
+            
             const data = monthFields.map(month => {
                 const value = singleData[month.key];
                 return formatNumber(value);
@@ -479,61 +520,45 @@ const Costs = () => {
             // 普通模式也使用简称或缩写
             let label;
             if (selectedCategories.length === 0) {
-                // 如果是全部类别，使用 "All (Total)"
                 label = 'All (Total)';
             } else if (selectedCategories.length === 1) {
-                // 如果只选择一个类别，使用该类别的简称
                 label = getCategoryShortName(selectedCategories[0]);
             } else {
-                // 如果选择多个类别，使用缩写组合
                 const shortNames = selectedCategories.map(cat => getCategoryShortName(cat));
                 label = shortNames.join('/ ');
             }
 
-            chartData = {
-                labels,
-                datasets: [
-                    {
+            // 如果是 Pie Chart，使用多种颜色区分月份
+            if (selectedChartType === 'pie') {
+                const pieColors = getSingleModePieColors(data.length);
+                chartData = {
+                    labels: monthLabels,
+                    datasets: [{
                         label: label,
                         data,
-                        backgroundColor: selectedChartType === 'pie' 
-                            ? [
-                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                                '#4BC0C0', '#36A2EB', '#FFCE56', '#9966FF'
-                              ]
-                            : 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 2,
-                        fill: selectedChartType === 'line',
-                        tension: selectedChartType === 'line' ? 0.1 : undefined
-                    },
-                ],
-            };
-        }
-
-        // 更新工具提示显示全称
-        const getChartTooltip = (context) => {
-            if (context.dataset && context.dataset.data) {
-                const label = context.label || '';
-                const fullLabel = getCategoryFullName(label);
-                const value = context.raw || 0;
-                const roundedValue = formatNumber(value);
-                
-                // 对于普通模式的汇总数据
-                if (!comparisonMode && selectedCategories.length === 0) {
-                    return `Total: ${roundedValue}`;
-                } else if (!comparisonMode && selectedCategories.length > 0) {
-                    if (selectedCategories.length === 1) {
-                        return `${fullLabel}: ${roundedValue}`;
-                    } else {
-                        return `Total of ${selectedCategories.length} categories: ${roundedValue}`;
-                    }
-                }
-                
-                return `${fullLabel}: ${roundedValue}`;
+                        backgroundColor: pieColors.map(c => c.bg),
+                        borderColor: pieColors.map(c => c.border),
+                        borderWidth: 1,
+                        hoverBackgroundColor: pieColors.map(c => c.hoverBg)
+                    }]
+                };
+            } else {
+                // Bar/Line 使用单一颜色
+                chartData = {
+                    labels: monthLabels,
+                    datasets: [
+                        {
+                            label: label,
+                            data,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            fill: selectedChartType === 'line',
+                            tension: selectedChartType === 'line' ? 0.1 : undefined
+                        },
+                    ],
+                };
             }
-            return label;
         }
 
         // 饼图插件配置
@@ -546,18 +571,21 @@ const Costs = () => {
                     font: {
                         size: 11
                     },
-                    // 为图例也使用简称，并添加自动换行
+                    // 为 Comparison Pie 提供特殊的 label 生成逻辑
                     generateLabels: function(chart) {
                         const data = chart.data;
                         if (data.labels.length && data.datasets.length) {
                             return data.labels.map((label, i) => {
-                                const displayText = wrapLabelText(label);
+                                // 如果是比较模式，label 是 category name，不需要 wrap 太复杂
+                                // 如果是普通模式，label 是 month name
+                                const displayText = comparisonMode ? label : wrapLabelText(label);
+                                
                                 return {
                                     text: displayText,
                                     fillStyle: data.datasets[0].backgroundColor[i],
-                                    strokeStyle: data.datasets[0].borderColor,
+                                    strokeStyle: data.datasets[0].borderColor ? data.datasets[0].borderColor[i] : '#fff',
                                     lineWidth: 2,
-                                    hidden: false,
+                                    hidden: isNaN(data.datasets[0].data[i]) || chart.getDatasetMeta(0).data[i].hidden,
                                     index: i
                                 };
                             });
@@ -570,15 +598,13 @@ const Costs = () => {
                 callbacks: {
                     label: function(context) {
                         const label = context.label || '';
-                        const fullLabel = getCategoryFullName(label);
                         const value = context.raw || 0;
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const roundedValue = formatNumber(value);
                         const percentage = total > 0 ? formatNumber((value / total) * 100) : 0;
                         
-                        if (!comparisonMode && selectedCategories.length === 0) {
-                            return `Total: ${roundedValue} (${percentage.toFixed(1)}%)`;
-                        }
+                        // 获取全称（如果是比较模式，label 是 category short name）
+                        const fullLabel = comparisonMode ? getCategoryFullName(label) : label;
                         
                         return `${fullLabel}: ${roundedValue} (${percentage.toFixed(1)}%)`;
                     }
@@ -588,7 +614,7 @@ const Costs = () => {
 
         const plugins = selectedChartType === 'pie' ? [piePlugins] : [];
 
-        // 图表配置 - 添加自动换行
+        // 图表配置
         const options = {
             responsive: true,
             maintainAspectRatio: false,
@@ -601,22 +627,13 @@ const Costs = () => {
                         font: {
                             size: comparisonMode && selectedData.length > 6 ? 10 : 12
                         },
-                        // 添加自动换行功能
+                        // 只为非 Pie 图表使用自定义 generateLabels (Pie 图表在 piePlugins 中定义了)
                         generateLabels: selectedChartType !== 'pie' ? function(chart) {
                             const data = chart.data;
                             if (data.datasets.length) {
                                 return data.datasets.map((dataset, i) => {
                                     const label = dataset.label || '';
-                                    let displayLabel = label;
-                                    
-                                    // 如果是单个类别或比较模式中的单个数据集，获取全称
-                                    if (!comparisonMode && selectedCategories.length === 1) {
-                                        displayLabel = getCategoryFullName(label);
-                                    } else if (comparisonMode) {
-                                        displayLabel = getCategoryFullName(label);
-                                    }
-                                    
-                                    // 将长标签分割成多行
+                                    let displayLabel = getCategoryFullName(label);
                                     displayLabel = wrapLabelText(displayLabel);
                                     
                                     return {
@@ -636,22 +653,25 @@ const Costs = () => {
                 title: {
                     display: true,
                     text: comparisonMode 
-                        ? `Cost Comparison - ${displayYear} (${selectedData.length} Categories)`
+                        ? (selectedChartType === 'pie' 
+                             ? `Cost Distribution (Total) - ${displayYear}` 
+                             : `Cost Comparison - ${displayYear} (${selectedData.length} Categories)`)
                         : `${selectedCategories.length === 0 ? 'All Costs' : (selectedCategories.length === 1 ? getCategoryFullName(selectedCategories[0]) : selectedCategories.length + ' Categories')} - ${displayYear}`,
                     font: {
                         size: 16
                     }
                 },
-                tooltip: {
+                // Bar/Line 的 Tooltip
+                tooltip: selectedChartType !== 'pie' ? {
                     callbacks: {
                         label: function(context) {
-                            return getChartTooltip(context);
+                            const label = context.dataset.label || '';
+                            const fullLabel = getCategoryFullName(label);
+                            const value = context.raw || 0;
+                            return `${fullLabel}: ${formatNumber(value)}`;
                         }
                     }
-                },
-                ...(selectedChartType === 'pie' && {
-                    tooltip: piePlugins.tooltip
-                })
+                } : piePlugins.tooltip // Pie 使用自定义的 tooltip
             },
             scales: selectedChartType !== 'pie' ? {
                 y: {
@@ -1458,10 +1478,10 @@ const Costs = () => {
                         <p className="text-xs text-gray-600 dark:text-gray-400">
                             <strong>Comparison Mode:</strong> {
                                 selectedCategories.length === 0 
-                                    ? 'Comparing all categories (using abbreviations)' 
+                                    ? 'Comparing all categories' 
                                     : selectedCategories.length === 1 
                                     ? `Showing ${selectedCategories[0]} only`
-                                    : `Comparing ${selectedCategories.length} categories (using abbreviations)`
+                                    : `Comparing ${selectedCategories.length} categories`
                             }
                         </p>
                     </div>
