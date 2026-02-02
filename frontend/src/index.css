@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "flowbite-react/plugin/tailwindcss";
+@plugin "flowbite-react/plugin/tailwindcss";
 @source "../.flowbite-react/class-list.json";
 
 /* 只针对 DashSidebar 组件的侧边栏背景颜色 */
