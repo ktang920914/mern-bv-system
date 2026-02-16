@@ -33,6 +33,10 @@ const Maintenance = () => {
   const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [itemsPage] = useState(10)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  // --- 新增：排序状态 ---
+  const [sortBy, setSortBy] = useState('jobdate') // 默认按工作日期排序
+  const [sortOrder, setSortOrder] = useState('desc') // 默认降序 (最新的在前面)
     
   // MFR 保存状态
   const [mfrSaveStatus, setMfrSaveStatus] = useState('')
@@ -541,180 +545,6 @@ const Maintenance = () => {
       setMfrSaveDetails({ fileName: '', path: '' })
     }, 300)
   }
-
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value.toLowerCase())
-    setCurrentPage(1)
-  }
-
-  const filteredMaintenances = maintenances.filter(maintenance => 
-    maintenance.supplier.toLowerCase().includes(searchTerm) || 
-    maintenance.cost.toString().toLowerCase().includes(searchTerm) ||
-    maintenance.problem.toLowerCase().includes(searchTerm) ||
-    maintenance.jobdetail.toLowerCase().includes(searchTerm) ||
-    maintenance.jobtype.toLowerCase().includes(searchTerm) ||
-    maintenance.jobdate.toLowerCase().includes(searchTerm) ||
-    maintenance.rootcause.toLowerCase().includes(searchTerm) ||
-    maintenance.status.toLowerCase().includes(searchTerm) ||
-    maintenance.completiondate.toLowerCase().includes(searchTerm) ||
-    maintenance.code.toLowerCase().includes(searchTerm) && maintenance.code.toString().toLowerCase() === searchTerm
-  )
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const indexOfLastItem = currentPage * itemsPage
-  const indexOfFirstItem = indexOfLastItem - itemsPage
-  const currentMaintenances = filteredMaintenances.slice(indexOfFirstItem, indexOfLastItem)
-  const totalEntries = filteredMaintenances.length
-  const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
-  const showingTo = Math.min(indexOfLastItem, totalEntries)
-  const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
-
-  // 移动端简洁分页组件
-  const MobileSimplePagination = () => (
-    <div className="flex items-center justify-center space-x-4">
-      <Button
-        size="sm"
-        disabled={currentPage === 1}
-        onClick={() => handlePageChange(currentPage - 1)}
-        className="flex items-center"
-      >
-        <span>‹</span>
-        <span className="ml-1">Previous</span>
-      </Button>
-
-      <Button
-        size="sm"
-        disabled={currentPage === totalPages}
-        onClick={() => handlePageChange(currentPage + 1)}
-        className="flex items-center"
-      >
-        <span className="mr-1">Next</span>
-        <span>›</span>
-      </Button>
-    </div>
-  )
-
-  // 移动端卡片组件
-  const MaintenanceCard = ({ maintenance }) => (
-    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
-      theme === 'light' 
-        ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
-        : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
-    }`}>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Job Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
-            {formatDateTimeForDisplay(maintenance.jobdate)}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Completion Date</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
-            {formatDateTimeForDisplay(maintenance.completiondate)}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Job Time</p>
-          <p className={`font-bold ${(maintenance.jobtime || 0) > 360 ? 'text-red-500' : 'text-green-500'}`}>
-            {formatJobTime(maintenance.jobtime)}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Status</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.status}</p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-500">Cost</p>
-          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.cost}</p>
-        </div>
-      </div>
-      
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Job Type</p>
-        <Popover 
-          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-          content={
-            <div className="p-3 max-w-xs">
-              <p className="font-semibold text-sm">Job detail:</p>
-              <p className="text-xs mb-2">{maintenance.jobdetail}</p>
-            </div>
-          }
-          trigger='hover'
-          placement="top"
-          arrow={false}
-        >
-          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-          }`}>
-            {maintenance.jobtype}
-          </span>
-        </Popover>
-      </div>
-
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Item Code</p>
-        <Popover 
-          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-          content={
-            <div className="p-3 max-w-xs">
-              <p className="font-semibold text-sm">Problem:</p>
-              <p className="text-xs mb-2">{maintenance.problem}</p>
-              <p className="font-semibold text-sm">Root cause:</p>
-              <p className="text-xs mb-2">{maintenance.rootcause}</p>
-            </div>
-          }
-          trigger='hover'
-          placement="top"
-          arrow={false}
-        >
-          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
-          }`}>
-            {maintenance.code}
-          </span>
-        </Popover>
-      </div>
-
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-gray-500">Supplier</p>
-        <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.supplier}</p>
-      </div>
-
-      <div className="flex gap-2">
-        <Button 
-          outline 
-          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => handleUpdate(maintenance)}
-        >
-          Edit
-        </Button>
-        <Button 
-          color='blue'
-          outline 
-          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => handleMRFClick(maintenance)}
-        >
-          MRF
-        </Button>
-        <Button 
-          color='red' 
-          outline 
-          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
-          onClick={() => {
-            setMaintenanceIdToDelete(maintenance._id)
-            setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)
-          }}
-        >
-          Delete
-        </Button>
-      </div>
-    </div>
-  )
 
   // 页面设置辅助函数
   const setupWorksheetPrint = (worksheet, options = {}) => {
@@ -1417,7 +1247,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
         { width: 12 },   // Cost
         { width: 15 },   // Completion Date
         { width: 15 },   // Job Time (新增)
-        { width: 15 },   // Status
+        { width: 35 },   // Status
         { width: 20 },   // Created At
         { width: 20 }    // Updated At
       ]
@@ -1833,36 +1663,274 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
     saveToFileServer()
   }
 
+  // --- 搜索和排序逻辑 (已修正：只定义一次) ---
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value.toLowerCase())
+    setCurrentPage(1)
+  }
+
+  // 辅助函数：解析日期
+  const parseDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return new Date(0)
+    
+    // 如果是 ISO 格式（updatedAt），直接创建 Date 对象
+    if (dateTimeStr.includes('T') && dateTimeStr.includes('Z')) {
+        return new Date(dateTimeStr)
+    }
+    
+    // 处理 "YYYY-MM-DD HH:mm:ss" 格式
+    return new Date(dateTimeStr.replace(' ', 'T'))
+  }
+
+  // 过滤并排序
+  const filteredMaintenances = maintenances
+    .filter(maintenance => 
+      maintenance.supplier.toLowerCase().includes(searchTerm) || 
+      maintenance.cost.toString().toLowerCase().includes(searchTerm) ||
+      maintenance.problem.toLowerCase().includes(searchTerm) ||
+      maintenance.jobdetail.toLowerCase().includes(searchTerm) ||
+      maintenance.jobtype.toLowerCase().includes(searchTerm) ||
+      maintenance.jobdate.toLowerCase().includes(searchTerm) ||
+      maintenance.rootcause.toLowerCase().includes(searchTerm) ||
+      maintenance.status.toLowerCase().includes(searchTerm) ||
+      maintenance.completiondate.toLowerCase().includes(searchTerm) ||
+      maintenance.code.toLowerCase().includes(searchTerm) && maintenance.code.toString().toLowerCase() === searchTerm
+    )
+    .sort((a, b) => {
+        // 特殊处理 Cost (数字)
+        if (sortBy === 'cost') {
+             const costA = Number(a.cost) || 0;
+             const costB = Number(b.cost) || 0;
+             if (sortOrder === 'asc') return costA - costB;
+             return costB - costA;
+        }
+
+        // 处理日期字段 (Job Date, Completion Date, Updated At)
+        const dateA = sortBy === 'updatedAt' ? new Date(a.updatedAt) : parseDateTime(a[sortBy])
+        const dateB = sortBy === 'updatedAt' ? new Date(b.updatedAt) : parseDateTime(b[sortBy])
+
+        if (sortOrder === 'asc') {
+            return dateA - dateB
+        } else {
+            return dateB - dateA
+        }
+    })
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const indexOfLastItem = currentPage * itemsPage
+  const indexOfFirstItem = indexOfLastItem - itemsPage
+  const currentMaintenances = filteredMaintenances.slice(indexOfFirstItem, indexOfLastItem)
+  const totalEntries = filteredMaintenances.length
+  const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+  const showingTo = Math.min(indexOfLastItem, totalEntries)
+  const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+  // 移动端简洁分页组件
+  const MobileSimplePagination = () => (
+    <div className="flex items-center justify-center space-x-4">
+      <Button
+        size="sm"
+        disabled={currentPage === 1}
+        onClick={() => handlePageChange(currentPage - 1)}
+        className="flex items-center"
+      >
+        <span>‹</span>
+        <span className="ml-1">Previous</span>
+      </Button>
+
+      <Button
+        size="sm"
+        disabled={currentPage === totalPages}
+        onClick={() => handlePageChange(currentPage + 1)}
+        className="flex items-center"
+      >
+        <span className="mr-1">Next</span>
+        <span>›</span>
+      </Button>
+    </div>
+  )
+
+  // 移动端卡片组件
+  const MaintenanceCard = ({ maintenance }) => (
+    <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+      theme === 'light' 
+        ? 'bg-white border border-gray-200 hover:bg-gray-50 hover:shadow-md' 
+        : 'bg-gray-800 border border-gray-700 hover:bg-gray-750 hover:shadow-md'
+    }`}>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Job Date</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
+            {formatDateTimeForDisplay(maintenance.jobdate)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Completion Date</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
+            {formatDateTimeForDisplay(maintenance.completiondate)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Job Time</p>
+          <p className={`font-bold ${(maintenance.jobtime || 0) > 360 ? 'text-red-500' : 'text-green-500'}`}>
+            {formatJobTime(maintenance.jobtime)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Status</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.status}</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-500">Cost</p>
+          <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.cost}</p>
+        </div>
+      </div>
+      
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Job Type</p>
+        <Popover 
+          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+          content={
+            <div className="p-3 max-w-xs">
+              <p className="font-semibold text-sm">Job detail:</p>
+              <p className="text-xs mb-2">{maintenance.jobdetail}</p>
+            </div>
+          }
+          trigger='hover'
+          placement="top"
+          arrow={false}
+        >
+          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+          }`}>
+            {maintenance.jobtype}
+          </span>
+        </Popover>
+      </div>
+
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Item Code</p>
+        <Popover 
+          className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+          content={
+            <div className="p-3 max-w-xs">
+              <p className="font-semibold text-sm">Problem:</p>
+              <p className="text-xs mb-2">{maintenance.problem}</p>
+              <p className="font-semibold text-sm">Root cause:</p>
+              <p className="text-xs mb-2">{maintenance.rootcause}</p>
+            </div>
+          }
+          trigger='hover'
+          placement="top"
+          arrow={false}
+        >
+          <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+            theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+          }`}>
+            {maintenance.code}
+          </span>
+        </Popover>
+      </div>
+
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-gray-500">Supplier</p>
+        <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{maintenance.supplier}</p>
+      </div>
+
+      <div className="flex gap-2">
+        <Button 
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => handleUpdate(maintenance)}
+        >
+          Edit
+        </Button>
+        <Button 
+          color='blue'
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => handleMRFClick(maintenance)}
+        >
+          MRF
+        </Button>
+        <Button 
+          color='red' 
+          outline 
+          className='cursor-pointer flex-1 py-2 text-sm transition-all hover:scale-105' 
+          onClick={() => {
+            setMaintenanceIdToDelete(maintenance._id)
+            setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div className='min-h-screen'>
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
-        <h1 className='text-2xl font-semibold'>Jobs</h1>
-        <div className='w-full sm:w-auto'>
-          <TextInput 
+        <h1 className='text-2xl font-semibold'>Maintenance</h1>
+        
+        {/* --- 顶部控制栏 (排序、搜索、按钮) --- */}
+        <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
+           {/* 排序控件 */}
+           <div className='flex gap-2'>
+                <Select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className='w-full sm:w-40'
+                >
+                    <option value="jobdate">Job Date</option>
+                    <option value="completiondate">Completion Date</option>
+                    <option value="cost">Cost</option>
+                    <option value="updatedAt">Updated Date</option>
+                </Select>
+                
+                <Select 
+                    value={sortOrder} 
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className='w-full sm:w-40'
+                >
+                    <option value="desc">Newest First</option>
+                    <option value="asc">Oldest First</option>
+                </Select>
+           </div>
+           
+           {/* 搜索框 */}
+           <TextInput 
             placeholder='Enter searching' 
             value={searchTerm} 
             onChange={handleSearch}
-            className='w-full'
-          />
-        </div>
-        <div className='flex gap-2 w-full sm:w-auto'>
-          <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateJob}>
-            Create job
-          </Button>
-          <Button 
-            className='cursor-pointer flex-1 sm:flex-none' 
-            onClick={handleDownloadReport} 
-            color='green'
-          >
-            Report
-          </Button>
-          <Button 
-            className='cursor-pointer flex-1 sm:flex-none' 
-            onClick={confirmSaveToServer}
-            color='blue'
-          >
-            Save
-          </Button>
+            className='w-full sm:w-auto'
+           />
+           
+           {/* 按钮组 */}
+           <div className='flex gap-2 w-full sm:w-auto'>
+                <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateJob}>
+                    Create job
+                </Button>
+                <Button 
+                    className='cursor-pointer flex-1 sm:flex-none' 
+                    onClick={handleDownloadReport} 
+                    color='green'
+                >
+                    Report
+                </Button>
+                <Button 
+                    className='cursor-pointer flex-1 sm:flex-none' 
+                    onClick={confirmSaveToServer}
+                    color='blue'
+                >
+                    Save
+                </Button>
+           </div>
         </div>
       </div>
 
@@ -2239,7 +2307,6 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
         </ModalBody>
       </Modal>
 
-      {/* 已有的其他模态框保持不变 */}
       {/* MFR 选择 Modal */}
       <Modal show={openModalMFR} onClose={() => setOpenModalMFR(false)} size="md">
         <ModalHeader>Maintenance Request Form</ModalHeader>

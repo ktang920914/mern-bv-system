@@ -92,7 +92,7 @@ const Productivity = () => {
 
     const handleUpdate = (productivities) => {
         setProductivityIdToUpdate(productivities._id)
-        setFormData({totaloutput:productivities.totaloutput, reject:productivities.reject, startup: productivities.startup, screwout:productivities.screwout,
+        setFormData({totaloutput:productivities.totaloutput, reject:productivities.reject, startup: productivities.startup, actualipqc:productivities.actualipqc,screwout:productivities.screwout,
             processcomplication:productivities.processcomplication, qctime: productivities.qctime, washup: productivities.washup, vent:productivities.vent,
             unevenpallet:productivities.unevenpallet, whiteoil:productivities.whiteoil, stranddrop:productivities.stranddrop, trialrun:productivities.trialrun,
             meterstart:productivities.meterstart,meterend:productivities.meterend, reason:productivities.reason, washresin:productivities.washresin,
@@ -598,6 +598,11 @@ const Productivity = () => {
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Start up</Label>
                                 <TextInput value={formData.startup}  type='number' min='0' id="startup" placeholder='Enter start up' onChange={handleChange} onFocus={handleFocus}/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IPQC</Label>
+                                <TextInput value={formData.actualipqc}  type='number' min='0' id="actualipqc" placeholder='Enter IPQC' onChange={handleChange} onFocus={handleFocus}/>
                             </div>
         
                             <div className="mb-4 block">

@@ -40,6 +40,10 @@ const productivitySchema = new mongoose.Schema({
         type:Number,
         default:0
     },
+    actualipqc:{
+        type:Number,
+        default:0
+    },
     screwout:{
         type:Number,
         default:0

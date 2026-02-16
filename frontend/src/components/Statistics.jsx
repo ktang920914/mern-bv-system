@@ -25,13 +25,16 @@ const Statistics = () => {
   const [sortBy, setSortBy] = useState('jobs') // 默认按工作数量排序
   const [selectedMonth, setSelectedMonth] = useState('all') // 新增：选择月份状态，默认显示全部月份
   const [sortOrder, setSortOrder] = useState('desc') // 默认降序
-  
+    
   // 保存到服务器的状态
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
   const [saveMessage, setSaveMessage] = useState('')
   const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  // ⭐ 修改：默认勾选排除 L11 (Lab Machine)
+  const [excludeL11, setExcludeL11] = useState(true)
 
   useEffect(() => {
     const handleResize = () => {
@@ -168,7 +171,7 @@ const Statistics = () => {
             : job.starttime
               ? new Date(job.starttime)
               : null
-          
+            
           return jobDate && jobDate.getFullYear() === calendarYear
         })
         .sort((a, b) => {
@@ -912,8 +915,13 @@ const Statistics = () => {
     // 获取选中的月份名称
     const selectedMonthName = monthOptions.find(m => m.value === selectedMonth)?.label || 'All Months'
     
-    // ⭐ 重点修改：根据结束时间（endtime）的年份和选择的月份过滤
+    // ⭐ 重点修改：数据过滤逻辑
     const yearlyData = jobsData.filter(job => {
+      // 1. L11 排除逻辑
+      if (excludeL11 && (job.code === 'L11')) {
+        return false
+      }
+
       // 优先使用 endtime，如果没有 endtime 则使用 starttime
       const jobDate = job.endtime 
         ? moment(job.endtime)
@@ -923,10 +931,10 @@ const Statistics = () => {
       
       if (!jobDate) return false
       
-      // 首先检查年份
+      // 2. 年份检查
       if (jobDate.year() !== calendarYear) return false
       
-      // 然后检查月份（如果选择了特定月份）
+      // 3. 月份检查（如果选择了特定月份）
       if (selectedMonth !== 'all' && jobDate.month() + 1 !== parseInt(selectedMonth)) {
         return false
       }
@@ -937,7 +945,7 @@ const Statistics = () => {
     // 基础统计
     const totalJobs = yearlyData.length
     
-    // ⭐ 修改：使用 operatingtime（分钟转小时）
+    // 修改：使用 operatingtime（分钟转小时）
     const totalDuration = yearlyData.reduce((sum, job) => {
       const operatingTime = Number(job.operatingtime) || 0
       // 将分钟转换为小时
@@ -960,6 +968,9 @@ const Statistics = () => {
     
     // 统计跨天工作数量
     const multiDayJobs = events.filter(event => {
+      // 排除 L11
+      if (excludeL11 && event.resource.code === 'L11') return false
+
       const eventStart = moment(event.resource.actualStart || event.resource.starttime)
       if (selectedMonth !== 'all') {
         return event.resource.isMultiDay && eventStart.month() + 1 === parseInt(selectedMonth) && eventStart.year() === calendarYear
@@ -1021,7 +1032,7 @@ const Statistics = () => {
       jobData.totalScrewOut += Number(job.screwout) || 0
       jobData.totalProdLeadTime += Number(job.prodleadtime) || 0
       
-      // ⭐ 修改：使用 operatingtime（分钟转小时）
+      // 修改：使用 operatingtime（分钟转小时）
       const operatingTime = Number(job.operatingtime) || 0
       jobData.totalDuration += (operatingTime / 60) // 转换为小时
       
@@ -1145,18 +1156,31 @@ const Statistics = () => {
         
         {/* 修改：添加月份过滤卡片 */}
         <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-lg shadow">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h4 className="font-semibold text-gray-700 dark:text-gray-300">Month Filter</h4>
-              
+              <h4 className="font-semibold text-gray-700 dark:text-gray-300">Filter Data</h4>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* ⭐ 新增：排除 L11 的 Checkbox 选项 */}
+              <div className="flex items-center space-x-2 bg-white dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600">
+                <input
+                  type="checkbox"
+                  id="excludeL11"
+                  checked={excludeL11}
+                  onChange={(e) => setExcludeL11(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+                />
+                <label htmlFor="excludeL11" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Exclude L11 (Lab Machine)
+                </label>
+              </div>
+
               {/* 月份选择器 */}
               <select 
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className={"text-sm border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 min-w-[180px]"}
+                className={"text-sm border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 min-w-[150px] cursor-pointer"}
               >
                 {monthOptions.map(month => (
                   <option key={month.value} value={month.value}>
@@ -1164,8 +1188,6 @@ const Statistics = () => {
                   </option>
                 ))}
               </select>
-              
-              
             </div>
           </div>
           
@@ -1176,7 +1198,7 @@ const Statistics = () => {
                 <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                   {totalJobs}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Jobs in {selectedMonthName}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Jobs {excludeL11 ? '(w/o L11)' : ''}</div>
               </div>
               <div className="text-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm">
                 <div className="text-lg font-bold text-green-600 dark:text-green-400">
@@ -1194,7 +1216,7 @@ const Statistics = () => {
                 <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
                   {sortedJobsByCode.length}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Extrusion Lines</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Active Lines</div>
               </div>
             </div>
           )}
@@ -1289,7 +1311,9 @@ const Statistics = () => {
         
         {/* 性能指标卡片 */}
         <div className="mb-2 flex justify-between items-center">
-          <h4 className="text-md font-semibold text-gray-900 dark:text-white">Performance Metrics</h4>
+          <h4 className="text-md font-semibold text-gray-900 dark:text-white">
+            Performance Metrics {excludeL11 && <span className="text-xs font-normal text-gray-500 ml-2">(Excluding L11)</span>}
+          </h4>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1366,7 +1390,7 @@ const Statistics = () => {
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className={"text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900"}
+                    className={"text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 cursor-pointer"}
                   >
                     <option value="jobs">Sort by Jobs</option>
                     <option value="order">Sort by Order</option>

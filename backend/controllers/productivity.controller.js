@@ -22,6 +22,7 @@ export const updateProductivity = async (req, res, next) => {
         const totalorder = existingProductivity.totalorder || 0;
         const screwout = Number(req.body.screwout) || 0;
         const startup = Number(req.body.startup) || 0;
+        const actualipqc = Number(req.body.actualipqc) || 0;
         const processcomplication = Number(req.body.processcomplication) || 0;
         const qctime = Number(req.body.qctime) || 0;
         const washup = Number(req.body.washup) || 0;
@@ -100,6 +101,7 @@ export const updateProductivity = async (req, res, next) => {
                 reject: reject,
                 cause: req.body.cause,
                 startup: startup,
+                actualipqc: actualipqc,
                 screwout: screwout,
                 processcomplication: processcomplication,
                 qctime: qctime,
@@ -145,6 +147,7 @@ export const updateProductivity = async (req, res, next) => {
                             reject: reject,
                             cause: req.body.cause,
                             startup: startup,
+                            actualipqc: actualipqc,
                             screwout: screwout,
                             processcomplication: processcomplication,
                             qctime: qctime,
@@ -188,6 +191,7 @@ export const updateProductivity = async (req, res, next) => {
                             reject: reject,
                             cause: req.body.cause,
                             startup: startup,
+                            actualipqc: actualipqc,
                             screwout: screwout,
                             processcomplication: processcomplication,
                             qctime: qctime,
