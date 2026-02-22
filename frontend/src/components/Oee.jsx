@@ -225,6 +225,7 @@ const Oee = () => {
           10,   // IRR
           10,   // ARR
           10,   // IPQC
+          10,   // Actual IPQC (新增)
           10,   // Setup
           15,   // Prod Lead Time
           15,   // Plan Prod Time
@@ -283,7 +284,7 @@ const Oee = () => {
           'Reject Cause', 'Startup', 'Screw Out', 'Process Complication', 'QC Time',
           'Reason', 'Downtime', 'Wash Resin', 'Wash Up', 'Strand Drop', 'White Oil',
           'Vent', 'Uneven Pallet', 'Trial Run', 'Wastage', 'Meter Start', 'Meter End',
-          'Total Meter', 'Operator', 'IRR', 'ARR', 'IPQC', 'Setup', 'Prod Lead Time',
+          'Total Meter', 'Operator', 'IRR', 'ARR', 'IPQC', 'Actual IPQC', 'Setup', 'Prod Lead Time',
           'Plan Prod Time', 'Operating Time', 'Availability', 'Performance', 'Quality',
           'OEE', 'OEE %', 'Created At', 'Updated At'
         ];
@@ -353,6 +354,7 @@ const Oee = () => {
               job.irr || 0,
               job.arr || 0,
               job.ipqc || 0,
+              job.actualipqc || 0, // 新增数据
               job.setup || 0,
               job.prodleadtime || 0,
               job.planprodtime || 0,
@@ -382,7 +384,8 @@ const Oee = () => {
               
               cell.border = borderStyle;
               
-              if (colIndex === 41) {
+              // OEE 百分比列 (索引偏移至 42)
+              if (colIndex === 42) {
                 const oeePercentage = job.oee ? job.oee * 100 : 0;
                 cell.fill = {
                   type: 'pattern',
@@ -393,7 +396,8 @@ const Oee = () => {
                 };
               }
               
-              if (colIndex >= 37 && colIndex <= 40) {
+              // 灰色背景列 (索引范围偏移至 38-41)
+              if (colIndex >= 38 && colIndex <= 41) {
                 cell.fill = {
                   type: 'pattern',
                   pattern: 'solid',
@@ -436,11 +440,13 @@ const Oee = () => {
             ? exportData.reduce((sum, job) => sum + (job.oee || 0), 0) / exportData.length
             : 0;
           
-          const avgOeeCell = worksheet.getCell(rowIndex, 41);
+          // 平均 OEE 单元格位置偏移至 42
+          const avgOeeCell = worksheet.getCell(rowIndex, 42);
           avgOeeCell.value = `Avg OEE: ${(avgOEE * 100).toFixed(1)}%`;
           avgOeeCell.font = { ...defaultFont, bold: true };
           avgOeeCell.alignment = centerAlignment;
-          worksheet.mergeCells(rowIndex, 40, rowIndex, 42);
+          // 合并范围偏移至 41-43
+          worksheet.mergeCells(rowIndex, 41, rowIndex, 43);
         }
 
         // 设置冻结窗格
@@ -826,101 +832,101 @@ const Oee = () => {
                                 <TableCell>{job.code}</TableCell>
                                 <TableCell className="align-middle">
                                     <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">Extruder:</p>
-                                                <p className="text-xs mb-2">{job.code}</p>
-                                                <p className="font-semibold text-sm">Prod start:</p>
-                                                <p className="text-xs mb-2">{job.starttime}</p>
-                                                <p className="font-semibold text-sm">Prod end:</p>
-                                                <p className="text-xs mb-2">{job.endtime}</p>
-                                                <p className="font-semibold text-sm">Order date:</p>
-                                                <p className="text-xs mb-2">{job.orderdate}</p>
-                                                <p className="font-semibold text-sm">Colour code:</p>
-                                                <p className="text-xs mb-2">{job.colourcode}</p>
-                                                <p className="font-semibold text-sm">Material:</p>
-                                                <p className="text-xs mb-2">{job.material}</p>
-                                                <p className="font-semibold text-sm">Total order:</p>
-                                                <p className="text-xs mb-2">{job.totalorder}</p>
-                                            </div>
-                                        }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
+                                            content={
+                                                <div className="p-3 max-w-xs">
+                                                    <p className="font-semibold text-sm">Extruder:</p>
+                                                    <p className="text-xs mb-2">{job.code}</p>
+                                                    <p className="font-semibold text-sm">Prod start:</p>
+                                                    <p className="text-xs mb-2">{job.starttime}</p>
+                                                    <p className="font-semibold text-sm">Prod end:</p>
+                                                    <p className="text-xs mb-2">{job.endtime}</p>
+                                                    <p className="font-semibold text-sm">Order date:</p>
+                                                    <p className="text-xs mb-2">{job.orderdate}</p>
+                                                    <p className="font-semibold text-sm">Colour code:</p>
+                                                    <p className="text-xs mb-2">{job.colourcode}</p>
+                                                    <p className="font-semibold text-sm">Material:</p>
+                                                    <p className="text-xs mb-2">{job.material}</p>
+                                                    <p className="font-semibold text-sm">Total order:</p>
+                                                    <p className="text-xs mb-2">{job.totalorder}</p>
+                                                </div>
+                                            }
+                                            trigger='hover'
+                                            placement="top"
+                                            arrow={false}
                                     >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {job.lotno}
-                                        </span>
+                                            <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                                {job.lotno}
+                                            </span>
                                     </Popover>
                                 </TableCell>
                                 <TableCell className="align-middle">
                                     <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">{`(Operatingtime / Plan Prodtime) = Availability`}</p>
-                                                <p className="text-xs mb-2">{`(${job.operatingtime} / ${job.planprodtime}) = ${job.availability}`}</p>
-                                            </div>
-                                        }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
+                                            content={
+                                                <div className="p-3 max-w-xs">
+                                                    <p className="font-semibold text-sm">{`(Operatingtime / Plan Prodtime) = Availability`}</p>
+                                                    <p className="text-xs mb-2">{`(${job.operatingtime} / ${job.planprodtime}) = ${job.availability}`}</p>
+                                                </div>
+                                            }
+                                            trigger='hover'
+                                            placement="top"
+                                            arrow={false}
                                     >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {job.availability}
-                                        </span>
+                                            <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                                {job.availability}
+                                            </span>
                                     </Popover>
                                 </TableCell>
                                 <TableCell className="align-middle">
                                     <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) / IRR = Performance`}</p>
-                                                <p className="text-xs mb-2">{`(${job.totaloutput} / ${job.operatingtime}) / ${job.irr} = ${job.performance}`}</p>
-                                            </div>
-                                        }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
+                                            content={
+                                                <div className="p-3 max-w-xs">
+                                                    <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) / IRR = Performance`}</p>
+                                                    <p className="text-xs mb-2">{`(${job.totaloutput} / ${job.operatingtime}) / ${job.irr} = ${job.performance}`}</p>
+                                                </div>
+                                            }
+                                            trigger='hover'
+                                            placement="top"
+                                            arrow={false}
                                     >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {job.performance}
-                                        </span>
+                                            <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                                {job.performance}
+                                            </span>
                                     </Popover>
                                 </TableCell>
                                 <TableCell className="align-middle">
                                     <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">{`(Totaloutput - Reject) / Total output = Quality`}</p>
-                                                <p className="text-xs mb-2">{`(${job.totaloutput} - ${job.reject}) / ${job.totaloutput} = ${job.quality}`}</p>
-                                            </div>
-                                        }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
+                                            content={
+                                                <div className="p-3 max-w-xs">
+                                                    <p className="font-semibold text-sm">{`(Totaloutput - Reject) / Total output = Quality`}</p>
+                                                    <p className="text-xs mb-2">{`(${job.totaloutput} - ${job.reject}) / ${job.totaloutput} = ${job.quality}`}</p>
+                                                </div>
+                                            }
+                                            trigger='hover'
+                                            placement="top"
+                                            arrow={false}
                                     >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {job.quality}
-                                        </span>
+                                            <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                                {job.quality}
+                                            </span>
                                     </Popover>
                                 </TableCell>
                                 <TableCell className="align-middle">
                                     <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
-                                                <p className="text-xs mb-2">{`${job.availability} x ${job.performance} x ${job.quality} = ${job.oee}`}</p>
-                                                <p className="font-semibold text-sm mt-2">OEE Percentage:</p>
-                                                <p className="text-xs">{`${getOeePercentage(job.oee)}%`}</p>
-                                            </div>
-                                        }
-                                        trigger='hover'
-                                        placement="top"
-                                        arrow={false}
+                                            content={
+                                                <div className="p-3 max-w-xs">
+                                                    <p className="font-semibold text-sm">{`Availability x Performance x Quality = OEE`}</p>
+                                                    <p className="text-xs mb-2">{`${job.availability} x ${job.performance} x ${job.quality} = ${job.oee}`}</p>
+                                                    <p className="font-semibold text-sm mt-2">OEE Percentage:</p>
+                                                    <p className="text-xs">{`${getOeePercentage(job.oee)}%`}</p>
+                                                </div>
+                                            }
+                                            trigger='hover'
+                                            placement="top"
+                                            arrow={false}
                                     >
-                                        <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
-                                            {getOeePercentage(job.oee)}%
-                                        </span>
+                                            <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full ${getOeeColorClass(job.oee)}`}>
+                                                {getOeePercentage(job.oee)}%
+                                            </span>
                                     </Popover>
                                 </TableCell>
                             </TableRow>
