@@ -877,7 +877,7 @@ export const updateJob = async (req,res,next) => {
         // Recalculate arr (Average Run Rate)
         let arr = 0;
         if (operatingtime > 0) {
-            arr = Number((totaloutput / operatingtime).toFixed(1));
+            arr = Number((totaloutput / operatingtime).toFixed(2));
         }
 
         // Calculate availability
