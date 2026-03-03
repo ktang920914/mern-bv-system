@@ -60,7 +60,7 @@ const Login = () => {
   return (
     <div className='min-h-screen flex items-center justify-center'>
         <div className='w-full max-w-md bg-white p-8 rounded-lg shadow-lg'>
-            <h1 className='text-2xl text-gray-500 font-semibold text-center'>BV SYSTEM</h1>
+            <h1 className='text-2xl text-gray-500 font-semibold text-center'>Maintenance Web Management</h1>
 
             <form onSubmit={handleSubmit}>
                 <div className='mt-4'>

@@ -21,19 +21,20 @@ const Statistics = () => {
   const [calendarYear, setCalendarYear] = useState(moment().year())
   const [selectedJob, setSelectedJob] = useState(null)
   const [showJobDetails, setShowJobDetails] = useState(false)
-  // 排序选项状态
-  const [sortBy, setSortBy] = useState('jobs') // 默认按工作数量排序
-  const [selectedMonth, setSelectedMonth] = useState('all') // 新增：选择月份状态，默认显示全部月份
-  const [sortOrder, setSortOrder] = useState('desc') // 默认降序
+  
+  // Sorting options state
+  const [sortBy, setSortBy] = useState('jobs') 
+  const [selectedMonth, setSelectedMonth] = useState('all') 
+  const [sortOrder, setSortOrder] = useState('desc') 
     
-  // 保存到服务器的状态
+  // Server save states
   const [showSaveModal, setShowSaveModal] = useState(false)
-  const [saveStatus, setSaveStatus] = useState('') // 'saving', 'success', 'error'
+  const [saveStatus, setSaveStatus] = useState('') 
   const [saveMessage, setSaveMessage] = useState('')
   const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
   const [showConfirmModal, setShowConfirmModal] = useState(false)
 
-  // ⭐ 修改：默认勾选排除 L11 (Lab Machine)
+  // Default to exclude L11 (Lab Machine)
   const [excludeL11, setExcludeL11] = useState(true)
 
   useEffect(() => {
@@ -60,7 +61,7 @@ const Statistics = () => {
         
         const data = await res.json()
         
-        // 按 starttime 排序（最早的在前）
+        // Sort by starttime
         const sortedData = data.sort((a, b) => {
           const timeA = a.starttime ? new Date(a.starttime).getTime() : 0
           const timeB = b.starttime ? new Date(b.starttime).getTime() : 0
@@ -69,18 +70,16 @@ const Statistics = () => {
         
         setJobsData(sortedData)
         
-        // ⭐ 重点：改进的事件生成逻辑（解决跨天显示问题）
+        // Generate calendar events
         const calendarEvents = sortedData.map(job => {
-          // 确保有默认值
           const start = job.starttime
             ? moment(job.starttime)
-            : moment().startOf('day').add(8, 'hours') // 默认8AM开始
+            : moment().startOf('day').add(8, 'hours') 
 
           const end = job.endtime
             ? moment(job.endtime)
-            : start.clone().add(2, 'hours') // 默认2小时
+            : start.clone().add(2, 'hours') 
 
-          // 确保 end 时间不早于 start
           const adjustedEnd = end.isBefore(start) 
             ? start.clone().add(2, 'hours')
             : end
@@ -91,18 +90,11 @@ const Statistics = () => {
           return {
             id: job._id,
             title: `${job.code || 'N/A'} - ${job.lotno || 'No Lot'}`,
-            
-            // ⭐ 关键：日历事件时间处理
             start: start.toDate(),
-            
-            // 跨天事件：显示为全天事件（占满整行）
-            // 非跨天：显示实际时间段
             end: isMultiDay
               ? adjustedEnd.clone().add(1, 'day').startOf('day').toDate()
               : adjustedEnd.toDate(),
-            
             allDay: isMultiDay,
-            
             resource: {
               ...job,
               duration: duration,
@@ -159,23 +151,32 @@ const Statistics = () => {
     }
   }
 
-  // 修改后的 generateJobReport 函数 - 添加时间戳文件名并返回对象
+  // Generate Excel report
   const generateJobReport = async () => {
     try {
-      // ⭐ 首先定义和过滤数据
       const yearJobs = jobsData
         .filter(job => {
-          // 优先使用 endtime 的年份，如果没有 endtime 则使用 starttime
+          if (excludeL11 && job.code === 'L11') {
+            return false
+          }
+
           const jobDate = job.endtime 
             ? new Date(job.endtime)
-            : job.starttime
+            : job.starttime 
               ? new Date(job.starttime)
               : null
-            
-          return jobDate && jobDate.getFullYear() === calendarYear
+              
+          if (!jobDate) return false
+
+          if (jobDate.getFullYear() !== calendarYear) return false
+
+          if (selectedMonth !== 'all' && (jobDate.getMonth() + 1) !== parseInt(selectedMonth)) {
+            return false
+          }
+
+          return true
         })
         .sort((a, b) => {
-          // 排序也优先使用 endtime，其次使用 starttime
           const timeA = a.endtime 
             ? new Date(a.endtime).getTime()
             : a.starttime
@@ -186,18 +187,21 @@ const Statistics = () => {
             : b.starttime
               ? new Date(b.starttime).getTime()
               : 0
-          return timeB - timeA // 最新的在前
+          return timeB - timeA 
         })
 
       const workbook = new ExcelJS.Workbook()
       const reportYear = calendarYear
       
-      // 生成带时间戳的文件名
       const reportDate = new Date();
       const dateStr = reportDate.toISOString().split('T')[0];
       const timeStr = reportDate.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
       
-      const worksheet = workbook.addWorksheet(`Jobs ${reportYear}`)
+      const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthTitleStr = selectedMonth === 'all' ? '' : ` - ${monthNames[parseInt(selectedMonth)]}`;
+      const monthFileNameStr = selectedMonth === 'all' ? '' : `_${monthNames[parseInt(selectedMonth)]}`;
+
+      const worksheet = workbook.addWorksheet(`Jobs ${reportYear}${selectedMonth !== 'all' ? ` M${selectedMonth}` : ''}`)
       
       setupWorksheetPrint(worksheet, {
         fitToHeight: 1,
@@ -206,7 +210,6 @@ const Statistics = () => {
         verticalCentered: false
       })
       
-      // 设置列宽
       worksheet.columns = [
         { width: 5 },    // No.
         { width: 10 },   // Job Code
@@ -240,15 +243,13 @@ const Statistics = () => {
       const centerAlignment = { horizontal: 'center', vertical: 'middle' }
       const leftAlignment = { horizontal: 'left', vertical: 'middle' }
 
-      // 标题行
       const titleRow = worksheet.getRow(1)
       titleRow.height = 30
-      titleRow.getCell(1).value = `JOB PRODUCTION SCHEDULE - ${reportYear}`
+      titleRow.getCell(1).value = `JOB PRODUCTION SCHEDULE - ${reportYear}${monthTitleStr}`
       titleRow.getCell(1).font = titleFont
       titleRow.getCell(1).alignment = centerAlignment
       worksheet.mergeCells(`A1:P1`)
 
-      // ⭐ 新增：生成时间信息
       const generatedRow = worksheet.getRow(2)
       generatedRow.height = 20
       generatedRow.getCell(1).value = `Generated on: ${reportDate.toLocaleString()}`
@@ -256,7 +257,6 @@ const Statistics = () => {
       generatedRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
       worksheet.mergeCells(`A2:P2`)
 
-      // ⭐ 新增：统计信息行
       const statsRow = worksheet.getRow(3)
       statsRow.height = 20
       const totalJobs = yearJobs.length
@@ -275,7 +275,6 @@ const Statistics = () => {
       statsRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
       worksheet.mergeCells(`A3:P3`)
 
-      // 表头行（现在在第4行）
       const headerRow = worksheet.getRow(4)
       headerRow.height = 25
       const headers = [
@@ -298,7 +297,6 @@ const Statistics = () => {
         }
       })
 
-      // 数据行（从第5行开始）
       let rowIndex = 5
       yearJobs.forEach((job, index) => {
         const row = worksheet.getRow(rowIndex)
@@ -307,7 +305,6 @@ const Statistics = () => {
         const startTime = job.starttime ? moment(job.starttime).format('YYYY-MM-DD HH:mm') : ''
         const endTime = job.endtime ? moment(job.endtime).format('YYYY-MM-DD HH:mm') : ''
         
-        // 计算持续时间
         let duration = 0
         if (job.starttime && job.endtime) {
           const start = moment(job.starttime)
@@ -345,27 +342,23 @@ const Statistics = () => {
         rowIndex++
       })
 
-      // ⭐ 新增：启用筛选功能
-      // 设置筛选范围从表头行（第4行）到最后一行的所有列
       if (yearJobs.length > 0) {
-        const lastRow = rowIndex - 1 // 最后一行数据
+        const lastRow = rowIndex - 1 
         worksheet.autoFilter = {
-          from: { row: 4, column: 1 }, // 从第4行第1列开始（表头）
-          to: { row: lastRow, column: 16 } // 到最后一行第16列结束
+          from: { row: 4, column: 1 }, 
+          to: { row: lastRow, column: 16 } 
         }
       }
 
-      // 如果没有数据，添加提示行
       if (yearJobs.length === 0) {
         const row = worksheet.getRow(rowIndex)
-        row.getCell(1).value = `No job data for ${reportYear}`
+        row.getCell(1).value = `No job data for ${reportYear}${monthTitleStr}`
         worksheet.mergeCells(`A${rowIndex}:P${rowIndex}`)
         row.getCell(1).alignment = centerAlignment
         row.getCell(1).font = { ...defaultFont, italic: true }
         rowIndex++
       }
 
-      // ⭐ 新增：添加筛选说明
       if (yearJobs.length > 0) {
         const filterNoteRow = worksheet.getRow(rowIndex + 1)
         filterNoteRow.getCell(1).value = `Note: Use filter icons in column headers to sort and filter data`
@@ -379,8 +372,7 @@ const Statistics = () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       })
       
-      // 生成带时间戳的文件名
-      const fileName = `Job_Production_Schedule_${reportYear}_${dateStr}_${timeStr}.xlsx`
+      const fileName = `Job_Production_Schedule_${reportYear}${monthFileNameStr}_${dateStr}_${timeStr}.xlsx`
       
       return { blob, fileName, reportYear }
 
@@ -390,29 +382,23 @@ const Statistics = () => {
     }
   }
 
-  // 保存到文件服务器的函数 - 使用 FormData
   const saveToFileServer = async () => {
     try {
-      // 显示 Modal 并设置状态为保存中
       setShowSaveModal(true)
       setSaveStatus('saving')
       setSaveMessage('Generating...')
       setSaveDetails({ fileName: '', path: '' })
 
-      // 首先生成 Excel 文件
       const result = await generateJobReport()
       const { blob, fileName } = result
 
-      // 更新状态
       setSaveMessage('Saving...')
       setSaveDetails(prev => ({ ...prev, fileName }))
 
-      // 创建 FormData 对象
       const formData = new FormData()
       formData.append('file', blob, fileName)
       formData.append('fileServerPath', 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)')
 
-      // 发送到后端 API 保存到文件服务器
       const response = await fetch('/api/file/save-excel', {
         method: 'POST',
         body: formData,
@@ -422,7 +408,7 @@ const Statistics = () => {
 
       if (response.ok) {
         setSaveStatus('success')
-        setSaveMessage('Success！')
+        setSaveMessage('Success!')
         setSaveDetails({
           fileName,
           path: data.path || 'Z:\\Document\\FACTORY DEPT\\Maintenance Department (MAINT)'
@@ -448,7 +434,6 @@ const Statistics = () => {
     }
   }
 
-  // 处理下载到本地
   const handleDownloadReport = async () => {
     try {
       const result = await generateJobReport()
@@ -457,21 +442,17 @@ const Statistics = () => {
 
     } catch (error) {
       console.error('Error downloading report:', error)
-      // 可以添加错误提示
       alert('Failed to download report. Please try again.')
     }
   }
 
-  // 处理手动下载（当服务器保存失败时）
   const handleManualDownload = () => {
     handleDownloadReport()
     setShowSaveModal(false)
   }
 
-  // 关闭保存 Modal
   const closeSaveModal = () => {
     setShowSaveModal(false)
-    // 重置状态，但保留一小段时间以便用户看到结果
     setTimeout(() => {
       setSaveStatus('')
       setSaveMessage('')
@@ -479,35 +460,31 @@ const Statistics = () => {
     }, 300)
   }
 
-  // 确认保存到服务器
   const confirmSaveToServer = () => {
     setShowConfirmModal(true)
   }
 
-  // 实际执行保存
   const executeSaveToServer = () => {
     setShowConfirmModal(false)
     saveToFileServer()
   }
 
   const eventStyleGetter = (event) => {
-    // 根据 Job Code 分配不同的颜色
     const jobCode = event.resource.code || 'L1'
     const colorMap = {
-      'L1': '#3B82F6',  // 蓝色
-      'L2': '#10B981',  // 绿色
-      'L3': '#8B5CF6',  // 紫色
-      'L5': '#F59E0B',  // 黄色
-      'L6': '#EF4444',  // 红色
-      'L9': '#EC4899',  // 粉色
-      'L10': '#06B6D4', // 青色
-      'L11': '#84CC16', // 青绿色
-      'L12': '#F97316'  // 橙色
+      'L1': '#3B82F6',  
+      'L2': '#10B981',  
+      'L3': '#8B5CF6',  
+      'L5': '#F59E0B',  
+      'L6': '#EF4444',  
+      'L9': '#EC4899',  
+      'L10': '#06B6D4', 
+      'L11': '#84CC16', 
+      'L12': '#F97316'  
     }
 
-    const backgroundColor = colorMap[jobCode] || '#6B7280' // 默认灰色
+    const backgroundColor = colorMap[jobCode] || '#6B7280'
 
-    // 跨天事件使用不同的样式
     const isMultiDay = event.resource.isMultiDay
     
     return {
@@ -526,7 +503,6 @@ const Statistics = () => {
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         cursor: 'pointer',
-        // 跨天事件添加虚线边框以示区别
         borderStyle: isMultiDay ? 'dashed' : 'none',
         borderWidth: isMultiDay ? '1px' : '0'
       }
@@ -534,7 +510,6 @@ const Statistics = () => {
   }
 
   const handleSelectEvent = (event) => {
-    // 使用实际时间而非日历调整后的时间
     const actualStart = event.resource.actualStart || event.resource.starttime
     const actualEnd = event.resource.actualEnd || event.resource.endtime
     
@@ -547,11 +522,9 @@ const Statistics = () => {
   }
 
   const handleSelectSlot = (slotInfo) => {
-    // ⭐ 修改：获取当天的事件，只包括在该日期实际开始的事件
     const dayEvents = events
       .filter(event => {
         const eventStart = moment(event.resource.actualStart || event.resource.starttime)
-        // ⭐ 重点修改：只匹配开始日期（按天比较）
         return moment(slotInfo.start).isSame(eventStart, 'day')
       })
       .sort((a, b) => {
@@ -691,7 +664,6 @@ const Statistics = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
           <div className="flex justify-between items-center mb-2">
-            {/* 年份切换按钮 - 左侧 */}
             <div className="flex space-x-1">
               <Button size="xs" className='cursor-pointer px-2' onClick={() => {
                 const newDate = currentDate.clone().subtract(1, 'year')
@@ -711,7 +683,6 @@ const Statistics = () => {
               </span>
             </div>
             
-            {/* 年份切换按钮 - 右侧 */}
             <div className="flex space-x-1">
               <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(currentDate.clone().add(1, 'month'))} color="gray">
                 ›
@@ -752,11 +723,9 @@ const Statistics = () => {
                 const isCurrentMonth = day.month() === currentDate.month()
                 const isToday = day.isSame(moment(), 'day')
                 
-                // ⭐ 修改：获取当天事件，只包括在该日期实际开始的事件
                 const dayEvents = events
                   .filter(event => {
                     const eventStart = moment(event.resource.actualStart || event.resource.starttime)
-                    // ⭐ 只匹配开始日期（按天比较）
                     return day.isSame(eventStart, 'day')
                   })
                   .sort((a, b) => {
@@ -808,7 +777,7 @@ const Statistics = () => {
                             className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor} ${borderClass} ${isMultiDay ? 'italic' : ''}`}
                             title={`${event.resource.code} - ${event.resource.lotno} ${isMultiDay ? '(Multi-day)' : ''}`}
                             onClick={(e) => {
-                              e.stopPropagation() // ⭐ 关键修复：阻止事件冒泡
+                              e.stopPropagation() 
                               handleSelectEvent(event)
                             }}
                           >
@@ -821,7 +790,7 @@ const Statistics = () => {
                         <div 
                           className="text-[10px] text-blue-500 text-center bg-blue-50 dark:bg-blue-900 rounded p-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
                           onClick={(e) => {
-                            e.stopPropagation() // ⭐ 关键修复：阻止事件冒泡
+                            e.stopPropagation() 
                             if (dayEvents.length > 0) {
                               setSelectedDay({
                                 date: day,
@@ -836,7 +805,6 @@ const Statistics = () => {
                       )}
                     </div>
                     
-                    {/* 添加查看当天所有事件的链接 */}
                     {dayEvents.length > 0 && (
                       <div className="mt-1 text-center">
                         <button
@@ -895,7 +863,6 @@ const Statistics = () => {
   }
 
   const StatsCards = () => {
-    // 月份选项
     const monthOptions = [
       { value: 'all', label: 'All Months' },
       { value: '1', label: 'January' },
@@ -912,17 +879,13 @@ const Statistics = () => {
       { value: '12', label: 'December' }
     ]
     
-    // 获取选中的月份名称
     const selectedMonthName = monthOptions.find(m => m.value === selectedMonth)?.label || 'All Months'
     
-    // ⭐ 重点修改：数据过滤逻辑
     const yearlyData = jobsData.filter(job => {
-      // 1. L11 排除逻辑
       if (excludeL11 && (job.code === 'L11')) {
         return false
       }
 
-      // 优先使用 endtime，如果没有 endtime 则使用 starttime
       const jobDate = job.endtime 
         ? moment(job.endtime)
         : job.starttime 
@@ -931,10 +894,8 @@ const Statistics = () => {
       
       if (!jobDate) return false
       
-      // 2. 年份检查
       if (jobDate.year() !== calendarYear) return false
       
-      // 3. 月份检查（如果选择了特定月份）
       if (selectedMonth !== 'all' && jobDate.month() + 1 !== parseInt(selectedMonth)) {
         return false
       }
@@ -942,33 +903,35 @@ const Statistics = () => {
       return true
     })
     
-    // 基础统计
     const totalJobs = yearlyData.length
     
-    // 修改：使用 operatingtime（分钟转小时）
     const totalDuration = yearlyData.reduce((sum, job) => {
       const operatingTime = Number(job.operatingtime) || 0
-      // 将分钟转换为小时
       return sum + (operatingTime / 60)
     }, 0)
     
     const totalOrder = yearlyData.reduce((sum, job) => sum + (Number(job.totalorder) || 0), 0)
     const totalDowntime = yearlyData.reduce((sum, job) => sum + (Number(job.downtime) || 0), 0)
     
-    // 修改：只相加 positive wastage 值
     const totalWastage = yearlyData.reduce((sum, job) => {
       const wastage = Number(job.wastage) || 0
-      // 只相加正值，忽略负值
       return sum + (wastage > 0 ? wastage : 0)
     }, 0)
     
     const totalOutput = yearlyData.reduce((sum, job) => sum + (Number(job.totaloutput) || 0), 0)
-    const totalScrewOut = yearlyData.reduce((sum, job) => sum + (Number(job.screwout) || 0), 0)
+    
+    // Global Screw Out Calculation
+    let globalScrewOutCount = 0;
+    const totalScrewOut = yearlyData.reduce((sum, job) => {
+      const val = Number(job.screwout) || 0;
+      if (val > 0) globalScrewOutCount++;
+      return sum + val;
+    }, 0)
+    const globalAvgScrewOut = globalScrewOutCount > 0 ? (totalScrewOut / globalScrewOutCount) : 0;
+    
     const totalProdLeadTime = yearlyData.reduce((sum, job) => sum + (Number(job.prodleadtime) || 0), 0)
     
-    // 统计跨天工作数量
     const multiDayJobs = events.filter(event => {
-      // 排除 L11
       if (excludeL11 && event.resource.code === 'L11') return false
 
       const eventStart = moment(event.resource.actualStart || event.resource.starttime)
@@ -978,7 +941,6 @@ const Statistics = () => {
       return event.resource.isMultiDay && eventStart.year() === calendarYear
     }).length
     
-    // 性能指标平均
     const avgAvailability = yearlyData.length > 0 
       ? yearlyData.reduce((sum, job) => sum + (Number(job.availability) || 0), 0) / yearlyData.length
       : 0
@@ -995,7 +957,7 @@ const Statistics = () => {
       ? yearlyData.reduce((sum, job) => sum + (Number(job.oee) || 0), 0) / yearlyData.length
       : 0
 
-    // 按 Job Code 分组统计 - 增强版
+    // Group Statistics by Job Code
     const jobsByCode = {}
     yearlyData.forEach(job => {
       const code = job.code || 'Unknown'
@@ -1007,6 +969,8 @@ const Statistics = () => {
           totalOutput: 0,
           totalWastage: 0,
           totalScrewOut: 0,
+          screwOutCount: 0, // Track jobs with valid screw out
+          avgScrewOut: 0,   // Average screw out
           totalProdLeadTime: 0,
           multiDayCount: 0,
           avgAvailability: 0,
@@ -1025,18 +989,20 @@ const Statistics = () => {
       jobData.totalOrder += Number(job.totalorder) || 0
       jobData.totalOutput += Number(job.totaloutput) || 0
       
-      // 修改：只相加 positive wastage 值
       const wastage = Number(job.wastage) || 0
       jobData.totalWastage += (wastage > 0 ? wastage : 0)
       
-      jobData.totalScrewOut += Number(job.screwout) || 0
+      const screwOutValue = Number(job.screwout) || 0
+      jobData.totalScrewOut += screwOutValue
+      if (screwOutValue > 0) {
+        jobData.screwOutCount++ 
+      }
+      
       jobData.totalProdLeadTime += Number(job.prodleadtime) || 0
       
-      // 修改：使用 operatingtime（分钟转小时）
       const operatingTime = Number(job.operatingtime) || 0
-      jobData.totalDuration += (operatingTime / 60) // 转换为小时
+      jobData.totalDuration += (operatingTime / 60) 
       
-      // 统计跨天工作
       if (job.starttime && job.endtime) {
         const start = moment(job.starttime)
         const end = moment(job.endtime)
@@ -1045,14 +1011,13 @@ const Statistics = () => {
         }
       }
       
-      // 累计性能指标用于计算平均值
       jobData.availabilitySum += Number(job.availability) || 0
       jobData.performanceSum += Number(job.performance) || 0
       jobData.qualitySum += Number(job.quality) || 0
       jobData.oeeSum += Number(job.oee) || 0
     })
 
-    // 计算每个 Job Code 的平均值
+    // Calculate Averages for each Job Code
     Object.keys(jobsByCode).forEach(code => {
       const jobData = jobsByCode[code]
       if (jobData.count > 0) {
@@ -1061,13 +1026,15 @@ const Statistics = () => {
         jobData.avgQuality = (jobData.qualitySum / jobData.count) * 100
         jobData.avgOEE = (jobData.oeeSum / jobData.count) * 100
       }
+      
+      jobData.avgScrewOut = jobData.screwOutCount > 0 
+        ? (jobData.totalScrewOut / jobData.screwOutCount) 
+        : 0
     })
 
-    // 将 jobsByCode 转换为数组并排序
     const sortedJobsByCode = Object.entries(jobsByCode)
       .map(([code, data]) => ({ code, ...data }))
       .sort((a, b) => {
-        // 根据排序选项和顺序进行排序
         let valueA, valueB;
         
         switch (sortBy) {
@@ -1092,8 +1059,9 @@ const Statistics = () => {
             valueB = b.totalWastage;
             break;
           case 'screwOut':
-            valueA = a.totalScrewOut;
-            valueB = b.totalScrewOut;
+            // Sort by average screw out
+            valueA = a.avgScrewOut;
+            valueB = b.avgScrewOut;
             break;
           case 'oee':
             valueA = a.avgOEE;
@@ -1119,7 +1087,6 @@ const Statistics = () => {
         return sortOrder === 'desc' ? valueB - valueA : valueA - valueB;
       });
 
-    // 最忙的 Job Code
     let busiestCode = 'N/A'
     let maxJobs = 0
     Object.entries(jobsByCode).forEach(([code, data]) => {
@@ -1129,12 +1096,10 @@ const Statistics = () => {
       }
     })
 
-    // 计算废品率（使用 positive wastage）
     const wastageRate = totalOutput > 0 
       ? ((totalWastage / totalOutput) * 100).toFixed(2)
       : '0.00'
 
-    // 排名颜色配置
     const getRankColor = (index) => {
       if (index === 0) return 'bg-yellow-100 dark:bg-yellow-900 border-l-yellow-500'
       if (index === 1) return 'bg-gray-100 dark:bg-gray-900 border-l-gray-500'
@@ -1144,7 +1109,6 @@ const Statistics = () => {
 
     return (
       <div className="mt-4">
-        {/* 修改：添加月份过滤和标题 */}
         <div className="mb-2 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Statistics for {calendarYear} {selectedMonth !== 'all' && `- ${selectedMonthName}`}
@@ -1154,7 +1118,6 @@ const Statistics = () => {
           </Badge>
         </div>
         
-        {/* 修改：添加月份过滤卡片 */}
         <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-lg shadow">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -1162,7 +1125,6 @@ const Statistics = () => {
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
-              {/* ⭐ 新增：排除 L11 的 Checkbox 选项 */}
               <div className="flex items-center space-x-2 bg-white dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600">
                 <input
                   type="checkbox"
@@ -1176,7 +1138,6 @@ const Statistics = () => {
                 </label>
               </div>
 
-              {/* 月份选择器 */}
               <select 
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
@@ -1191,7 +1152,6 @@ const Statistics = () => {
             </div>
           </div>
           
-          {/* 月份数据概览 */}
           {selectedMonth !== 'all' && (
             <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="text-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm">
@@ -1222,7 +1182,6 @@ const Statistics = () => {
           )}
         </div>
         
-        {/* 基础统计卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
@@ -1234,7 +1193,6 @@ const Statistics = () => {
             </div>
           </div>
           
-          {/* ⭐ 修改：Operating Time 卡片 */}
           <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg shadow">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400">
               {totalDuration.toFixed(1)}
@@ -1266,7 +1224,6 @@ const Statistics = () => {
           </div>
         </div>
         
-        {/* 新增统计卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="text-center p-4 bg-indigo-50 dark:bg-indigo-900 rounded-lg shadow">
             <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
@@ -1294,7 +1251,7 @@ const Statistics = () => {
             </div>
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">Total Screw Out</div>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Avg: {totalJobs > 0 ? Math.round(totalScrewOut / totalJobs) : 0}/job
+              Avg: {globalAvgScrewOut.toFixed(1)} / job
             </div>
           </div>
           
@@ -1309,7 +1266,6 @@ const Statistics = () => {
           </div>
         </div>
         
-        {/* 性能指标卡片 */}
         <div className="mb-2 flex justify-between items-center">
           <h4 className="text-md font-semibold text-gray-900 dark:text-white">
             Performance Metrics {excludeL11 && <span className="text-xs font-normal text-gray-500 ml-2">(Excluding L11)</span>}
@@ -1370,7 +1326,6 @@ const Statistics = () => {
           </div>
         </div>
         
-        {/* Job Code 分布 - 增强版 */}
         {sortedJobsByCode.length > 0 && (
           <div className="mt-4">
             <div className="flex justify-between items-center mb-3">
@@ -1385,7 +1340,6 @@ const Statistics = () => {
                   }
                 </Badge>
                 
-                {/* 排序选择器 */}
                 <div className="flex items-center space-x-2">
                   <select 
                     value={sortBy}
@@ -1416,7 +1370,6 @@ const Statistics = () => {
               </div>
             </div>
             
-            {/* 排名说明 */}
             <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -1439,7 +1392,6 @@ const Statistics = () => {
               )}
             </div>
             
-            {/* 如果没有数据，显示提示 */}
             {selectedMonth !== 'all' && sortedJobsByCode.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="text-gray-400 dark:text-gray-500 mb-2">
@@ -1473,12 +1425,10 @@ const Statistics = () => {
                   const borderColor = colorMap[jobData.code] || 'border-gray-500'
                   const bgClass = `${rankBgClass} ${borderColor}`
                   
-                  // 计算废品率（使用 positive wastage）
                   const wastageRate = jobData.totalOutput > 0 
                     ? ((jobData.totalWastage / jobData.totalOutput) * 100).toFixed(2)
                     : '0.00'
                   
-                  // 计算平均生产前置时间
                   const avgProdLeadTime = jobData.count > 0 
                     ? (jobData.totalProdLeadTime / jobData.count).toFixed(1)
                     : '0.0'
@@ -1488,7 +1438,6 @@ const Statistics = () => {
                       key={jobData.code} 
                       className={`p-3 rounded-lg border-l-4 ${bgClass} transition-all duration-300 hover:shadow-md`}
                     >
-                      {/* 头部信息 - 添加排名徽章 */}
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2">
                           <Badge 
@@ -1507,7 +1456,6 @@ const Statistics = () => {
                             <div className="text-sm text-gray-600 dark:text-gray-400">
                               {jobData.count} jobs • {percentage}%
                             </div>
-                            {/* 添加月份信息 */}
                             {selectedMonth !== 'all' && (
                               <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
                                 {selectedMonthName} Ranking
@@ -1520,7 +1468,6 @@ const Statistics = () => {
                         </Badge>
                       </div>
                       
-                      {/* 产量信息 */}
                       <div className="space-y-1 text-xs mb-3">
                         <div className="grid grid-cols-2 gap-1">
                           <div className="font-medium text-green-600 dark:text-green-400">Order:</div>
@@ -1534,15 +1481,16 @@ const Statistics = () => {
                             {jobData.totalWastage.toLocaleString()} ({wastageRate}%)
                           </div>
                           
-                          <div className="font-medium text-red-600 dark:text-red-400">Screw Out:</div>
-                          <div className="text-red-600 dark:text-red-400">{jobData.totalScrewOut.toLocaleString()}</div>
+                          <div className="font-medium text-red-600 dark:text-red-400">Avg Screwout:</div>
+                          <div className="text-red-600 dark:text-red-400">
+                            {jobData.avgScrewOut.toFixed(2)} <span className="text-[10px] text-gray-500">/job</span>
+                          </div>
                           
                           <div className="font-medium text-gray-800 dark:text-gray-300">Lead Time:</div>
                           <div className='text-gray-800 dark:text-gray-300'>{avgProdLeadTime} days</div>
                         </div>
                       </div>
                       
-                      {/* 性能指标 */}
                       <div className="space-y-1 text-xs">
                         <div className="grid grid-cols-2 gap-1">
                           <div className="font-medium text-yellow-600 dark:text-yellow-400">OEE:</div>
@@ -1559,7 +1507,6 @@ const Statistics = () => {
                         </div>
                       </div>
                       
-                      {/* 底部信息 */}
                       <div className="mt-2 flex justify-between items-center">
                         <div className="flex items-center space-x-2">
                           {jobData.multiDayCount > 0 && (
@@ -1591,7 +1538,6 @@ const Statistics = () => {
   const DayEventsModal = () => {
     if (!selectedDay) return null
 
-    // 确保事件按 starttime 排序（最早的在前）
     const sortedEvents = [...selectedDay.events].sort((a, b) => {
       const timeA = new Date(a.resource.starttime).getTime()
       const timeB = new Date(b.resource.starttime).getTime()
@@ -1880,10 +1826,8 @@ const Statistics = () => {
           </div>
         )}
         
-        {/* 统一在这里渲染所有弹窗 */}
         <DayEventsModal />
         <JobDetailsModal />
-        {/* 新增保存相关弹窗 */}
         <ConfirmSaveModal />
         <SaveStatusModal />
         
@@ -1892,7 +1836,6 @@ const Statistics = () => {
     </div>
   )
 
-  // 新增：确认保存 Modal 组件
   function ConfirmSaveModal() {
     return (
       <Modal show={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="md">
@@ -1924,7 +1867,6 @@ const Statistics = () => {
     )
   }
 
-  // 新增：保存状态 Modal 组件
   function SaveStatusModal() {
     return (
       <Modal show={showSaveModal} onClose={closeSaveModal} size="md">
@@ -1935,7 +1877,6 @@ const Statistics = () => {
         </ModalHeader>
         <ModalBody>
           <div className="space-y-4">
-            {/* 状态图标 */}
             <div className="flex justify-center">
               {saveStatus === 'saving' && (
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -1956,12 +1897,10 @@ const Statistics = () => {
               )}
             </div>
             
-            {/* 消息 */}
             <p className="text-center text-gray-700 dark:text-gray-300">
               {saveMessage}
             </p>
             
-            {/* 详细信息 */}
             {saveDetails.fileName && (
               <div className={`p-3 rounded-lg ${
                 theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-gray-700 text-white'
@@ -1978,7 +1917,6 @@ const Statistics = () => {
               </div>
             )}
             
-            {/* 错误时的额外选项 */}
             {saveStatus === 'error' && (
               <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
