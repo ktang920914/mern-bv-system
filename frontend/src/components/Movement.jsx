@@ -962,7 +962,7 @@ const Movement = () => {
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
-                <TextInput id="quantity" type='number' min='1' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} required/>
+                <TextInput id="quantity" type='number' min='1' placeholder='Enter quantity' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
               </div>
 
               <div className="mb-4 block">
@@ -1036,7 +1036,7 @@ const Movement = () => {
             <form onSubmit={handleUpdateSubmit}>
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Quantity</Label>
-                <TextInput value={updateFormData.quantity || ''} id="quantity" type='number' placeholder='Enter balance' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <TextInput value={updateFormData.quantity || ''} id="quantity" type='number' placeholder='Enter balance' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
               </div>
 
               <div className="mb-4 block">
