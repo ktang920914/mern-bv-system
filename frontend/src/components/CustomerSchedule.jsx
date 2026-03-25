@@ -1,0 +1,1053 @@
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, ModalFooter, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { useEffect, useState } from 'react'
+import useUserstore from '../store'
+import { HiOutlineExclamationCircle } from "react-icons/hi";
+import useThemeStore from '../themeStore';
+import { useSearchParams } from 'react-router-dom';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+
+const CustomerSchedule = () => {
+    const { theme } = useThemeStore()
+    const { currentUser } = useUserstore()
+    const [searchParams, setSearchParams] = useSearchParams()
+    
+    // --- Modals State ---
+    const [openModalCreateSchedule, setOpenModalCreateSchedule] = useState(false)
+    const [openModalDeleteSchedule, setOpenModalDeleteSchedule] = useState(false)
+    const [openModalUpdateSchedule, setOpenModalUpdateSchedule] = useState(false)
+    const [openModalReport, setOpenModalReport] = useState(false) // 新增：报表导出弹窗
+    
+    // --- Form & Data State ---
+    const [formData, setFormData] = useState({})
+    const [updateFormData, setUpdateFormData] = useState({})
+    const [errorMessage, setErrorMessage] = useState(null)
+    const [loading, setLoading] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
+    
+    // --- Report State ---
+    const [reportRange, setReportRange] = useState({ start: '', end: '' })
+
+    // --- Data States ---
+    const [extruders, setExtruders] = useState([])
+    const [customers, setCustomers] = useState([])
+    const [schedules, setSchedules] = useState([])
+    
+    const [scheduleIdToDelete, setScheduleIdToDelete] = useState('')
+    const [scheduleIdToUpdate, setScheduleIdToUpdate] = useState('')
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
+    const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
+    const [itemsPage] = useState(10)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [sortBy, setSortBy] = useState('prodstart') 
+    const [sortOrder, setSortOrder] = useState('desc')
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768)
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams)
+        if (currentPage === 1) params.delete('page')
+        else params.set('page', currentPage.toString())
+        
+        if (searchTerm === '') params.delete('search')
+        else params.set('search', searchTerm)
+        
+        setSearchParams(params)
+    }, [currentPage, searchTerm, searchParams, setSearchParams])
+
+    useEffect(() => {
+        const fetchExtruders = async () => {
+            try {
+                const res = await fetch('/api/machine/getExtruders')
+                const data = await res.json()
+                if (res.ok) setExtruders(data)
+            } catch (error) { console.log(error.message) }
+        }
+        fetchExtruders()
+    }, [currentUser._id])
+
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            try {
+                const res = await fetch('/api/client/getcustomers')
+                const data = await res.json()
+                if (res.ok) setCustomers(data)
+            } catch (error) { console.log(error.message) }
+        }
+        fetchCustomers()
+    }, [currentUser._id])
+
+    useEffect(() => {
+        const fetchSchedules = async () => {
+            try {
+                const res = await fetch('/api/customerschedule/getcustomerjobs') 
+                const data = await res.json()
+                if (res.ok) setSchedules(data)
+            } catch (error) { console.log(error.message) }
+        }
+        fetchSchedules()
+    }, [currentUser._id])
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.id]: e.target.value.trim() })
+    }
+
+    const handleFocus = () => {
+        setErrorMessage(null)
+        setLoading(false)
+    }
+
+    const handleCreateSchedule = () => {
+        setOpenModalCreateSchedule(!openModalCreateSchedule)
+    }
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        setLoading(true)
+        try {
+            const res = await fetch('/api/customerschedule/customerjob', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+            const data = await res.json()
+            if (data.success === false) {
+                setErrorMessage(data.message)
+                setLoading(false)
+            } else {
+                setOpenModalCreateSchedule(false)
+                setLoading(false)
+                setFormData({})
+                const refreshRes = await fetch('/api/customerschedule/getcustomerjobs')
+                const refreshData = await refreshRes.json()
+                if (refreshRes.ok) setSchedules(refreshData)
+            }
+        } catch (error) {
+            console.log(error.message)
+            setLoading(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        setOpenModalDeleteSchedule(false)
+        try {
+            const res = await fetch(`/api/customerschedule/delete/${scheduleIdToDelete}`, { method: 'DELETE' })
+            if (res.ok) {
+                setSchedules((prev) => prev.filter((schedule) => schedule._id !== scheduleIdToDelete))
+            }
+        } catch (error) { console.log(error.message) }
+    }
+
+    const handleUpdate = (schedule) => {
+        setScheduleIdToUpdate(schedule._id)
+        setOpenModalUpdateSchedule(!openModalUpdateSchedule)
+        setErrorMessage(null)
+        setLoading(false)
+        setUpdateFormData({
+            customerID: schedule.customerID,
+            customerName: schedule.customerName, 
+            code: schedule.code, 
+            prodstart: schedule.prodstart,
+            prodend: schedule.prodend,
+            targetcompletion: schedule.targetcompletion, 
+            deliverydate: schedule.deliverydate, 
+            lotno: schedule.lotno, 
+            colourcode: schedule.colourcode, 
+            material: schedule.material, 
+            qty: schedule.qty,
+            pax: schedule.pax
+        })
+    }
+
+    const handleUpdateChange = (e) => {
+        if (e.target.id === 'lotno' || e.target.id === 'colourcode' || e.target.id === 'material') {
+            setUpdateFormData({ ...updateFormData, [e.target.id]: e.target.value })
+        } else {
+            setUpdateFormData({ ...updateFormData, [e.target.id]: e.target.value.trim() })
+        }
+    }
+
+    const handleUpdateSubmit = async (e) => {
+        e.preventDefault()
+        setLoading(true)
+        try {
+            const res = await fetch(`/api/customerschedule/update/${scheduleIdToUpdate}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateFormData)
+            })
+            const data = await res.json()
+            if (data.success === false) {
+                setErrorMessage(data.message)
+                setLoading(false)
+            } else if (res.ok) {
+                setOpenModalUpdateSchedule(false)
+                setLoading(false)
+                const refreshRes = await fetch('/api/customerschedule/getcustomerjobs')
+                const refreshData = await refreshRes.json()
+                if (refreshRes.ok) setSchedules(refreshData)
+            }
+        } catch (error) {
+            console.log(error.message)
+            setLoading(false)
+        }
+    }
+
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value.toLowerCase())
+        setCurrentPage(1)
+    }
+
+    const parseDateTime = (dateTimeStr) => {
+        if (!dateTimeStr) return new Date(0)
+        if (dateTimeStr.includes('T') && dateTimeStr.includes('Z')) return new Date(dateTimeStr)
+        return new Date(dateTimeStr.replace(' ', 'T'))
+    }
+
+    const isDateTimeFormat = (val) => {
+        if (!val) return false;
+        return /^\d{4}-\d{2}-\d{2}T/.test(val);
+    }
+
+    const formatDisplayTime = (timeStr) => {
+        if (!timeStr) return '';
+        if (isDateTimeFormat(timeStr)) return timeStr.replace('T', ' ');
+        return timeStr; 
+    }
+
+    // 专门用来格式化报表右上角的时间格式 (M/D/YY h:mm A)
+    const formatReportTime = (dateObj) => {
+        if (!dateObj || isNaN(dateObj)) return '';
+        const m = dateObj.getMonth() + 1;
+        const d = dateObj.getDate();
+        const yy = dateObj.getFullYear().toString().slice(-2);
+        let h = dateObj.getHours();
+        const min = dateObj.getMinutes().toString().padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12; // the hour '0' should be '12'
+        return `${m}/${d}/${yy} ${h}:${min} ${ampm}`;
+    }
+
+    const filteredAndSortedSchedules = schedules
+        .filter(schedule => 
+            (schedule.customerName && schedule.customerName.toLowerCase().includes(searchTerm)) || 
+            (schedule.targetcompletion && schedule.targetcompletion.toLowerCase().includes(searchTerm)) ||
+            (schedule.deliverydate && schedule.deliverydate.toLowerCase().includes(searchTerm)) ||
+            (schedule.lotno && schedule.lotno.toLowerCase().includes(searchTerm)) ||
+            (schedule.code && schedule.code.toLowerCase().includes(searchTerm))
+        )
+        .sort((a, b) => {
+            const dateA = sortBy === 'updatedAt' ? new Date(a.updatedAt) : parseDateTime(a[sortBy])
+            const dateB = sortBy === 'updatedAt' ? new Date(b.updatedAt) : parseDateTime(b[sortBy])
+            return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
+        })
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // --- Excel Report Generation Logic ---
+    const executeDownloadReport = async () => {
+        if (!reportRange.start || !reportRange.end) {
+            alert('Please select both Prod Start and Prod End time.');
+            return;
+        }
+
+        // 过滤出在这个时间范围内的 schedules
+        const startTarget = parseDateTime(reportRange.start).getTime();
+        const endTarget = parseDateTime(reportRange.end).getTime();
+
+        const reportData = schedules.filter(job => {
+            if (!job.prodstart) return false;
+            const jobTime = parseDateTime(job.prodstart).getTime();
+            return jobTime >= startTarget && jobTime <= endTarget;
+        });
+
+        if (reportData.length === 0) {
+            alert('No records found in this time range!');
+            return;
+        }
+        
+        setIsExporting(true);
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Weekly Production');
+
+            // --- 页面打印设置 ---
+            worksheet.pageSetup.orientation = 'landscape';
+            worksheet.pageSetup.fitToPage = true;
+            worksheet.pageSetup.fitToWidth = 1;
+            worksheet.pageSetup.fitToHeight = 0;
+
+            const dateTitle = new Date(reportRange.start).toISOString().split('T')[0].replace(/-/g, '.');
+
+            // ==========================================
+            // 排版构建：完全模仿截图样式
+            // ==========================================
+            
+            // --- 1. 左侧大标题 ---
+            worksheet.mergeCells('A1:F3');
+            const titleCell = worksheet.getCell('A1');
+            titleCell.value = 'WEEKLY PRODUCTION PLANNING';
+            titleCell.font = { name: 'Arial Black', size: 22, bold: true };
+            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // --- 2. 右上角信息表 ---
+            const wipTime = new Date();
+            const mbTime = parseDateTime(reportRange.start);
+            const psdTime = parseDateTime(reportRange.end);
+
+            // G1:I1 (WIP)
+            worksheet.getCell('G1').value = 'WIP';
+            worksheet.getCell('G1').font = { bold: true };
+            worksheet.getCell('G1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } }; // 绿底
+            worksheet.getCell('G1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('G1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.mergeCells('H1:I1');
+            worksheet.getCell('H1').value = formatReportTime(wipTime);
+            worksheet.getCell('H1').font = { color: { argb: 'FFFFFFFF' }, bold: true }; // 白字
+            worksheet.getCell('H1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; // 黑底
+            worksheet.getCell('H1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('H1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // G2:I2 (MB / Prod Start)
+            worksheet.getCell('G2').value = 'MB';
+            worksheet.getCell('G2').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            worksheet.getCell('G2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } }; // 红底
+            worksheet.getCell('G2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('G2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.getCell('H2').value = 'Prod Start';
+            worksheet.getCell('H2').font = { bold: true };
+            worksheet.getCell('H2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+
+            worksheet.getCell('I2').value = formatReportTime(mbTime);
+            worksheet.getCell('I2').font = { color: { argb: 'FF0000FF' }, bold: true }; // 蓝字
+            worksheet.getCell('I2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+
+            // G3:I3 (PSD / Prod End)
+            worksheet.getCell('G3').value = 'PSD';
+            worksheet.getCell('G3').font = { bold: true };
+            worksheet.getCell('G3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB6C1' } }; // 粉红底
+            worksheet.getCell('G3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('G3').alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.getCell('H3').value = 'Prod End';
+            worksheet.getCell('H3').font = { bold: true };
+            worksheet.getCell('H3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+
+            worksheet.getCell('I3').value = formatReportTime(psdTime);
+            worksheet.getCell('I3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+
+
+            // --- 3. 表头 ---
+            const headerRow = worksheet.getRow(4);
+            const headers = ['PAX', 'EXT ID', 'Cust ID', 'Lot No', 'Colour Code', 'Material', 'Qty', 'Target Completion', 'Delivery Date'];
+            
+            headers.forEach((header, index) => {
+                const cell = headerRow.getCell(index + 1);
+                cell.value = header;
+                cell.font = { bold: true };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0C0C0' } }; // 灰底
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            });
+
+            // --- 4. 填充数据 ---
+            let totalPax = 0;
+            let totalQty = 0;
+            let currentRowIdx = 5;
+
+            // 按照 Prod Start 排序
+            const sortedReportData = [...reportData].sort((a, b) => parseDateTime(a.prodstart) - parseDateTime(b.prodstart));
+
+            sortedReportData.forEach((job) => {
+                const isShutdown = job.material?.toUpperCase().includes('SHUT DOWN') || job.lotno?.toUpperCase().includes('SHUT DOWN');
+                
+                const row = worksheet.getRow(currentRowIdx);
+                
+                if (isShutdown) {
+                    // 如果是关机计划行，按照截图特殊合并
+                    row.getCell(1).value = job.pax || 0;
+                    row.getCell(2).value = job.code || '';
+                    row.getCell(3).value = job.lotno || job.material || 'PLAN SHUT DOWN'; // 合并显示在这个区域
+                    row.getCell(7).value = job.qty || 0;
+                    
+                    worksheet.mergeCells(`C${currentRowIdx}:F${currentRowIdx}`);
+                    worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`); // 后面的留空或合并
+
+                    row.eachCell((cell) => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCC0000' } }; // 深红底
+                        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; // 白字
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    });
+                } else {
+                    // 正常数据行
+                    row.getCell(1).value = job.pax || '';
+                    row.getCell(2).value = job.code || '';
+                    row.getCell(3).value = job.customerID || job.customerName || '';
+                    
+                    // Lot no, Colour Code 可能是蓝色链接样式
+                    row.getCell(4).value = job.lotno || '';
+                    row.getCell(4).font = { color: { argb: 'FF0000FF' }, bold: true }; 
+                    
+                    row.getCell(5).value = job.colourcode || '';
+                    row.getCell(5).font = { color: { argb: 'FF0000FF' }, bold: true }; 
+                    
+                    row.getCell(6).value = job.material || '';
+                    row.getCell(6).font = { bold: true }; 
+
+                    row.getCell(7).value = job.qty || 0;
+                    row.getCell(7).font = { bold: true }; 
+                    row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                    // Target Completion (URGENT / KIV 红色高亮)
+                    const targetStr = formatDisplayTime(job.targetcompletion);
+                    row.getCell(8).value = targetStr;
+                    if (targetStr.toUpperCase().includes('URGENT') || targetStr.toUpperCase().includes('KIV')) {
+                        row.getCell(8).font = { color: { argb: 'FFFF0000' }, bold: true };
+                    } else {
+                        row.getCell(8).font = { color: { argb: 'FF0000FF' }, bold: true }; // 其他日期蓝色
+                    }
+
+                    // Delivery Date
+                    const deliveryStr = formatDisplayTime(job.deliverydate);
+                    row.getCell(9).value = deliveryStr;
+                    if (deliveryStr.toUpperCase().includes('URGENT') || deliveryStr.toUpperCase().includes('KIV')) {
+                        row.getCell(9).font = { color: { argb: 'FFFF0000' }, bold: true };
+                    }
+
+                    // 统身边框
+                    for(let c=1; c<=9; c++) {
+                        row.getCell(c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        if (c < 4) row.getCell(c).font = { bold: true };
+                    }
+                }
+
+                // 累加计算 (非 Shutdown 才加，或者根据你的业务逻辑)
+                totalPax += (Number(job.pax) || 0);
+                totalQty += (Number(job.qty) || 0);
+
+                currentRowIdx++;
+            });
+
+            // --- 5. 底部统计栏 ---
+            const totalRow = worksheet.getRow(currentRowIdx);
+            totalRow.getCell(1).value = totalPax; // PAX 总计
+            totalRow.getCell(2).value = 'MANPOWER NEEDED';
+            
+            worksheet.mergeCells(`B${currentRowIdx}:F${currentRowIdx}`);
+            totalRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+
+            totalRow.getCell(7).value = 'TOTAL QTY';
+            totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+            
+            worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`);
+            totalRow.getCell(8).value = totalQty.toLocaleString(); // 加上逗号
+            totalRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle' };
+
+            // 蓝色背景，白字
+            for(let c=1; c<=9; c++) {
+                const cell = totalRow.getCell(c);
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } }; // 蓝底
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; // 白字
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            }
+
+            // --- 6. 设置列宽 ---
+            worksheet.columns = [
+                { width: 6 },  // PAX
+                { width: 10 }, // EXT ID
+                { width: 12 }, // Cust ID
+                { width: 18 }, // Lot No
+                { width: 20 }, // Colour Code
+                { width: 40 }, // Material
+                { width: 12 }, // Qty
+                { width: 22 }, // Target Completion
+                { width: 15 }  // Delivery Date
+            ];
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            
+            saveAs(blob, `Weekly Production Planning dtd ${dateTitle} (MGT).xlsx`);
+            
+            // 关闭模态框
+            setOpenModalReport(false);
+
+        } catch (error) {
+            console.error('Error generating Excel:', error);
+            alert('Failed to generate report.');
+        } finally {
+            setIsExporting(false);
+        }
+    }
+
+    const indexOfLastItem = currentPage * itemsPage
+    const indexOfFirstItem = indexOfLastItem - itemsPage
+    const currentSchedules = filteredAndSortedSchedules.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredAndSortedSchedules.length
+    const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+    const showingTo = Math.min(indexOfLastItem, totalEntries)
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="flex items-center">
+                <span>‹</span><span className="ml-1">Previous</span>
+            </Button>
+            <Button size="sm" disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="flex items-center">
+                <span className="mr-1">Next</span><span>›</span>
+            </Button>
+        </div>
+    )
+
+    const ScheduleCard = ({ schedule }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' ? 'bg-white border border-gray-200 hover:bg-gray-50' : 'bg-gray-800 border border-gray-700 hover:bg-gray-750'
+        }`}>
+            <div className="mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 flex justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">Customer</p>
+                    <p className={`text-lg font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.customerName}</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-500">Ext</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'} font-bold`}>{schedule.code}</p>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div>
+                    <p className="font-semibold text-gray-500">Prod Start:</p>
+                    <p className='text-gray-800 dark:text-gray-300'>{formatDisplayTime(schedule.prodstart)}</p>
+                </div>
+                <div>
+                    <p className="font-semibold text-gray-500">Prod End:</p>
+                    <p className='text-gray-800 dark:text-gray-300'>{formatDisplayTime(schedule.prodend)}</p>
+                </div>
+                <div>
+                    <p className="font-semibold text-gray-500">Target:</p>
+                    <p className='text-green-500 font-semibold'>{formatDisplayTime(schedule.targetcompletion)}</p>
+                </div>
+                <div>
+                    <p className="font-semibold text-gray-500">Delivery:</p>
+                    <p className='text-red-600 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
+                </div>
+            </div>
+            
+            <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-500">Lot No / Details</p>
+                <Popover 
+                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                    content={
+                        <div className="p-3 max-w-xs">
+                            <p className="font-semibold text-sm">Colour code:</p>
+                            <p className="text-xs mb-2">{schedule.colourcode}</p>
+                            <p className="font-semibold text-sm">Material:</p>
+                            <p className="text-xs mb-2">{schedule.material}</p>
+                            <p className="font-semibold text-sm">Qty:</p>
+                            <p className="text-xs mb-2">{schedule.qty}</p>
+                            <p className="font-semibold text-sm">Pax:</p>
+                            <p className="text-xs mb-2">{schedule.pax}</p>
+                        </div>
+                    }
+                    trigger='hover' placement="top" arrow={false}
+                >
+                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                        theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                    }`}>
+                        {schedule.lotno}
+                    </span>
+                </Popover>
+            </div>
+
+            <div className="flex gap-2">
+                <Button outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => handleUpdate(schedule)}>Edit</Button>
+                <Button color='red' outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => {
+                    setScheduleIdToDelete(schedule._id)
+                    setOpenModalDeleteSchedule(true)
+                }}>Delete</Button>
+            </div>
+        </div>
+    )
+
+    return (
+        <div className='min-h-screen'>
+            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
+                <h1 className='text-2xl font-semibold'>Customer Schedule</h1>
+                <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
+                    <div className='flex gap-2'>
+                        <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className='w-full sm:w-36'>
+                            <option value="prodstart">Prod Start</option>
+                            <option value="targetcompletion">Target Comp.</option>
+                            <option value="updatedAt">Updated Date</option>
+                        </Select>
+                        <Select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className='w-full sm:w-32'>
+                            <option value="desc">Newest</option>
+                            <option value="asc">Oldest</option>
+                        </Select>
+                    </div>
+                    
+                    <TextInput placeholder='Search...' value={searchTerm} onChange={handleSearch} className='w-full sm:w-auto'/>
+                    
+                    {/* --- 拦截按钮：不再直接导出，而是打开选择时间的 Modal --- */}
+                    <Button color="green" className='cursor-pointer w-full sm:w-auto' onClick={() => setOpenModalReport(true)}>
+                        Report
+                    </Button>
+                    
+                    <Button color="blue" className='cursor-pointer w-full sm:w-auto' onClick={handleCreateSchedule}>Create</Button>
+                </div>
+            </div>
+
+            {/* Desktop Table View */}
+            {!isMobile && (
+                <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
+                    <TableHead>
+                        <TableRow>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Customer</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Ext</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod Start/End</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Target/Delivery</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Qty</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Pax</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Actions</TableHeadCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {currentSchedules.map((schedule) => (
+                            <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                <TableCell className={`align-middle font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.customerName}</TableCell>
+                                <TableCell className="align-middle font-semibold">{schedule.code}</TableCell>
+                                
+                                <TableCell className="align-middle text-xs">
+                                    <div className="text-green-600 font-semibold">{formatDisplayTime(schedule.prodstart)}</div>
+                                    <div className="text-red-500">{formatDisplayTime(schedule.prodend)}</div>
+                                </TableCell>
+                                
+                                <TableCell className="align-middle text-xs">
+                                    <div className="font-bold">{formatDisplayTime(schedule.targetcompletion)}</div>
+                                    <div className="text-gray-500">{formatDisplayTime(schedule.deliverydate)}</div>
+                                </TableCell>
+                                
+                                <TableCell className="align-middle">
+                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                                        content={
+                                            <div className="p-3 max-w-xs">
+                                                <p className="font-semibold text-sm">Colour code:</p>
+                                                <p className="text-xs mb-2">{schedule.colourcode}</p>
+                                                <p className="font-semibold text-sm">Material:</p>
+                                                <p className="text-xs mb-2">{schedule.material}</p>
+                                            </div>
+                                        }
+                                        trigger='hover' placement="top" arrow={false}
+                                    >
+                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                            {schedule.lotno}
+                                        </span>
+                                    </Popover>
+                                </TableCell>
+                                <TableCell className="align-middle font-semibold">{schedule.qty}</TableCell>
+                                <TableCell className="align-middle font-bold text-orange-500">{schedule.pax}</TableCell>
+                                <TableCell className="align-middle">
+                                    <div className="flex flex-col gap-1">
+                                        <Button outline size="xs" className='cursor-pointer' onClick={() => handleUpdate(schedule)}>Edit</Button>
+                                        <Button color='red' outline size="xs" className='cursor-pointer' onClick={() => {
+                                            setScheduleIdToDelete(schedule._id)
+                                            setOpenModalDeleteSchedule(true)
+                                        }}>Delete</Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            )}
+
+            {/* Mobile Card View */}
+            {isMobile && (
+                <div className="space-y-4">
+                    {currentSchedules.map((schedule) => (
+                        <ScheduleCard key={schedule._id} schedule={schedule} />
+                    ))}
+                </div>
+            )}
+
+            <div className="flex-col justify-center text-center mt-4 mb-8">
+                <p className={`font-semibold ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+                    Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+                </p>
+                {isMobile ? (
+                    <div className="mt-4">
+                        <MobileSimplePagination />
+                    </div>
+                ) : (
+                    <Pagination
+                        showIcons
+                        currentPage={currentPage}
+                        totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                        onPageChange={handlePageChange}
+                    />
+                )}
+            </div>
+
+            {/* ========================================================= */}
+            {/* 新增：REPORT MODAL (选择 Prod Start & Prod End) */}
+            {/* ========================================================= */}
+            <Modal show={openModalReport} onClose={() => setOpenModalReport(false)} popup size="md">
+                <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+                <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
+                    <div className="space-y-6">
+                        <h3 className="text-xl font-medium">Export Weekly Planning</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Select the production time range. Only schedules within this period will be exported.
+                        </p>
+                        
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod Start (From)</Label>
+                            <TextInput 
+                                type='datetime-local' 
+                                value={reportRange.start} 
+                                onChange={(e) => setReportRange({...reportRange, start: e.target.value})} 
+                                required
+                            />
+                        </div>
+                        
+                        <div className="mb-4 block">
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod End (To)</Label>
+                            <TextInput 
+                                type='datetime-local' 
+                                value={reportRange.end} 
+                                onChange={(e) => setReportRange({...reportRange, end: e.target.value})} 
+                                required
+                            />
+                        </div>
+
+                        <div className='flex gap-2 mt-6'>
+                            <Button color='gray' className='w-full cursor-pointer' onClick={() => setOpenModalReport(false)}>
+                                Cancel
+                            </Button>
+                            <Button color='green' className='w-full cursor-pointer' onClick={executeDownloadReport} disabled={isExporting}>
+                                {isExporting ? <Spinner size="sm" className="mr-2" /> : null}
+                                Download Excel
+                            </Button>
+                        </div>
+                    </div>
+                </ModalBody>
+            </Modal>
+
+            {/* CREATE MODAL */}
+            <Modal show={openModalCreateSchedule} onClose={() => setOpenModalCreateSchedule(false)} popup size="lg">
+                <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+                <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900'}`} >
+                    <div className="space-y-6">
+                        <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Create Schedule</h3>
+                        <form onSubmit={handleSubmit}>
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Customer</Label>
+                                <Select 
+                                    id="customerSelect" 
+                                    className='mb-4' 
+                                    required
+                                    onFocus={handleFocus}
+                                    onChange={(e) => {
+                                        const selectedId = e.target.value;
+                                        const selectedCustomer = customers.find(c => c._id === selectedId);
+                                        if (selectedCustomer) {
+                                            setFormData({ 
+                                                ...formData, 
+                                                customerID: selectedCustomer.clientID || selectedCustomer._id,
+                                                customerName: selectedCustomer.clientName 
+                                            });
+                                        } else {
+                                            setFormData({ ...formData, customerID: '', customerName: '' });
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select a customer...</option>
+                                    {customers.map((customer) => (
+                                        <option key={customer._id} value={customer._id}>
+                                            {customer.clientID} - {customer.clientName}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
+                                <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                                    <option value="">Select an extruder...</option>
+                                    {extruders.map((extruder) => (
+                                        <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod Start</Label>
+                                <TextInput type='datetime-local' id="prodstart" onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod End</Label>
+                                <TextInput type='datetime-local' id="prodend" onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+                                
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Target Completion</Label>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='datetime-local' 
+                                        id="targetcompletion" 
+                                        value={isDateTimeFormat(formData.targetcompletion) ? formData.targetcompletion : ''}
+                                        onChange={(e) => setFormData({ ...formData, targetcompletion: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                    <span className="text-gray-500 font-medium text-center">OR</span>
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='text' 
+                                        id="targetcompletion_text" 
+                                        placeholder='e.g., KIV RESIN-TBA' 
+                                        value={!isDateTimeFormat(formData.targetcompletion) ? (formData.targetcompletion || '') : ''}
+                                        onChange={(e) => setFormData({ ...formData, targetcompletion: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Delivery Date</Label>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='datetime-local' 
+                                        id="deliverydate" 
+                                        value={isDateTimeFormat(formData.deliverydate) ? formData.deliverydate : ''}
+                                        onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                    <span className="text-gray-500 font-medium text-center">OR</span>
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='text' 
+                                        id="deliverydate_text" 
+                                        placeholder='e.g., URGENT' 
+                                        value={!isDateTimeFormat(formData.deliverydate) ? (formData.deliverydate || '') : ''}
+                                        onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                </div>
+                            </div>
+        
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
+                                <TextInput id="lotno" placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
+                                <TextInput id="colourcode" placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
+                                <TextInput id="material" placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
+                                <TextInput type='number' min='0' id="qty" step='0.0001' placeholder='Enter Qty' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
+                                <TextInput type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleChange} onFocus={handleFocus} required/>
+                            </div>
+                                
+                            <div className='mb-4 block'>
+                                <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                    {loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}
+                                </Button>
+                            </div>
+                        </form>
+                        {errorMessage && (
+                            <Alert color='failure' className='mt-4 font-semibold'>{errorMessage}</Alert>
+                        )}
+                    </div>
+                </ModalBody>
+            </Modal>
+
+            {/* DELETE MODAL */}
+            <Modal show={openModalDeleteSchedule} size="md" onClose={() => setOpenModalDeleteSchedule(false)} popup>
+                <ModalHeader/>
+                <ModalBody>
+                    <div className="text-center">
+                        <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400 dark:text-gray-200" />
+                        <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+                            Are you sure you want to delete this schedule?
+                        </h3>
+                        <div className="flex justify-center gap-4">
+                            <Button color="red" onClick={handleDelete}>Yes, I'm sure</Button>
+                            <Button color="alternative" onClick={() => setOpenModalDeleteSchedule(false)}>No, cancel</Button>
+                        </div>
+                    </div>
+                </ModalBody>
+            </Modal>
+
+            {/* UPDATE MODAL */}
+            <Modal show={openModalUpdateSchedule} onClose={() => setOpenModalUpdateSchedule(false)} popup size="lg">
+                <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
+                <ModalBody className={`${theme === 'light' ? '' : 'text-gray-50 bg-gray-900'}`}>
+                    <div className="space-y-6">
+                        <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update Schedule</h3>
+                        <form onSubmit={handleUpdateSubmit}>
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Customer</Label>
+                                <Select 
+                                    id="customerUpdateSelect" 
+                                    className='mb-4' 
+                                    required
+                                    value={customers.find(c => c.clientName === updateFormData.customerName)?._id || ''} 
+                                    onFocus={handleFocus}
+                                    onChange={(e) => {
+                                        const selectedId = e.target.value;
+                                        const selectedCustomer = customers.find(c => c._id === selectedId);
+                                        if (selectedCustomer) {
+                                            setUpdateFormData({ 
+                                                ...updateFormData, 
+                                                customerID: selectedCustomer.clientID || selectedCustomer._id,
+                                                customerName: selectedCustomer.clientName 
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select a customer...</option>
+                                    {customers.map((customer) => (
+                                        <option key={customer._id} value={customer._id}>
+                                            {customer.clientID} - {customer.clientName}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
+                                <Select value={updateFormData.code || ''} id="code" className='mb-4' onChange={handleUpdateChange} onFocus={handleFocus} required>
+                                    <option value="">Select an extruder...</option>
+                                    {extruders.map((extruder) => (
+                                        <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod Start</Label>
+                                <TextInput value={updateFormData.prodstart || ''} type='datetime-local' id="prodstart" onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod End</Label>
+                                <TextInput value={updateFormData.prodend || ''} type='datetime-local' id="prodend" onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+                                
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Target Completion</Label>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='datetime-local' 
+                                        id="targetcompletion" 
+                                        value={isDateTimeFormat(updateFormData.targetcompletion) ? updateFormData.targetcompletion : ''}
+                                        onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                    <span className="text-gray-500 font-medium text-center">OR</span>
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='text' 
+                                        id="targetcompletion_text"
+                                        placeholder='e.g., KIV RESIN-TBA' 
+                                        value={!isDateTimeFormat(updateFormData.targetcompletion) ? (updateFormData.targetcompletion || '') : ''}
+                                        onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Delivery Date</Label>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='datetime-local' 
+                                        id="deliverydate" 
+                                        value={isDateTimeFormat(updateFormData.deliverydate) ? updateFormData.deliverydate : ''}
+                                        onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                    <span className="text-gray-500 font-medium text-center">OR</span>
+                                    <TextInput 
+                                        className="flex-1"
+                                        type='text' 
+                                        id="deliverydate_text"
+                                        placeholder='e.g., URGENT' 
+                                        value={!isDateTimeFormat(updateFormData.deliverydate) ? (updateFormData.deliverydate || '') : ''}
+                                        onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
+                                        onFocus={handleFocus} 
+                                    />
+                                </div>
+                            </div>
+        
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
+                                <TextInput value={updateFormData.lotno || ''} id="lotno" placeholder='Enter lot no' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
+                                <TextInput value={updateFormData.colourcode || ''} id="colourcode" placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
+                                <TextInput value={updateFormData.material || ''} id="material" placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
+                                <TextInput value={updateFormData.qty || ''} type='number' min='0' step='0.0001' id="qty" placeholder='Enter Qty' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+
+                            <div className="mb-4 block">
+                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
+                                <TextInput value={updateFormData.pax || ''} type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                            </div>
+                                
+                            <div className='mb-4 block'>
+                                <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                    {loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}
+                                </Button>
+                            </div>
+                        </form>
+                        {errorMessage && (
+                            <Alert color='failure' className='mt-4 font-semibold'>{errorMessage}</Alert>
+                        )}
+                    </div>
+                </ModalBody>
+            </Modal>
+        </div>
+    )
+}
+
+export default CustomerSchedule

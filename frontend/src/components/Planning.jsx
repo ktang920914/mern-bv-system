@@ -19,8 +19,8 @@ const Planning = () => {
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-    const [sortBy, setSortBy] = useState('starttime') // 'starttime', 'endtime', 'orderdate', 'updatedAt'
-    const [sortOrder, setSortOrder] = useState('desc') // 'asc', 'desc'
+    const [sortBy, setSortBy] = useState('starttime') 
+    const [sortOrder, setSortOrder] = useState('desc') 
 
     // Listen for window size changes
     useEffect(() => {
@@ -136,16 +136,14 @@ const Planning = () => {
         setCurrentPage(1)
     }
 
-    // Date parsing function - updated to support updatedAt
+    // Date parsing function
     const parseDateTime = (dateTimeStr) => {
         if (!dateTimeStr) return new Date(0)
         
-        // If it's ISO format (updatedAt), create Date object directly
         if (dateTimeStr.includes('T') && dateTimeStr.includes('Z')) {
             return new Date(dateTimeStr)
         }
         
-        // Handle "YYYY-MM-DD HH:mm:ss" format
         return new Date(dateTimeStr.replace(' ', 'T'))
     }
 
@@ -169,12 +167,11 @@ const Planning = () => {
             planning.prodleadtime.toString().toLowerCase().includes(searchTerm) ||
             planning.planprodtime.toString().toLowerCase().includes(searchTerm) ||
             planning.operatingtime.toString().toLowerCase().includes(searchTerm) ||
-            planning.ipqc.toString().toLowerCase().includes(searchTerm) || // Add setup to search
-            planning.setup.toString().toLowerCase().includes(searchTerm) || // Add setup to search
+            planning.ipqc.toString().toLowerCase().includes(searchTerm) || 
+            planning.setup.toString().toLowerCase().includes(searchTerm) || 
             planning.code.toLowerCase().includes(searchTerm) && planning.code.toString().toLowerCase() === searchTerm
         )
         .sort((a, b) => {
-            // Use ISO string for updatedAt, custom parsing for others
             const dateA = sortBy === 'updatedAt' ? 
                 new Date(a.updatedAt) : 
                 parseDateTime(a[sortBy])
@@ -209,7 +206,7 @@ const Planning = () => {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
 
-    // Mobile simple pagination component - only shows Previous/Next
+    // Mobile simple pagination component
     const MobileSimplePagination = () => (
         <div className="flex items-center justify-center space-x-4">
             <Button
@@ -234,7 +231,7 @@ const Planning = () => {
         </div>
     )
 
-    // Mobile card component - add IPQC and Setup information
+    // Mobile card component
     const PlanningCard = ({ planning }) => (
         <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
             theme === 'light' 
@@ -315,7 +312,8 @@ const Planning = () => {
                         content={
                             <div className="p-3 max-w-xs">
                                 <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) = ARR`}</p>
-                                <p className="text-xs mb-2">{`(${planning.totaloutput} / ${planning.operatingtime}) = ${planning.arr}`}</p>
+                                {/* 强制显示2位小数 */}
+                                <p className="text-xs mb-2">{`(${planning.totaloutput} / ${planning.operatingtime}) = ${Number(planning.arr || 0).toFixed(2)}`}</p>
                             </div>
                         }
                         trigger='hover'
@@ -325,7 +323,8 @@ const Planning = () => {
                         <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
                             theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
                         }`}>
-                            {planning.arr}
+                            {/* 强制显示2位小数 */}
+                            {Number(planning.arr || 0).toFixed(2)}
                         </span>
                     </Popover>
                 </div>
@@ -411,7 +410,7 @@ const Planning = () => {
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Plannings</h1>
                 <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
-                    {/* Sort controls - add updatedAt option */}
+                    {/* Sort controls */}
                     <div className='flex gap-2'>
                         <Select 
                             value={sortBy} 
@@ -443,7 +442,7 @@ const Planning = () => {
                 </div>
             </div>
 
-            {/* Desktop table view - add IPQC and Setup columns */}
+            {/* Desktop table view */}
             {!isMobile && (
                 <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                     <TableHead>
@@ -521,7 +520,8 @@ const Planning = () => {
                                     content={
                                         <div className="p-3 max-w-xs">
                                             <p className="font-semibold text-sm">{`(Totaloutput / Operatingtime) = ARR`}</p>
-                                            <p className="text-xs mb-2">{`(${planning.totaloutput} / ${planning.operatingtime}) = ${planning.arr}`}</p>
+                                            {/* 强制显示2位小数 */}
+                                            <p className="text-xs mb-2">{`(${planning.totaloutput} / ${planning.operatingtime}) = ${Number(planning.arr || 0).toFixed(2)}`}</p>
                                         </div>
                                     }
                                         trigger='hover'
@@ -529,7 +529,8 @@ const Planning = () => {
                                         arrow={false}
                                     >
                                         <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {planning.arr}
+                                            {/* 强制显示2位小数 */}
+                                            {Number(planning.arr || 0).toFixed(2)}
                                         </span>
                                     </Popover>
                                 </TableCell>
@@ -634,60 +635,6 @@ const Planning = () => {
                                 <TextInput value={formData.irr} type='number' min='0.1' max='6.0' step='any'id="irr" placeholder='Enter IRR'  onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
                             </div>
 
-                            {/*<div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>IPQC (Auto-calculated)</Label>
-                                <div className={`p-2 rounded ${theme === 'light' ? 'bg-gray-100' : 'bg-gray-700'}`}>
-                                    <span className="text-sm">
-                                        IPQC is auto-calculated based on:
-                                        <br/>
-                                        • If material contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 0
-                                        <br/>
-                                        • If same colour code as previous job: 0
-                                        <br/>
-                                        • If starts with letters: 0
-                                        <br/>
-                                        • If 5th digit = 0: 0
-                                        <br/>
-                                        • If 5th digit = 2: 60
-                                        <br/>
-                                        • If 5th digit = 3: 200
-                                    </span>
-                                </div>
-                            </div>*/}
-
-                            {/*<div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Setup (Auto-calculated)</Label>
-                                <div className={`p-2 rounded ${theme === 'light' ? 'bg-gray-100' : 'bg-gray-700'}`}>
-                                    <span className="text-sm">
-                                        Setup is auto-calculated based on:
-                                        <br/>
-                                        • If same colour code as previous job: 0
-                                        <br/>
-                                        • If material contains natural/transparent/smoke/pearl/gold/strong/stubborn/metallic: 180
-                                        <br/>
-                                        • If grey/black to grey/black: 25
-                                        <br/>
-                                        • If light to dark, dark to dark, or different material (non grey/black): 60
-                                        <br/>
-                                        • Other cases (dark to light or other colors): 120
-                                    </span>
-                                </div>
-                                <div className={`mt-2 p-2 rounded ${theme === 'light' ? 'bg-blue-50' : 'bg-blue-900'}`}>
-                                    <span className="text-sm font-semibold">Auto-calculated Setup: {formData.setup}</span>
-                                </div>
-                                <TextInput 
-                                    value={formData.setup} 
-                                    type='number' 
-                                    min='0' 
-                                    max='180' 
-                                    step='1'
-                                    id="setup" 
-                                    placeholder='Enter Setup to override auto-calculation (Optional)'
-                                    onChange={handleChange} 
-                                    onFocus={handleFocus}
-                                />
-                            </div>*/}
-                                
                             <div className='mb-4 block'>
                                 <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
                                     {

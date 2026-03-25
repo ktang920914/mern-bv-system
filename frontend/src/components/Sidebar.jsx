@@ -5,7 +5,7 @@ import { HiOutlineDocumentCurrencyDollar } from "react-icons/hi2";
 import { GrDocumentUser } from "react-icons/gr";
 import { MdOutlineInventory } from "react-icons/md";
 import { GrDocumentStore, GrHostMaintenance, GrDocumentVerified} from "react-icons/gr";
-import { RiCalendarScheduleLine } from "react-icons/ri";
+import { RiCalendarScheduleLine, RiUserHeartLine } from "react-icons/ri";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import useUserstore from "../store";
 import useThemeStore from "../themeStore";
@@ -178,6 +178,35 @@ const DashSidebar = () => {
                     Statistics
                   </SidebarItem>
                 </Link>
+              </SidebarCollapse>
+
+              <SidebarCollapse 
+                icon={RiUserHeartLine} 
+                label="Client"
+                className={currentTheme.collapse}
+                renderChevronIcon={() => <span className="ml-auto">▼</span>}
+              >
+                <Link to='/?tab=Customers'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Customers'} 
+                    as='div'
+                    className={tab === 'Customers' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Customer
+                  </SidebarItem>
+                </Link>
+                <Link to='/?tab=Customerschedule'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Customerschedule'} 
+                    as='div'
+                    className={tab === 'Customerschedule' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Schedule
+                  </SidebarItem>
+                </Link>
+                
               </SidebarCollapse>
               
               <SidebarCollapse 
