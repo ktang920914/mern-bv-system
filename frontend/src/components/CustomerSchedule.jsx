@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, ModalFooter, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -16,7 +16,7 @@ const CustomerSchedule = () => {
     const [openModalCreateSchedule, setOpenModalCreateSchedule] = useState(false)
     const [openModalDeleteSchedule, setOpenModalDeleteSchedule] = useState(false)
     const [openModalUpdateSchedule, setOpenModalUpdateSchedule] = useState(false)
-    const [openModalReport, setOpenModalReport] = useState(false) // 新增：报表导出弹窗
+    const [openModalReport, setOpenModalReport] = useState(false) 
     
     // --- Form & Data State ---
     const [formData, setFormData] = useState({})
@@ -27,6 +27,7 @@ const CustomerSchedule = () => {
     
     // --- Report State ---
     const [reportRange, setReportRange] = useState({ start: '', end: '' })
+    const [reportError, setReportError] = useState(null)
 
     // --- Data States ---
     const [extruders, setExtruders] = useState([])
@@ -219,7 +220,6 @@ const CustomerSchedule = () => {
         return timeStr; 
     }
 
-    // 专门用来格式化报表右上角的时间格式 (M/D/YY h:mm A)
     const formatReportTime = (dateObj) => {
         if (!dateObj || isNaN(dateObj)) return '';
         const m = dateObj.getMonth() + 1;
@@ -229,7 +229,7 @@ const CustomerSchedule = () => {
         const min = dateObj.getMinutes().toString().padStart(2, '0');
         const ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12;
-        h = h ? h : 12; // the hour '0' should be '12'
+        h = h ? h : 12; 
         return `${m}/${d}/${yy} ${h}:${min} ${ampm}`;
     }
 
@@ -254,23 +254,30 @@ const CustomerSchedule = () => {
 
     // --- Excel Report Generation Logic ---
     const executeDownloadReport = async () => {
+        setReportError(null); 
+
         if (!reportRange.start || !reportRange.end) {
-            alert('Please select both Prod Start and Prod End time.');
+            setReportError('Please select both Prod Start and Prod End time.');
             return;
         }
 
-        // 过滤出在这个时间范围内的 schedules
         const startTarget = parseDateTime(reportRange.start).getTime();
         const endTarget = parseDateTime(reportRange.end).getTime();
 
+        if (startTarget > endTarget) {
+            setReportError('Start time cannot be later than End time.');
+            return;
+        }
+
         const reportData = schedules.filter(job => {
-            if (!job.prodstart) return false;
-            const jobTime = parseDateTime(job.prodstart).getTime();
-            return jobTime >= startTarget && jobTime <= endTarget;
+            if (!job.prodstart || !job.prodend) return false;
+            const jobStart = parseDateTime(job.prodstart).getTime();
+            const jobEnd = parseDateTime(job.prodend).getTime();
+            return jobStart <= endTarget && jobEnd >= startTarget;
         });
 
         if (reportData.length === 0) {
-            alert('No records found in this time range!');
+            setReportError('No records found in this time range!');
             return;
         }
         
@@ -279,7 +286,6 @@ const CustomerSchedule = () => {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Weekly Production');
 
-            // --- 页面打印设置 ---
             worksheet.pageSetup.orientation = 'landscape';
             worksheet.pageSetup.fitToPage = true;
             worksheet.pageSetup.fitToWidth = 1;
@@ -287,40 +293,32 @@ const CustomerSchedule = () => {
 
             const dateTitle = new Date(reportRange.start).toISOString().split('T')[0].replace(/-/g, '.');
 
-            // ==========================================
-            // 排版构建：完全模仿截图样式
-            // ==========================================
-            
-            // --- 1. 左侧大标题 ---
             worksheet.mergeCells('A1:F3');
             const titleCell = worksheet.getCell('A1');
             titleCell.value = 'WEEKLY PRODUCTION PLANNING';
             titleCell.font = { name: 'Arial Black', size: 22, bold: true };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            // --- 2. 右上角信息表 ---
             const wipTime = new Date();
             const mbTime = parseDateTime(reportRange.start);
             const psdTime = parseDateTime(reportRange.end);
 
-            // G1:I1 (WIP)
             worksheet.getCell('G1').value = 'WIP';
             worksheet.getCell('G1').font = { bold: true };
-            worksheet.getCell('G1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } }; // 绿底
+            worksheet.getCell('G1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
             worksheet.getCell('G1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             worksheet.getCell('G1').alignment = { horizontal: 'center', vertical: 'middle' };
 
             worksheet.mergeCells('H1:I1');
             worksheet.getCell('H1').value = formatReportTime(wipTime);
-            worksheet.getCell('H1').font = { color: { argb: 'FFFFFFFF' }, bold: true }; // 白字
-            worksheet.getCell('H1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; // 黑底
+            worksheet.getCell('H1').font = { color: { argb: 'FFFFFFFF' }, bold: true }; 
+            worksheet.getCell('H1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; 
             worksheet.getCell('H1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             worksheet.getCell('H1').alignment = { horizontal: 'center', vertical: 'middle' };
 
-            // G2:I2 (MB / Prod Start)
             worksheet.getCell('G2').value = 'MB';
             worksheet.getCell('G2').font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            worksheet.getCell('G2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } }; // 红底
+            worksheet.getCell('G2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } }; 
             worksheet.getCell('G2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             worksheet.getCell('G2').alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -329,13 +327,12 @@ const CustomerSchedule = () => {
             worksheet.getCell('H2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
             worksheet.getCell('I2').value = formatReportTime(mbTime);
-            worksheet.getCell('I2').font = { color: { argb: 'FF0000FF' }, bold: true }; // 蓝字
+            worksheet.getCell('I2').font = { color: { argb: 'FF0000FF' }, bold: true }; 
             worksheet.getCell('I2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
-            // G3:I3 (PSD / Prod End)
             worksheet.getCell('G3').value = 'PSD';
             worksheet.getCell('G3').font = { bold: true };
-            worksheet.getCell('G3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB6C1' } }; // 粉红底
+            worksheet.getCell('G3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB6C1' } }; 
             worksheet.getCell('G3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             worksheet.getCell('G3').alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -346,8 +343,6 @@ const CustomerSchedule = () => {
             worksheet.getCell('I3').value = formatReportTime(psdTime);
             worksheet.getCell('I3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
-
-            // --- 3. 表头 ---
             const headerRow = worksheet.getRow(4);
             const headers = ['PAX', 'EXT ID', 'Cust ID', 'Lot No', 'Colour Code', 'Material', 'Qty', 'Target Completion', 'Delivery Date'];
             
@@ -355,47 +350,49 @@ const CustomerSchedule = () => {
                 const cell = headerRow.getCell(index + 1);
                 cell.value = header;
                 cell.font = { bold: true };
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0C0C0' } }; // 灰底
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0C0C0' } };
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 cell.alignment = { horizontal: 'left', vertical: 'middle' };
             });
 
-            // --- 4. 填充数据 ---
-            let totalPax = 0;
-            let totalQty = 0;
+            let grandTotalPax = 0;
+            let grandTotalQty = 0;
             let currentRowIdx = 5;
 
-            // 按照 Prod Start 排序
             const sortedReportData = [...reportData].sort((a, b) => parseDateTime(a.prodstart) - parseDateTime(b.prodstart));
 
-            sortedReportData.forEach((job) => {
-                const isShutdown = job.material?.toUpperCase().includes('SHUT DOWN') || job.lotno?.toUpperCase().includes('SHUT DOWN');
-                
-                const row = worksheet.getRow(currentRowIdx);
-                
-                if (isShutdown) {
-                    // 如果是关机计划行，按照截图特殊合并
-                    row.getCell(1).value = job.pax || 0;
-                    row.getCell(2).value = job.code || '';
-                    row.getCell(3).value = job.lotno || job.material || 'PLAN SHUT DOWN'; // 合并显示在这个区域
-                    row.getCell(7).value = job.qty || 0;
-                    
-                    worksheet.mergeCells(`C${currentRowIdx}:F${currentRowIdx}`);
-                    worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`); // 后面的留空或合并
+            const groupedJobs = {};
+            sortedReportData.forEach(job => {
+                const code = job.code || 'UNKNOWN';
+                if (!groupedJobs[code]) groupedJobs[code] = [];
+                groupedJobs[code].push(job);
+            });
 
-                    row.eachCell((cell) => {
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCC0000' } }; // 深红底
-                        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; // 白字
-                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                    });
-                } else {
-                    // 正常数据行
-                    row.getCell(1).value = job.pax || '';
+            const sortedCodes = Object.keys(groupedJobs).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+            sortedCodes.forEach(code => {
+                const jobs = groupedJobs[code];
+                
+                const maxPax = Math.max(...jobs.map(j => Number(j.pax) || 0));
+                let groupTotalQty = 0;
+                let hasDate = false;
+                let fallbackText = ''; // 记录 KIV 相关的文字
+
+                jobs.forEach(job => {
+                    const row = worksheet.getRow(currentRowIdx);
+                    
+                    const tc = job.targetcompletion || '';
+                    // 检查是否有具体的日期
+                    if (tc && !/KIV|TBA|URGENT/i.test(tc) && !isNaN(parseDateTime(tc).getTime())) {
+                        hasDate = true;
+                    } else if (!fallbackText && tc) {
+                        fallbackText = tc; // 保存诸如 "KIV RESIN", "KIV NAP-61 & Talc" 等内容
+                    }
+
+                    row.getCell(1).value = ''; 
                     row.getCell(2).value = job.code || '';
                     row.getCell(3).value = job.customerID || job.customerName || '';
                     
-                    // Lot no, Colour Code 可能是蓝色链接样式
                     row.getCell(4).value = job.lotno || '';
                     row.getCell(4).font = { color: { argb: 'FF0000FF' }, bold: true }; 
                     
@@ -405,43 +402,77 @@ const CustomerSchedule = () => {
                     row.getCell(6).value = job.material || '';
                     row.getCell(6).font = { bold: true }; 
 
-                    row.getCell(7).value = job.qty || 0;
+                    row.getCell(7).value = Number(job.qty) || 0;
                     row.getCell(7).font = { bold: true }; 
                     row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
 
-                    // Target Completion (URGENT / KIV 红色高亮)
                     const targetStr = formatDisplayTime(job.targetcompletion);
                     row.getCell(8).value = targetStr;
                     if (targetStr.toUpperCase().includes('URGENT') || targetStr.toUpperCase().includes('KIV')) {
                         row.getCell(8).font = { color: { argb: 'FFFF0000' }, bold: true };
                     } else {
-                        row.getCell(8).font = { color: { argb: 'FF0000FF' }, bold: true }; // 其他日期蓝色
+                        row.getCell(8).font = { color: { argb: 'FF0000FF' }, bold: true };
                     }
 
-                    // Delivery Date
                     const deliveryStr = formatDisplayTime(job.deliverydate);
                     row.getCell(9).value = deliveryStr;
                     if (deliveryStr.toUpperCase().includes('URGENT') || deliveryStr.toUpperCase().includes('KIV')) {
                         row.getCell(9).font = { color: { argb: 'FFFF0000' }, bold: true };
                     }
 
-                    // 统身边框
                     for(let c=1; c<=9; c++) {
                         row.getCell(c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                        if (c < 4) row.getCell(c).font = { bold: true };
                     }
+                    
+                    groupTotalQty += (Number(job.qty) || 0);
+                    currentRowIdx++;
+                });
+
+                // --- 处理分组底部的汇总行 ---
+                const summaryRow = worksheet.getRow(currentRowIdx);
+                summaryRow.getCell(1).value = maxPax; 
+                summaryRow.getCell(2).value = code;
+                
+                let summaryText = '';
+                let bgColor = '';
+
+                if (hasDate) {
+                    // 如果组内有日期，显示 PRODUCTION（青色背景）
+                    summaryText = 'PRODUCTION';
+                    bgColor = 'FF008000'; // Green
+                } else {
+                    // 如果组内完全没日期，显示 PLAN SHUT DOWN（红色背景）
+                    summaryText = fallbackText ? `PLAN SHUT DOWN - ${fallbackText.toUpperCase()}` : 'PLAN SHUT DOWN - NO ORDER';
+                    bgColor = 'FFCC0000'; // Red
                 }
+                
+                summaryRow.getCell(3).value = summaryText;
+                summaryRow.getCell(7).value = groupTotalQty;
 
-                // 累加计算 (非 Shutdown 才加，或者根据你的业务逻辑)
-                totalPax += (Number(job.pax) || 0);
-                totalQty += (Number(job.qty) || 0);
+                worksheet.mergeCells(`C${currentRowIdx}:F${currentRowIdx}`);
+                worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`);
 
+                summaryRow.eachCell((cell, colNum) => {
+                    if (colNum <= 9) {
+                        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // 白色字体
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }; // 动态背景色
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        if (colNum === 3) {
+                            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        }
+                        if (colNum === 1 || colNum === 7) {
+                            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        }
+                    }
+                });
+
+                grandTotalPax += maxPax;
+                grandTotalQty += groupTotalQty;
                 currentRowIdx++;
             });
 
-            // --- 5. 底部统计栏 ---
             const totalRow = worksheet.getRow(currentRowIdx);
-            totalRow.getCell(1).value = totalPax; // PAX 总计
+            totalRow.getCell(1).value = grandTotalPax; 
             totalRow.getCell(2).value = 'MANPOWER NEEDED';
             
             worksheet.mergeCells(`B${currentRowIdx}:F${currentRowIdx}`);
@@ -451,28 +482,26 @@ const CustomerSchedule = () => {
             totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
             
             worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`);
-            totalRow.getCell(8).value = totalQty.toLocaleString(); // 加上逗号
+            totalRow.getCell(8).value = grandTotalQty.toLocaleString(); 
             totalRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle' };
 
-            // 蓝色背景，白字
             for(let c=1; c<=9; c++) {
                 const cell = totalRow.getCell(c);
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } }; // 蓝底
-                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; // 白字
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } }; 
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; 
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             }
 
-            // --- 6. 设置列宽 ---
             worksheet.columns = [
-                { width: 6 },  // PAX
-                { width: 10 }, // EXT ID
-                { width: 12 }, // Cust ID
-                { width: 18 }, // Lot No
-                { width: 20 }, // Colour Code
-                { width: 40 }, // Material
-                { width: 12 }, // Qty
-                { width: 22 }, // Target Completion
-                { width: 15 }  // Delivery Date
+                { width: 6 },  
+                { width: 10 }, 
+                { width: 12 }, 
+                { width: 18 }, 
+                { width: 20 }, 
+                { width: 40 }, 
+                { width: 12 }, 
+                { width: 22 }, 
+                { width: 18 }  
             ];
 
             const buffer = await workbook.xlsx.writeBuffer();
@@ -480,12 +509,11 @@ const CustomerSchedule = () => {
             
             saveAs(blob, `Weekly Production Planning dtd ${dateTitle} (MGT).xlsx`);
             
-            // 关闭模态框
             setOpenModalReport(false);
 
         } catch (error) {
             console.error('Error generating Excel:', error);
-            alert('Failed to generate report.');
+            setReportError('Failed to generate report.');
         } finally {
             setIsExporting(false);
         }
@@ -528,11 +556,11 @@ const CustomerSchedule = () => {
             <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
                 <div>
                     <p className="font-semibold text-gray-500">Prod Start:</p>
-                    <p className='text-gray-800 dark:text-gray-300'>{formatDisplayTime(schedule.prodstart)}</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.prodstart)}</p>
                 </div>
                 <div>
                     <p className="font-semibold text-gray-500">Prod End:</p>
-                    <p className='text-gray-800 dark:text-gray-300'>{formatDisplayTime(schedule.prodend)}</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.prodend)}</p>
                 </div>
                 <div>
                     <p className="font-semibold text-gray-500">Target:</p>
@@ -599,8 +627,10 @@ const CustomerSchedule = () => {
                     
                     <TextInput placeholder='Search...' value={searchTerm} onChange={handleSearch} className='w-full sm:w-auto'/>
                     
-                    {/* --- 拦截按钮：不再直接导出，而是打开选择时间的 Modal --- */}
-                    <Button color="green" className='cursor-pointer w-full sm:w-auto' onClick={() => setOpenModalReport(true)}>
+                    <Button color="green" className='cursor-pointer w-full sm:w-auto' onClick={() => {
+                        setReportError(null)
+                        setOpenModalReport(true)
+                    }}>
                         Report
                     </Button>
                     
@@ -673,7 +703,6 @@ const CustomerSchedule = () => {
                 </Table>
             )}
 
-            {/* Mobile Card View */}
             {isMobile && (
                 <div className="space-y-4">
                     {currentSchedules.map((schedule) => (
@@ -700,17 +729,21 @@ const CustomerSchedule = () => {
                 )}
             </div>
 
-            {/* ========================================================= */}
-            {/* 新增：REPORT MODAL (选择 Prod Start & Prod End) */}
-            {/* ========================================================= */}
+            {/* REPORT MODAL */}
             <Modal show={openModalReport} onClose={() => setOpenModalReport(false)} popup size="md">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                     <div className="space-y-6">
                         <h3 className="text-xl font-medium">Export Weekly Planning</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Select the production time range. Only schedules within this period will be exported.
+                            Select the production time range. Only schedules active within this period will be exported.
                         </p>
+                        
+                        {reportError && (
+                            <Alert color="failure" icon={HiOutlineExclamationCircle}>
+                                <span className="font-medium">{reportError}</span>
+                            </Alert>
+                        )}
                         
                         <div className="mb-4 block">
                             <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod Start (From)</Label>
@@ -993,7 +1026,7 @@ const CustomerSchedule = () => {
                                         type='datetime-local' 
                                         id="deliverydate" 
                                         value={isDateTimeFormat(updateFormData.deliverydate) ? updateFormData.deliverydate : ''}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
+                                        onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
                                         onFocus={handleFocus} 
                                     />
                                     <span className="text-gray-500 font-medium text-center">OR</span>
