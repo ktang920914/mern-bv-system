@@ -297,7 +297,8 @@ const CustomerSchedule = () => {
             const dd = String(startDateObj.getDate()).padStart(2, '0');
             const dateTitle = `${yyyy}.${mm}.${dd}`;
 
-            worksheet.mergeCells('A1:F3');
+            // Modified Title merge to stretch over 7 columns (A to G)
+            worksheet.mergeCells('A1:G3');
             const titleCell = worksheet.getCell('A1');
             titleCell.value = 'WEEKLY PRODUCTION PLANNING';
             titleCell.font = { name: 'Arial Black', size: 22, bold: true };
@@ -307,48 +308,50 @@ const CustomerSchedule = () => {
             const mbTime = parseDateTime(reportRange.start);
             const psdTime = parseDateTime(reportRange.end);
 
-            worksheet.getCell('G1').value = 'WIP';
-            worksheet.getCell('G1').font = { bold: true };
-            worksheet.getCell('G1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
-            worksheet.getCell('G1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-            worksheet.getCell('G1').alignment = { horizontal: 'center', vertical: 'middle' };
-
-            worksheet.mergeCells('H1:I1');
-            worksheet.getCell('H1').value = formatReportTime(wipTime);
-            worksheet.getCell('H1').font = { color: { argb: 'FFFFFFFF' }, bold: true }; 
-            worksheet.getCell('H1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; 
+            // Shifted Right Box from (G, H, I) to (H, I, J)
+            worksheet.getCell('H1').value = 'WIP';
+            worksheet.getCell('H1').font = { bold: true };
+            worksheet.getCell('H1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
             worksheet.getCell('H1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             worksheet.getCell('H1').alignment = { horizontal: 'center', vertical: 'middle' };
 
-            worksheet.getCell('G2').value = 'MB';
-            worksheet.getCell('G2').font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            worksheet.getCell('G2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } }; 
-            worksheet.getCell('G2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-            worksheet.getCell('G2').alignment = { horizontal: 'center', vertical: 'middle' };
+            worksheet.mergeCells('I1:J1');
+            worksheet.getCell('I1').value = formatReportTime(wipTime);
+            worksheet.getCell('I1').font = { color: { argb: 'FFFFFFFF' }, bold: true }; 
+            worksheet.getCell('I1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; 
+            worksheet.getCell('I1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('I1').alignment = { horizontal: 'center', vertical: 'middle' };
 
-            worksheet.getCell('H2').value = 'Prod Start';
-            worksheet.getCell('H2').font = { bold: true };
+            worksheet.getCell('H2').value = 'MB';
+            worksheet.getCell('H2').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            worksheet.getCell('H2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } }; 
             worksheet.getCell('H2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('H2').alignment = { horizontal: 'center', vertical: 'middle' };
 
-            worksheet.getCell('I2').value = formatReportTime(mbTime);
-            worksheet.getCell('I2').font = { color: { argb: 'FF0000FF' }, bold: true }; 
+            worksheet.getCell('I2').value = 'Prod Start';
+            worksheet.getCell('I2').font = { bold: true };
             worksheet.getCell('I2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
-            worksheet.getCell('G3').value = 'PSD';
-            worksheet.getCell('G3').font = { bold: true };
-            worksheet.getCell('G3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB6C1' } }; 
-            worksheet.getCell('G3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-            worksheet.getCell('G3').alignment = { horizontal: 'center', vertical: 'middle' };
+            worksheet.getCell('J2').value = formatReportTime(mbTime);
+            worksheet.getCell('J2').font = { color: { argb: 'FF0000FF' }, bold: true }; 
+            worksheet.getCell('J2').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
-            worksheet.getCell('H3').value = 'Prod End';
+            worksheet.getCell('H3').value = 'PSD';
             worksheet.getCell('H3').font = { bold: true };
+            worksheet.getCell('H3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB6C1' } }; 
             worksheet.getCell('H3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            worksheet.getCell('H3').alignment = { horizontal: 'center', vertical: 'middle' };
 
-            worksheet.getCell('I3').value = formatReportTime(psdTime);
+            worksheet.getCell('I3').value = 'Prod End';
+            worksheet.getCell('I3').font = { bold: true };
             worksheet.getCell('I3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
+            worksheet.getCell('J3').value = formatReportTime(psdTime);
+            worksheet.getCell('J3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+
             const headerRow = worksheet.getRow(4);
-            const headers = ['PAX', 'EXT ID', 'Cust ID', 'Lot No', 'Colour Code', 'Material', 'Qty', 'Target Completion', 'Delivery Date'];
+            // Added Customer Name
+            const headers = ['PAX', 'EXT ID', 'Cust ID', 'Customer Name', 'Lot No', 'Colour Code', 'Material', 'Qty', 'Target Completion', 'Delivery Date'];
             
             headers.forEach((header, index) => {
                 const cell = headerRow.getCell(index + 1);
@@ -394,36 +397,38 @@ const CustomerSchedule = () => {
 
                     row.getCell(1).value = ''; 
                     row.getCell(2).value = job.code || '';
-                    row.getCell(3).value = job.customerID || job.customerName || '';
+                    row.getCell(3).value = job.customerID || '';
+                    row.getCell(4).value = job.customerName || ''; // Populating new Customer Name column
                     
-                    row.getCell(4).value = job.lotno || '';
-                    row.getCell(4).font = { color: { argb: 'FF0000FF' }, bold: true }; 
-                    
-                    row.getCell(5).value = job.colourcode || '';
+                    row.getCell(5).value = job.lotno || '';
                     row.getCell(5).font = { color: { argb: 'FF0000FF' }, bold: true }; 
                     
-                    row.getCell(6).value = job.material || '';
-                    row.getCell(6).font = { bold: true }; 
-
-                    row.getCell(7).value = Number(job.qty) || 0;
+                    row.getCell(6).value = job.colourcode || '';
+                    row.getCell(6).font = { color: { argb: 'FF0000FF' }, bold: true }; 
+                    
+                    row.getCell(7).value = job.material || '';
                     row.getCell(7).font = { bold: true }; 
-                    row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                    row.getCell(8).value = Number(job.qty) || 0;
+                    row.getCell(8).font = { bold: true }; 
+                    row.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
 
                     const targetStr = formatDisplayTime(job.targetcompletion);
-                    row.getCell(8).value = targetStr;
+                    row.getCell(9).value = targetStr;
                     if (targetStr.toUpperCase().includes('URGENT') || targetStr.toUpperCase().includes('KIV')) {
-                        row.getCell(8).font = { color: { argb: 'FFFF0000' }, bold: true };
+                        row.getCell(9).font = { color: { argb: 'FFFF0000' }, bold: true };
                     } else {
-                        row.getCell(8).font = { color: { argb: 'FF0000FF' }, bold: true };
+                        row.getCell(9).font = { color: { argb: 'FF0000FF' }, bold: true };
                     }
 
                     const deliveryStr = formatDisplayTime(job.deliverydate);
-                    row.getCell(9).value = deliveryStr;
+                    row.getCell(10).value = deliveryStr;
                     if (deliveryStr.toUpperCase().includes('URGENT') || deliveryStr.toUpperCase().includes('KIV')) {
-                        row.getCell(9).font = { color: { argb: 'FFFF0000' }, bold: true };
+                        row.getCell(10).font = { color: { argb: 'FFFF0000' }, bold: true };
                     }
 
-                    for(let c=1; c<=9; c++) {
+                    // Loop adjusted for 10 columns
+                    for(let c=1; c<=10; c++) {
                         row.getCell(c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                     }
                     
@@ -451,20 +456,21 @@ const CustomerSchedule = () => {
                 }
                 
                 summaryRow.getCell(3).value = summaryText;
-                summaryRow.getCell(7).value = groupTotalQty;
+                summaryRow.getCell(8).value = groupTotalQty; // Qty is now at column 8
 
-                worksheet.mergeCells(`C${currentRowIdx}:F${currentRowIdx}`);
-                worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`);
+                // Merge cells adjusted for added column
+                worksheet.mergeCells(`C${currentRowIdx}:G${currentRowIdx}`); // Merge from Cust ID(3) up to Material(7)
+                worksheet.mergeCells(`I${currentRowIdx}:J${currentRowIdx}`); // Merge from Target(9) to Delivery(10)
 
                 summaryRow.eachCell((cell, colNum) => {
-                    if (colNum <= 9) {
+                    if (colNum <= 10) {
                         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; 
                         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }; 
                         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                         if (colNum === 3) {
                             cell.alignment = { horizontal: 'center', vertical: 'middle' };
                         }
-                        if (colNum === 1 || colNum === 7) {
+                        if (colNum === 1 || colNum === 8) {
                             cell.alignment = { horizontal: 'center', vertical: 'middle' };
                         }
                     }
@@ -482,34 +488,38 @@ const CustomerSchedule = () => {
             totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
             
             totalRow.getCell(2).value = 'MANPOWER NEEDED';
-            worksheet.mergeCells(`B${currentRowIdx}:F${currentRowIdx}`);
+            // Merge B(2) to Material(7)
+            worksheet.mergeCells(`B${currentRowIdx}:G${currentRowIdx}`);
             
             totalRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
 
-            totalRow.getCell(7).value = 'TOTAL QTY';
-            totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+            totalRow.getCell(8).value = 'TOTAL QTY';
+            totalRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
             
-            worksheet.mergeCells(`H${currentRowIdx}:I${currentRowIdx}`);
-            totalRow.getCell(8).value = grandTotalQty.toLocaleString(); 
-            totalRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle' };
+            // Merge Target(9) to Delivery(10)
+            worksheet.mergeCells(`I${currentRowIdx}:J${currentRowIdx}`);
+            totalRow.getCell(9).value = grandTotalQty.toLocaleString(); 
+            totalRow.getCell(9).alignment = { horizontal: 'left', vertical: 'middle' };
 
-            for(let c=1; c<=9; c++) {
+            for(let c=1; c<=10; c++) {
                 const cell = totalRow.getCell(c);
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } }; 
                 cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; 
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             }
 
+            // Columns array updated for 10 columns
             worksheet.columns = [
-                { width: 6 },  
-                { width: 10 }, 
-                { width: 12 }, 
-                { width: 18 }, 
-                { width: 20 }, 
-                { width: 40 }, 
-                { width: 12 }, 
-                { width: 22 }, 
-                { width: 18 }  
+                { width: 6 },  // 1. PAX
+                { width: 10 }, // 2. EXT ID
+                { width: 12 }, // 3. Cust ID
+                { width: 25 }, // 4. Customer Name (NEW)
+                { width: 18 }, // 5. Lot No
+                { width: 20 }, // 6. Colour Code
+                { width: 40 }, // 7. Material
+                { width: 12 }, // 8. Qty
+                { width: 22 }, // 9. Target Completion
+                { width: 18 }  // 10. Delivery Date
             ];
 
             const buffer = await workbook.xlsx.writeBuffer();
@@ -564,19 +574,19 @@ const CustomerSchedule = () => {
             <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
                 <div>
                     <p className="font-semibold text-gray-500">Prod Start:</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.prodstart)}</p>
+                    <p className='text-green-500 font-semibold'>{formatDisplayTime(schedule.prodstart)}</p>
                 </div>
                 <div>
                     <p className="font-semibold text-gray-500">Prod End:</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.prodend)}</p>
+                    <p className='text-red-500 font-semibold'>{formatDisplayTime(schedule.prodend)}</p>
                 </div>
                 <div>
                     <p className="font-semibold text-gray-500">Target:</p>
-                    <p className='text-green-500 font-semibold'>{formatDisplayTime(schedule.targetcompletion)}</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.targetcompletion)}</p>
                 </div>
                 <div>
                     <p className="font-semibold text-gray-500">Delivery:</p>
-                    <p className='text-red-600 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
+                    <p className='text-cyan-500 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
                 </div>
             </div>
             
@@ -666,13 +676,13 @@ const CustomerSchedule = () => {
                                 <TableCell className="align-middle font-semibold">{schedule.code}</TableCell>
                                 
                                 <TableCell className="align-middle text-xs">
-                                    <div className="text-green-600 font-semibold">{formatDisplayTime(schedule.prodstart)}</div>
-                                    <div className="text-red-500">{formatDisplayTime(schedule.prodend)}</div>
+                                    <div className="text-green-500 font-semibold">{formatDisplayTime(schedule.prodstart)}</div>
+                                    <div className="text-red-500 font-semibold">{formatDisplayTime(schedule.prodend)}</div>
                                 </TableCell>
                                 
                                 <TableCell className="align-middle text-xs">
                                     <div className="font-bold">{formatDisplayTime(schedule.targetcompletion)}</div>
-                                    <div className="text-gray-500">{formatDisplayTime(schedule.deliverydate)}</div>
+                                    <div className="text-cyan-500 font-semibold">{formatDisplayTime(schedule.deliverydate)}</div>
                                 </TableCell>
                                 
                                 <TableCell className="align-middle">
