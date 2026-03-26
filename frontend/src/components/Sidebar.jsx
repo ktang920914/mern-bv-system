@@ -206,6 +206,16 @@ const DashSidebar = () => {
                     Schedule
                   </SidebarItem>
                 </Link>
+                <Link to='/?tab=Customeroutput'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Customeroutput'} 
+                    as='div'
+                    className={tab === 'Customeroutput' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Outputs
+                  </SidebarItem>
+                </Link>
                 
               </SidebarCollapse>
               

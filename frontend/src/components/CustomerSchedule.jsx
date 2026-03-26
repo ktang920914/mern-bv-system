@@ -291,7 +291,11 @@ const CustomerSchedule = () => {
             worksheet.pageSetup.fitToWidth = 1;
             worksheet.pageSetup.fitToHeight = 0;
 
-            const dateTitle = new Date(reportRange.start).toISOString().split('T')[0].replace(/-/g, '.');
+            const startDateObj = new Date(reportRange.start);
+            const yyyy = startDateObj.getFullYear();
+            const mm = String(startDateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(startDateObj.getDate()).padStart(2, '0');
+            const dateTitle = `${yyyy}.${mm}.${dd}`;
 
             worksheet.mergeCells('A1:F3');
             const titleCell = worksheet.getCell('A1');
@@ -373,20 +377,19 @@ const CustomerSchedule = () => {
             sortedCodes.forEach(code => {
                 const jobs = groupedJobs[code];
                 
-                const maxPax = Math.max(...jobs.map(j => Number(j.pax) || 0));
+                let maxPax = Math.max(...jobs.map(j => Number(j.pax) || 0));
                 let groupTotalQty = 0;
                 let hasDate = false;
-                let fallbackText = ''; // 记录 KIV 相关的文字
+                let fallbackText = ''; 
 
                 jobs.forEach(job => {
                     const row = worksheet.getRow(currentRowIdx);
                     
                     const tc = job.targetcompletion || '';
-                    // 检查是否有具体的日期
                     if (tc && !/KIV|TBA|URGENT/i.test(tc) && !isNaN(parseDateTime(tc).getTime())) {
                         hasDate = true;
                     } else if (!fallbackText && tc) {
-                        fallbackText = tc; // 保存诸如 "KIV RESIN", "KIV NAP-61 & Talc" 等内容
+                        fallbackText = tc; 
                     }
 
                     row.getCell(1).value = ''; 
@@ -428,7 +431,10 @@ const CustomerSchedule = () => {
                     currentRowIdx++;
                 });
 
-                // --- 处理分组底部的汇总行 ---
+                if (!hasDate) {
+                    maxPax = 0;
+                }
+
                 const summaryRow = worksheet.getRow(currentRowIdx);
                 summaryRow.getCell(1).value = maxPax; 
                 summaryRow.getCell(2).value = code;
@@ -437,11 +443,9 @@ const CustomerSchedule = () => {
                 let bgColor = '';
 
                 if (hasDate) {
-                    // 如果组内有日期，显示 PRODUCTION（青色背景）
                     summaryText = 'PRODUCTION';
                     bgColor = 'FF008000'; // Green
                 } else {
-                    // 如果组内完全没日期，显示 PLAN SHUT DOWN（红色背景）
                     summaryText = fallbackText ? `PLAN SHUT DOWN - ${fallbackText.toUpperCase()}` : 'PLAN SHUT DOWN - NO ORDER';
                     bgColor = 'FFCC0000'; // Red
                 }
@@ -454,8 +458,8 @@ const CustomerSchedule = () => {
 
                 summaryRow.eachCell((cell, colNum) => {
                     if (colNum <= 9) {
-                        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // 白色字体
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }; // 动态背景色
+                        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; 
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }; 
                         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                         if (colNum === 3) {
                             cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -471,12 +475,16 @@ const CustomerSchedule = () => {
                 currentRowIdx++;
             });
 
+            // --- 底部 MANPOWER NEEDED 行 ---
             const totalRow = worksheet.getRow(currentRowIdx);
-            totalRow.getCell(1).value = grandTotalPax; 
-            totalRow.getCell(2).value = 'MANPOWER NEEDED';
             
+            totalRow.getCell(1).value = grandTotalPax; 
+            totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+            
+            totalRow.getCell(2).value = 'MANPOWER NEEDED';
             worksheet.mergeCells(`B${currentRowIdx}:F${currentRowIdx}`);
-            totalRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+            
+            totalRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
 
             totalRow.getCell(7).value = 'TOTAL QTY';
             totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
@@ -583,9 +591,9 @@ const CustomerSchedule = () => {
                             <p className="font-semibold text-sm">Material:</p>
                             <p className="text-xs mb-2">{schedule.material}</p>
                             <p className="font-semibold text-sm">Qty:</p>
-                            <p className="text-xs mb-2">{schedule.qty}</p>
+                            <p className="text-xs mb-2 font-semibold text-blue-500">{schedule.qty}</p>
                             <p className="font-semibold text-sm">Pax:</p>
-                            <p className="text-xs mb-2">{schedule.pax}</p>
+                            <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
                         </div>
                     }
                     trigger='hover' placement="top" arrow={false}
@@ -648,8 +656,6 @@ const CustomerSchedule = () => {
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod Start/End</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Target/Delivery</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot no</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Qty</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Pax</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Actions</TableHeadCell>
                         </TableRow>
                     </TableHead>
@@ -677,6 +683,10 @@ const CustomerSchedule = () => {
                                                 <p className="text-xs mb-2">{schedule.colourcode}</p>
                                                 <p className="font-semibold text-sm">Material:</p>
                                                 <p className="text-xs mb-2">{schedule.material}</p>
+                                                <p className="font-semibold text-sm">Qty:</p>
+                                                <p className="text-xs mb-2 font-semibold text-blue-500">{schedule.qty}</p>
+                                                <p className="font-semibold text-sm">Pax:</p>
+                                                <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
                                             </div>
                                         }
                                         trigger='hover' placement="top" arrow={false}
@@ -686,10 +696,9 @@ const CustomerSchedule = () => {
                                         </span>
                                     </Popover>
                                 </TableCell>
-                                <TableCell className="align-middle font-semibold">{schedule.qty}</TableCell>
-                                <TableCell className="align-middle font-bold text-orange-500">{schedule.pax}</TableCell>
+
                                 <TableCell className="align-middle">
-                                    <div className="flex flex-col gap-1">
+                                    <div className="flex gap-2">
                                         <Button outline size="xs" className='cursor-pointer' onClick={() => handleUpdate(schedule)}>Edit</Button>
                                         <Button color='red' outline size="xs" className='cursor-pointer' onClick={() => {
                                             setScheduleIdToDelete(schedule._id)
@@ -900,12 +909,12 @@ const CustomerSchedule = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
-                                <TextInput type='number' min='0' id="qty" step='0.0001' placeholder='Enter Qty' onChange={handleChange} onFocus={handleFocus} required/>
+                                <TextInput type='number' min='0' id="qty" step='0.01' placeholder='Enter Qty' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
                             </div>
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
-                                <TextInput type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleChange} onFocus={handleFocus} required/>
+                                <TextInput type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
                             </div>
                                 
                             <div className='mb-4 block'>
@@ -1059,12 +1068,12 @@ const CustomerSchedule = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
-                                <TextInput value={updateFormData.qty || ''} type='number' min='0' step='0.0001' id="qty" placeholder='Enter Qty' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                <TextInput value={updateFormData.qty || ''} type='number' min='0' step='0.01' id="qty" placeholder='Enter Qty' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
                             </div>
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
-                                <TextInput value={updateFormData.pax || ''} type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                <TextInput value={updateFormData.pax || ''} type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
                             </div>
                                 
                             <div className='mb-4 block'>

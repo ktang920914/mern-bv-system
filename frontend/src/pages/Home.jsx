@@ -29,6 +29,7 @@ import Statistics from "../components/Statistics"
 import Others from "../components/Others"
 import Customers from "../components/Customers"
 import CustomerSchedule from "../components/CustomerSchedule"
+import CustomerOutputs from "../components/CustomerOutputs"
 
 const Home = () => {
   const { theme } = useThemeStore()
@@ -75,6 +76,7 @@ const Home = () => {
           {tab === 'Statistics' && <Statistics/>}
           {tab === 'Customers' && <Customers/>}
           {tab === 'Customerschedule' && <CustomerSchedule/>}
+          {tab === 'Customeroutput' && <CustomerOutputs/>}
           {tab === 'Suppliers' && <Suppliers/>}
           {tab === 'Orders' && <Orders/>}
           {tab === 'Costs' && <Costs/>}

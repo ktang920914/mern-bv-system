@@ -472,7 +472,7 @@ const Customers = () => {
 
             {/* 桌面端表格视图 */}
             {!isMobile && (
-                <Table hoverable className="[&_td]:py-2 [&_th]:py-3">
+                <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                     <TableHead>
                         <TableRow>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Customer ID</TableHeadCell>
