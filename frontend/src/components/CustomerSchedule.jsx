@@ -654,7 +654,7 @@ const CustomerSchedule = () => {
                         </Select>
                     </div>
                     
-                    <TextInput placeholder='Search...' value={searchTerm} onChange={handleSearch} className='w-full sm:w-auto'/>
+                    <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch} className='w-full sm:w-auto'/>
                     
                     <Button color="green" className='cursor-pointer w-full sm:w-auto' onClick={() => {
                         setReportError(null)

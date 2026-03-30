@@ -451,7 +451,7 @@ const Customers = () => {
                 <h1 className='text-2xl font-semibold'>Customers</h1>
                 <div className='w-full sm:w-auto'>
                     <TextInput 
-                        placeholder='Search Name or ID...' 
+                        placeholder='Enter searching' 
                         value={searchTerm} 
                         onChange={handleSearch}
                         className='w-full'

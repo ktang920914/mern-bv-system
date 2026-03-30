@@ -16,8 +16,9 @@ const CustomerOutputs = () => {
     const [loading, setLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState(null)
     
-    // Pagination & Search
+    // Pagination, Search & Filter (新增 statusFilter)
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
+    const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All')
     const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -46,9 +47,13 @@ const CustomerOutputs = () => {
         
         if (searchTerm === '') params.delete('search')
         else params.set('search', searchTerm)
+
+        // URL 状态保存
+        if (statusFilter === 'All') params.delete('status')
+        else params.set('status', statusFilter)
         
         setSearchParams(params)
-    }, [currentPage, searchTerm, searchParams, setSearchParams])
+    }, [currentPage, searchTerm, statusFilter, searchParams, setSearchParams])
 
     useEffect(() => {
         const fetchSchedules = async () => {
@@ -60,6 +65,30 @@ const CustomerOutputs = () => {
         }
         fetchSchedules()
     }, [currentUser._id])
+
+    // --- 点击 Export Report 时，自动计算昨天 8AM 到 今天 8AM ---
+    const handleOpenReportModal = () => {
+        const now = new Date();
+        // 设置今天早上 8:00
+        const endTarget = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
+        // 设置昨天早上 8:00
+        const startTarget = new Date(endTarget);
+        startTarget.setDate(startTarget.getDate() - 1);
+
+        // 格式化为 datetime-local 接受的格式 (YYYY-MM-DDTHH:mm) 本地时间
+        const formatForInput = (d) => {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        setReportRange({
+            start: formatForInput(startTarget),
+            end: formatForInput(endTarget)
+        });
+        
+        setReportError(null);
+        setOpenModalReport(true);
+    }
 
     // 打开 Update 窗口并加载当前数据
     const handleUpdate = (schedule) => {
@@ -101,7 +130,6 @@ const CustomerOutputs = () => {
                 // 2. 防错：只有从 "原本达标" 改成了 "不达标"（比如打错字删除了），才退回 In Progress
                 newFormData.status = 'In Progress';
             }
-            // 3. 其他情况（比如本来就不达标，但主管手动选了 Completed 然后微调了产量），系统不干扰，保持原样。
         }
 
         // Formula: Prod Delay = Operating Time - Plan Prod Time
@@ -141,25 +169,37 @@ const CustomerOutputs = () => {
         }
     }
 
-    // --- 生成与 PDF 完全一致的 Excel ---
+    // --- 生成与 PDF 完全一致的 Excel (基于 updatedAt) ---
     const executeDownloadReport = async () => {
         setReportError(null); 
         if (!reportRange.start || !reportRange.end) {
-            setReportError('Please select both Start and End dates.');
+            setReportError('Please select both Start and End date/time.');
             return;
         }
 
         const startTarget = new Date(reportRange.start).getTime();
         const endTarget = new Date(reportRange.end).getTime();
 
+        if (startTarget > endTarget) {
+            setReportError('Start time cannot be later than End time.');
+            return;
+        }
+
         const reportData = schedules.filter(job => {
-            if (!job.prodstart) return false;
-            const jobStart = new Date(job.prodstart).getTime();
-            return jobStart >= startTarget && jobStart <= endTarget;
+            if (!job.updatedAt) return false; // 必须有更新时间记录
+            
+            // 只要 Completed 或者有填入实际产量(>0)的才算作有效的 Output 记录
+            const hasOutput = job.status === 'Completed' || (Number(job.actualoutput) > 0);
+            if (!hasOutput) return false;
+
+            const jobUpdatedTime = new Date(job.updatedAt).getTime();
+            
+            // 筛选条件：基于真实输入产量的 updatedAt 时间点
+            return jobUpdatedTime >= startTarget && jobUpdatedTime <= endTarget;
         });
 
         if (reportData.length === 0) {
-            setReportError('No records found in this time range!');
+            setReportError('No production outputs found in this time range!');
             return;
         }
 
@@ -178,12 +218,12 @@ const CustomerOutputs = () => {
             titleCell.font = { name: 'Arial Black', size: 18, bold: true };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            // Date & Time Info
-            const today = new Date();
+            // Date & Time Info (采用报表结束时间作为主时间显示 [cite: 2, 3, 4])
+            const targetDateObj = new Date(reportRange.end);
             worksheet.getCell('M2').value = 'DATE:';
-            worksheet.getCell('N2').value = `${today.getDate()} ${today.toLocaleString('default', { month: 'short' })} ${today.getFullYear()}`;
+            worksheet.getCell('N2').value = `${targetDateObj.getDate()} ${targetDateObj.toLocaleString('default', { month: 'short' })} ${targetDateObj.getFullYear()}`;
             worksheet.getCell('M3').value = 'TIME:';
-            worksheet.getCell('N3').value = today.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            worksheet.getCell('N3').value = targetDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
             // Table Headers
             const headerRow = worksheet.getRow(5);
@@ -191,7 +231,7 @@ const CustomerOutputs = () => {
                 'No.', 'MC ID', 'LOT NO.', 'COLOR CODE', 'MATERIAL', 
                 'PLANNED OUTPUT (KG)', 'ACTUAL OUTPUT (KG)', 'WASTAGE (KG)', 
                 'PLANNED PROD TIME (HRS)', 'OPERATING TIME (HRS)', 'PROD DELAY (HRS)', 
-                'Ideal Run Rate, IRR (KG/MIN)', 'Actual Run Rate, ARR (KG/MIN)', 'REMARKS'
+                'Ideal Run Rate, IRR (KG/MIN)', 'Actual Run Rate, ARR (KG/MIN)', 'REMARKS (REJECT, REASON OF DELAY)'
             ];
             
             headers.forEach((header, index) => {
@@ -218,7 +258,6 @@ const CustomerOutputs = () => {
                 row.getCell(6).value = Number(job.qty) || 0;
                 row.getCell(7).value = Number(job.actualoutput) || 0;
                 
-                // Format Wastage and Delay with brackets for negative numbers as requested in PDF layout
                 const wastage = Number(job.wastage) || 0;
                 row.getCell(8).value = wastage;
                 row.getCell(8).numFmt = '#,##0.00;[Red](#,##0.00)';
@@ -233,7 +272,6 @@ const CustomerOutputs = () => {
                 row.getCell(12).value = Number(job.irr) || 0;
                 row.getCell(13).value = Number(job.arr) || 0;
                 
-                // 给 Remarks 加上强制结案的提示
                 row.getCell(14).value = job.status === 'Completed' && (Number(job.actualoutput) < Number(job.qty)) ? 'Force Closed' : ''; 
 
                 for(let c=1; c<=14; c++) {
@@ -269,7 +307,7 @@ const CustomerOutputs = () => {
 
             for(let c=1; c<=14; c++) {
                 totalRow.getCell(c).font = { bold: true };
-                totalRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }; // Yellow bg for total
+                totalRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }; 
                 totalRow.getCell(c).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             }
 
@@ -280,9 +318,19 @@ const CustomerOutputs = () => {
                 { width: 12 }, { width: 12 }, { width: 12 }, { width: 25 }
             ];
 
+            // 加入 NOTE [cite: 9, 10]
+            worksheet.getCell(`A${currentRowIdx + 2}`).value = 'NOTE';
+            worksheet.getCell(`A${currentRowIdx + 2}`).font = { bold: true };
+            worksheet.getCell(`B${currentRowIdx + 2}`).value = 'Production Time calculated is based on Actual Run Rate (ARR), NOT Ideal Run Rate (IRR)';
+            worksheet.getCell(`B${currentRowIdx + 2}`).font = { italic: true, color: { argb: 'FFFF0000' } }; 
+
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            saveAs(blob, `Production_Output_Report.xlsx`);
+            
+            // 使用结束时间做报表命名 [cite: 2, 3, 4]
+            const reportDateStr = new Date(reportRange.end).toISOString().slice(0,10).replace(/-/g, '.');
+            saveAs(blob, `Weekly Production Planning dtd ${reportDateStr} (Output).xlsx`);
+            
             setOpenModalReport(false);
 
         } catch (error) {
@@ -293,11 +341,14 @@ const CustomerOutputs = () => {
         }
     }
 
-    // List Rendering Logic
-    const filteredSchedules = schedules.filter(schedule => 
-        (schedule.code && schedule.code.toLowerCase().includes(searchTerm)) ||
-        (schedule.lotno && schedule.lotno.toLowerCase().includes(searchTerm))
-    )
+    // List Rendering Logic (支持 Search 和 Status Filter)
+    const filteredSchedules = schedules.filter(schedule => {
+        const matchesSearch = (schedule.code && schedule.code.toLowerCase().includes(searchTerm)) ||
+                              (schedule.lotno && schedule.lotno.toLowerCase().includes(searchTerm));
+        const matchesStatus = statusFilter === 'All' ? true : schedule.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
     const currentSchedules = filteredSchedules.slice(indexOfFirstItem, indexOfLastItem)
@@ -306,15 +357,41 @@ const CustomerOutputs = () => {
         <div className='min-h-screen'>
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Production Outputs</h1>
-                <div className='flex gap-2 w-full sm:w-auto'>
-                    <TextInput placeholder='Search MC ID / Lot No...' value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value.toLowerCase()); setCurrentPage(1)}} className='flex-1'/>
-                    <Button color="green" onClick={() => setOpenModalReport(true)}>Export Report</Button>
+                <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
+                    
+                    {/* --- 新增：状态筛选下拉菜单 --- */}
+                    <Select 
+                        value={statusFilter} 
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value); 
+                            setCurrentPage(1);
+                        }} 
+                        className='w-full sm:w-40'
+                    >
+                        <option value="All">All Status</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </Select>
+                    
+                    <TextInput 
+                        placeholder='Search MC ID / Lot No...' 
+                        value={searchTerm} 
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value.toLowerCase()); 
+                            setCurrentPage(1);
+                        }} 
+                        className='w-full sm:w-auto flex-1'
+                    />
+                    {/* 改成调用 handleOpenReportModal 来自动生成时间 */}
+                    <Button color="green" onClick={handleOpenReportModal} className="w-full sm:w-auto">
+                        Export Report
+                    </Button>
                 </div>
             </div>
 
             {/* Desktop Table View */}
             {!isMobile && (
-                <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
+                <Table hoverable className="[&_td]:py-2 [&_th]:py-2 shadow-md">
                     <TableHead>
                         <TableRow>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-200 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>MC ID</TableHeadCell>
@@ -330,7 +407,7 @@ const CustomerOutputs = () => {
                             <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                 <TableCell className="align-middle font-bold text-lg">{schedule.code}</TableCell>
                                 
-                                {/* 修改了这里：Lot No 加上 Popover */}
+                                {/* 悬浮显示物料信息 */}
                                 <TableCell className="align-middle">
                                     <Popover
                                         trigger="hover"
@@ -356,7 +433,6 @@ const CustomerOutputs = () => {
                                     {schedule.actualoutput || '0'}
                                 </TableCell>
                                 
-                                {/* UI 改进：直观显示状态 */}
                                 <TableCell className="align-middle text-center">
                                     <span className={`text-xs font-bold px-2 py-1 rounded-md ${schedule.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                                         {schedule.status || 'In Progress'}
@@ -364,7 +440,7 @@ const CustomerOutputs = () => {
                                 </TableCell>
                                 
                                 <TableCell className="align-middle">
-                                    <Button className='cursor-pointer' outline size="sm" onClick={() => handleUpdate(schedule)}>Update</Button>
+                                    <Button className='cursor-pointer px-3 py-1' outline size="sm" onClick={() => handleUpdate(schedule)}>Update</Button>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -399,7 +475,6 @@ const CustomerOutputs = () => {
                         <form onSubmit={handleUpdateSubmit}>
                             <div className="grid grid-cols-2 gap-4">
                                 
-                                {/* --- 核心修改：增加结案状态选择 --- */}
                                 <div className="mb-2 block col-span-2">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Job Status (Will Auto-Complete if Actual ≥ Planned)</Label>
                                     <Select id="status" value={updateFormData.status} onChange={handleUpdateChange} required className="font-bold text-blue-600">
@@ -407,7 +482,6 @@ const CustomerOutputs = () => {
                                         <option value="Completed">Completed</option>
                                     </Select>
                                 </div>
-                                {/* --------------------------------- */}
 
                                 <div className="mb-2 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Actual Output (KG)</Label>
@@ -458,6 +532,9 @@ const CustomerOutputs = () => {
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
                     <div className="space-y-6">
                         <h3 className="text-xl font-medium">Export Production Report</h3>
+                        <p className="text-sm text-gray-500">
+                            Select the time range when outputs were recorded. Defaults to the last 24 hours.
+                        </p>
                         
                         {reportError && (
                             <Alert color="failure" icon={HiOutlineExclamationCircle}>
@@ -466,12 +543,12 @@ const CustomerOutputs = () => {
                         )}
                         
                         <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Start Date</Label>
-                            <TextInput type='date' value={reportRange.start} onChange={(e) => setReportRange({...reportRange, start: e.target.value})} required/>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Start Date & Time</Label>
+                            <TextInput type='datetime-local' value={reportRange.start} onChange={(e) => setReportRange({...reportRange, start: e.target.value})} required/>
                         </div>
                         <div className="mb-4 block">
-                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>End Date</Label>
-                            <TextInput type='date' value={reportRange.end} onChange={(e) => setReportRange({...reportRange, end: e.target.value})} required/>
+                            <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>End Date & Time</Label>
+                            <TextInput type='datetime-local' value={reportRange.end} onChange={(e) => setReportRange({...reportRange, end: e.target.value})} required/>
                         </div>
 
                         <div className='flex gap-2 mt-6'>
