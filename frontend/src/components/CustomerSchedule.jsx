@@ -211,7 +211,7 @@ const CustomerSchedule = () => {
 
     const isDateTimeFormat = (val) => {
         if (!val) return false;
-        return /^\d{4}-\d{2}-\d{2}T/.test(val);
+        return /^\d{4}-\d{2}-\d{2}/.test(val);
     }
 
     const formatDisplayTime = (timeStr) => {
@@ -233,7 +233,10 @@ const CustomerSchedule = () => {
         return `${m}/${d}/${yy} ${h}:${min} ${ampm}`;
     }
 
-    const filteredAndSortedSchedules = schedules
+    // --- 核心修改：根据状态过滤，只要不是 Completed 就显示 ---
+    const activeSchedules = schedules.filter(job => job.status !== 'Completed');
+
+    const filteredAndSortedSchedules = activeSchedules
         .filter(schedule => 
             (schedule.customerName && schedule.customerName.toLowerCase().includes(searchTerm)) || 
             (schedule.targetcompletion && schedule.targetcompletion.toLowerCase().includes(searchTerm)) ||
@@ -269,7 +272,7 @@ const CustomerSchedule = () => {
             return;
         }
 
-        const reportData = schedules.filter(job => {
+        const reportData = activeSchedules.filter(job => {
             if (!job.prodstart || !job.prodend) return false;
             const jobStart = parseDateTime(job.prodstart).getTime();
             const jobEnd = parseDateTime(job.prodend).getTime();
@@ -297,7 +300,6 @@ const CustomerSchedule = () => {
             const dd = String(startDateObj.getDate()).padStart(2, '0');
             const dateTitle = `${yyyy}.${mm}.${dd}`;
 
-            // Modified Title merge to stretch over 7 columns (A to G)
             worksheet.mergeCells('A1:G3');
             const titleCell = worksheet.getCell('A1');
             titleCell.value = 'WEEKLY PRODUCTION PLANNING';
@@ -308,7 +310,6 @@ const CustomerSchedule = () => {
             const mbTime = parseDateTime(reportRange.start);
             const psdTime = parseDateTime(reportRange.end);
 
-            // Shifted Right Box from (G, H, I) to (H, I, J)
             worksheet.getCell('H1').value = 'WIP';
             worksheet.getCell('H1').font = { bold: true };
             worksheet.getCell('H1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
@@ -350,7 +351,6 @@ const CustomerSchedule = () => {
             worksheet.getCell('J3').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
 
             const headerRow = worksheet.getRow(4);
-            // Added Customer Name
             const headers = ['PAX', 'EXT ID', 'Cust ID', 'Customer Name', 'Lot No', 'Colour Code', 'Material', 'Qty', 'Target Completion', 'Delivery Date'];
             
             headers.forEach((header, index) => {
@@ -398,7 +398,7 @@ const CustomerSchedule = () => {
                     row.getCell(1).value = ''; 
                     row.getCell(2).value = job.code || '';
                     row.getCell(3).value = job.customerID || '';
-                    row.getCell(4).value = job.customerName || ''; // Populating new Customer Name column
+                    row.getCell(4).value = job.customerName || ''; 
                     
                     row.getCell(5).value = job.lotno || '';
                     row.getCell(5).font = { color: { argb: 'FF0000FF' }, bold: true }; 
@@ -409,7 +409,13 @@ const CustomerSchedule = () => {
                     row.getCell(7).value = job.material || '';
                     row.getCell(7).font = { bold: true }; 
 
-                    row.getCell(8).value = Number(job.qty) || 0;
+                    // 导出 Excel 时，如果是半成品，显示剩余数量
+                    const plannedQty = Number(job.qty) || 0;
+                    const actualQty = Number(job.actualoutput) || 0;
+                    let remainingQty = plannedQty - actualQty;
+                    if (remainingQty < 0) remainingQty = 0;
+
+                    row.getCell(8).value = remainingQty;
                     row.getCell(8).font = { bold: true }; 
                     row.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -427,12 +433,11 @@ const CustomerSchedule = () => {
                         row.getCell(10).font = { color: { argb: 'FFFF0000' }, bold: true };
                     }
 
-                    // Loop adjusted for 10 columns
                     for(let c=1; c<=10; c++) {
                         row.getCell(c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                     }
                     
-                    groupTotalQty += (Number(job.qty) || 0);
+                    groupTotalQty += remainingQty;
                     currentRowIdx++;
                 });
 
@@ -456,11 +461,10 @@ const CustomerSchedule = () => {
                 }
                 
                 summaryRow.getCell(3).value = summaryText;
-                summaryRow.getCell(8).value = groupTotalQty; // Qty is now at column 8
+                summaryRow.getCell(8).value = groupTotalQty;
 
-                // Merge cells adjusted for added column
-                worksheet.mergeCells(`C${currentRowIdx}:G${currentRowIdx}`); // Merge from Cust ID(3) up to Material(7)
-                worksheet.mergeCells(`I${currentRowIdx}:J${currentRowIdx}`); // Merge from Target(9) to Delivery(10)
+                worksheet.mergeCells(`C${currentRowIdx}:G${currentRowIdx}`); 
+                worksheet.mergeCells(`I${currentRowIdx}:J${currentRowIdx}`); 
 
                 summaryRow.eachCell((cell, colNum) => {
                     if (colNum <= 10) {
@@ -481,14 +485,12 @@ const CustomerSchedule = () => {
                 currentRowIdx++;
             });
 
-            // --- 底部 MANPOWER NEEDED 行 ---
             const totalRow = worksheet.getRow(currentRowIdx);
             
             totalRow.getCell(1).value = grandTotalPax; 
             totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
             
             totalRow.getCell(2).value = 'MANPOWER NEEDED';
-            // Merge B(2) to Material(7)
             worksheet.mergeCells(`B${currentRowIdx}:G${currentRowIdx}`);
             
             totalRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
@@ -496,7 +498,6 @@ const CustomerSchedule = () => {
             totalRow.getCell(8).value = 'TOTAL QTY';
             totalRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
             
-            // Merge Target(9) to Delivery(10)
             worksheet.mergeCells(`I${currentRowIdx}:J${currentRowIdx}`);
             totalRow.getCell(9).value = grandTotalQty.toLocaleString(); 
             totalRow.getCell(9).alignment = { horizontal: 'left', vertical: 'middle' };
@@ -508,18 +509,17 @@ const CustomerSchedule = () => {
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             }
 
-            // Columns array updated for 10 columns
             worksheet.columns = [
-                { width: 6 },  // 1. PAX
-                { width: 10 }, // 2. EXT ID
-                { width: 12 }, // 3. Cust ID
-                { width: 25 }, // 4. Customer Name (NEW)
-                { width: 18 }, // 5. Lot No
-                { width: 20 }, // 6. Colour Code
-                { width: 40 }, // 7. Material
-                { width: 12 }, // 8. Qty
-                { width: 22 }, // 9. Target Completion
-                { width: 18 }  // 10. Delivery Date
+                { width: 6 },  
+                { width: 10 }, 
+                { width: 12 }, 
+                { width: 25 }, 
+                { width: 18 }, 
+                { width: 20 }, 
+                { width: 40 }, 
+                { width: 12 }, 
+                { width: 22 }, 
+                { width: 18 }  
             ];
 
             const buffer = await workbook.xlsx.writeBuffer();
@@ -586,7 +586,7 @@ const CustomerSchedule = () => {
                 </div>
                 <div>
                     <p className="font-semibold text-gray-500">Delivery:</p>
-                    <p className='text-cyan-500 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
+                    <p className='text-rose-500 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
                 </div>
             </div>
             
@@ -600,8 +600,19 @@ const CustomerSchedule = () => {
                             <p className="text-xs mb-2">{schedule.colourcode}</p>
                             <p className="font-semibold text-sm">Material:</p>
                             <p className="text-xs mb-2">{schedule.material}</p>
-                            <p className="font-semibold text-sm">Qty:</p>
-                            <p className="text-xs mb-2 font-semibold text-blue-500">{schedule.qty}</p>
+                            
+                            {/* 桌面和移动端都显示剩余数量 */}
+                            <p className="font-semibold text-sm">Qty (Remaining):</p>
+                            <p className="text-xs mb-2 font-semibold">
+                                {schedule.actualoutput > 0 ? (
+                                    <span className="text-orange-500">
+                                        {schedule.qty - schedule.actualoutput} <span className="text-gray-500 font-normal">(Total: {schedule.qty})</span>
+                                    </span>
+                                ) : (
+                                    <span className="text-blue-500">{schedule.qty}</span>
+                                )}
+                            </p>
+                            
                             <p className="font-semibold text-sm">Pax:</p>
                             <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
                         </div>
@@ -682,7 +693,7 @@ const CustomerSchedule = () => {
                                 
                                 <TableCell className="align-middle text-xs">
                                     <div className="font-bold">{formatDisplayTime(schedule.targetcompletion)}</div>
-                                    <div className="text-cyan-500 font-semibold">{formatDisplayTime(schedule.deliverydate)}</div>
+                                    <div className="text-rose-500 font-semibold">{formatDisplayTime(schedule.deliverydate)}</div>
                                 </TableCell>
                                 
                                 <TableCell className="align-middle">
@@ -693,8 +704,18 @@ const CustomerSchedule = () => {
                                                 <p className="text-xs mb-2">{schedule.colourcode}</p>
                                                 <p className="font-semibold text-sm">Material:</p>
                                                 <p className="text-xs mb-2">{schedule.material}</p>
-                                                <p className="font-semibold text-sm">Qty:</p>
-                                                <p className="text-xs mb-2 font-semibold text-blue-500">{schedule.qty}</p>
+                                                
+                                                <p className="font-semibold text-sm">Qty (Remaining):</p>
+                                                <p className="text-xs mb-2 font-semibold">
+                                                    {schedule.actualoutput > 0 ? (
+                                                        <span className="text-orange-500">
+                                                            {schedule.qty - schedule.actualoutput} <span className="text-gray-500 font-normal">(Total: {schedule.qty})</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-blue-500">{schedule.qty}</span>
+                                                    )}
+                                                </p>
+
                                                 <p className="font-semibold text-sm">Pax:</p>
                                                 <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
                                             </div>
@@ -883,9 +904,9 @@ const CustomerSchedule = () => {
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
                                     <TextInput 
                                         className="flex-1"
-                                        type='datetime-local' 
+                                        type='date' 
                                         id="deliverydate" 
-                                        value={isDateTimeFormat(formData.deliverydate) ? formData.deliverydate : ''}
+                                        value={isDateTimeFormat(formData.deliverydate) ? formData.deliverydate.substring(0, 10) : ''}
                                         onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
                                         onFocus={handleFocus} 
                                     />
@@ -1042,10 +1063,10 @@ const CustomerSchedule = () => {
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
                                     <TextInput 
                                         className="flex-1"
-                                        type='datetime-local' 
+                                        type='date' 
                                         id="deliverydate" 
-                                        value={isDateTimeFormat(updateFormData.deliverydate) ? updateFormData.deliverydate : ''}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
+                                        value={isDateTimeFormat(updateFormData.deliverydate) ? updateFormData.deliverydate.substring(0, 10) : ''}
+                                        onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
                                         onFocus={handleFocus} 
                                     />
                                     <span className="text-gray-500 font-medium text-center">OR</span>

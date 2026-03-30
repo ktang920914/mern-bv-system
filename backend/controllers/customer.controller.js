@@ -38,6 +38,7 @@ export const updateSchedule = async (req, res, next) => {
             req.params.customerjobId,
             {
                 $set: {
+                    // 原有的计划字段
                     customerID: req.body.customerID,
                     customerName: req.body.customerName,
                     code: req.body.code,
@@ -50,6 +51,16 @@ export const updateSchedule = async (req, res, next) => {
                     material: req.body.material,
                     qty: req.body.qty,
                     pax: req.body.pax,
+                    
+                    // 新加的状态和输出字段
+                    status: req.body.status, // <--- 这里加上！
+                    actualoutput: req.body.actualoutput,
+                    wastage: req.body.wastage,
+                    planprodtime: req.body.planprodtime,
+                    operatingtime: req.body.operatingtime,
+                    proddelay: req.body.proddelay,
+                    irr: req.body.irr,
+                    arr: req.body.arr
                 }
             },
             { new: true } 
