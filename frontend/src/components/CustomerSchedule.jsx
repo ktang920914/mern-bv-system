@@ -102,8 +102,35 @@ const CustomerSchedule = () => {
         setLoading(false)
     }
 
+    // --- 核心修改 1：Create 时自动填充 "今天 08:00 AM" 到 "本周日 08:30 AM" ---
     const handleCreateSchedule = () => {
-        setOpenModalCreateSchedule(!openModalCreateSchedule)
+        const now = new Date();
+        
+        // 1. 设置 Start 为今天 08:00 AM
+        const startTarget = new Date(now);
+        startTarget.setHours(8, 0, 0, 0);
+
+        // 2. 计算距离这个星期日还有几天 (0 是星期日)
+        const daysUntilSunday = now.getDay() === 0 ? 0 : 7 - now.getDay();
+        
+        // 3. 设置 End 为这个星期日 08:30 AM
+        const endTarget = new Date(now);
+        endTarget.setDate(endTarget.getDate() + daysUntilSunday);
+        endTarget.setHours(8, 30, 0, 0);
+
+        const formatForInput = (d) => {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+
+        // 清空旧表单数据，并提前填充好默认的 Start 和 End 时间
+        setFormData({
+            prodstart: formatForInput(startTarget),
+            prodend: formatForInput(endTarget)
+        });
+
+        setErrorMessage(null);
+        setOpenModalCreateSchedule(true);
     }
 
     const handleSubmit = async (e) => {
@@ -143,17 +170,25 @@ const CustomerSchedule = () => {
         } catch (error) { console.log(error.message) }
     }
 
+    const formatForUpdateInput = (timeStr) => {
+        if (!timeStr) return '';
+        const d = parseDateTime(timeStr);
+        if (isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
     const handleUpdate = (schedule) => {
         setScheduleIdToUpdate(schedule._id)
-        setOpenModalUpdateSchedule(!openModalUpdateSchedule)
+        setOpenModalUpdateSchedule(true)
         setErrorMessage(null)
         setLoading(false)
         setUpdateFormData({
             customerID: schedule.customerID,
             customerName: schedule.customerName, 
             code: schedule.code, 
-            prodstart: schedule.prodstart,
-            prodend: schedule.prodend,
+            prodstart: formatForUpdateInput(schedule.prodstart), // 确保格式正确渲染
+            prodend: formatForUpdateInput(schedule.prodend),     // 确保格式正确渲染
             targetcompletion: schedule.targetcompletion, 
             deliverydate: schedule.deliverydate, 
             lotno: schedule.lotno, 
@@ -233,7 +268,38 @@ const CustomerSchedule = () => {
         return `${m}/${d}/${yy} ${h}:${min} ${ampm}`;
     }
 
-    // --- 核心修改：根据状态过滤，只要不是 Completed 就显示 ---
+    // --- 自动计算今天 8AM 到本周日 8:30AM (供 Report Modal 使用) ---
+    const handleOpenReportModal = () => {
+        const now = new Date();
+        
+        // 1. 设置 Start 为今天 08:00 AM
+        const startTarget = new Date(now);
+        startTarget.setHours(8, 0, 0, 0);
+
+        // 2. 计算距离这个星期日还有几天 (0 是星期日)
+        const daysUntilSunday = now.getDay() === 0 ? 0 : 7 - now.getDay();
+        
+        // 3. 设置 End 为这个星期日 08:30 AM
+        const endTarget = new Date(now);
+        endTarget.setDate(endTarget.getDate() + daysUntilSunday);
+        endTarget.setHours(8, 30, 0, 0);
+
+        // 格式化函数 (适应 datetime-local input)
+        const formatForInput = (d) => {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+
+        setReportRange({
+            start: formatForInput(startTarget),
+            end: formatForInput(endTarget)
+        });
+
+        setReportError(null);
+        setOpenModalReport(true);
+    };
+
+    // 根据状态过滤，只要不是 Completed 就显示
     const activeSchedules = schedules.filter(job => job.status !== 'Completed');
 
     const filteredAndSortedSchedules = activeSchedules
@@ -601,7 +667,6 @@ const CustomerSchedule = () => {
                             <p className="font-semibold text-sm">Material:</p>
                             <p className="text-xs mb-2">{schedule.material}</p>
                             
-                            {/* 桌面和移动端都显示剩余数量 */}
                             <p className="font-semibold text-sm">Qty (Remaining):</p>
                             <p className="text-xs mb-2 font-semibold">
                                 {schedule.actualoutput > 0 ? (
@@ -656,10 +721,8 @@ const CustomerSchedule = () => {
                     
                     <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch} className='w-full sm:w-auto'/>
                     
-                    <Button color="green" className='cursor-pointer w-full sm:w-auto' onClick={() => {
-                        setReportError(null)
-                        setOpenModalReport(true)
-                    }}>
+                    {/* 使用 handleOpenReportModal 来自动生成日期区间 */}
+                    <Button color="green" className='cursor-pointer w-full sm:w-auto' onClick={handleOpenReportModal}>
                         Report
                     </Button>
                     
@@ -867,12 +930,12 @@ const CustomerSchedule = () => {
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod Start</Label>
-                                <TextInput type='datetime-local' id="prodstart" onChange={handleChange} onFocus={handleFocus} required/>
+                                <TextInput value={formData.prodstart || ''} type='datetime-local' id="prodstart" onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
 
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod End</Label>
-                                <TextInput type='datetime-local' id="prodend" onChange={handleChange} onFocus={handleFocus} required/>
+                                <TextInput value={formData.prodend || ''} type='datetime-local' id="prodend" onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
                                 
                             <div className="mb-4 block">
@@ -1108,8 +1171,8 @@ const CustomerSchedule = () => {
                             </div>
                                 
                             <div className='mb-4 block'>
-                                <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
-                                    {loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}
+                                <Button color="blue" className='cursor-pointer w-full' type='submit' disabled={loading}>
+                                    {loading ? <Spinner size='md'/> : 'S U B M I T'}
                                 </Button>
                             </div>
                         </form>
