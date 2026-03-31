@@ -38,38 +38,23 @@ export const updateSchedule = async (req, res, next) => {
             req.params.customerjobId,
             {
                 $set: {
-                    // 原有的计划字段
-                    customerID: req.body.customerID,
-                    customerName: req.body.customerName,
-                    code: req.body.code,
-                    prodstart: req.body.prodstart,
-                    prodend: req.body.prodend,
-                    targetcompletion: req.body.targetcompletion,
-                    deliverydate: req.body.deliverydate,
-                    lotno: req.body.lotno,
-                    colourcode: req.body.colourcode,
-                    material: req.body.material,
-                    qty: req.body.qty,
-                    pax: req.body.pax,
-                    
-                    // 新加的状态和输出字段
-                    status: req.body.status, // <--- 这里加上！
+                    // ... 保持其他字段
+                    status: req.body.status,
                     actualoutput: req.body.actualoutput,
                     wastage: req.body.wastage,
                     planprodtime: req.body.planprodtime,
                     operatingtime: req.body.operatingtime,
                     proddelay: req.body.proddelay,
                     irr: req.body.irr,
-                    arr: req.body.arr
+                    arr: req.body.arr,
+                    // 保存生产日期
+                    productionDate: req.body.productionDate 
                 }
             },
             { new: true } 
         );
 
-        if (!updatedSchedule) {
-            return next(errorHandler(404, 'Schedule not found'));
-        }
-
+        if (!updatedSchedule) return next(errorHandler(404, 'Schedule not found'));
         res.status(200).json(updatedSchedule);
     } catch (error) {
         next(error);
@@ -86,3 +71,4 @@ export const deleteSchedule = async (req, res, next) => {
         next(error);
     }
 };
+

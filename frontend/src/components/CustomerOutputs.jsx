@@ -16,7 +16,7 @@ const CustomerOutputs = () => {
     const [loading, setLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState(null)
     
-    // Pagination, Search & Filter (新增 statusFilter)
+    // Pagination, Search & Filter
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
     const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All')
     const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
@@ -48,7 +48,6 @@ const CustomerOutputs = () => {
         if (searchTerm === '') params.delete('search')
         else params.set('search', searchTerm)
 
-        // URL 状态保存
         if (statusFilter === 'All') params.delete('status')
         else params.set('status', statusFilter)
         
@@ -66,16 +65,12 @@ const CustomerOutputs = () => {
         fetchSchedules()
     }, [currentUser._id])
 
-    // --- 点击 Export Report 时，自动计算昨天 8AM 到 今天 8AM ---
     const handleOpenReportModal = () => {
         const now = new Date();
-        // 设置今天早上 8:00
         const endTarget = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
-        // 设置昨天早上 8:00
         const startTarget = new Date(endTarget);
         startTarget.setDate(startTarget.getDate() - 1);
 
-        // 格式化为 datetime-local 接受的格式 (YYYY-MM-DDTHH:mm) 本地时间
         const formatForInput = (d) => {
             const pad = (n) => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -90,13 +85,17 @@ const CustomerOutputs = () => {
         setOpenModalReport(true);
     }
 
-    // 打开 Update 窗口并加载当前数据
     const handleUpdate = (schedule) => {
         setScheduleIdToUpdate(schedule._id)
         setOpenModalUpdate(true)
         setErrorMessage(null)
+
+        const initialProdDate = schedule.productionDate 
+            ? new Date(schedule.productionDate).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0];
+
         setUpdateFormData({
-            qty: schedule.qty || 0, // Planned Output, readonly
+            qty: schedule.qty || 0, 
             actualoutput: schedule.actualoutput || '',
             wastage: schedule.wastage || '',
             planprodtime: schedule.planprodtime || '',
@@ -104,35 +103,29 @@ const CustomerOutputs = () => {
             proddelay: schedule.proddelay || '',
             irr: schedule.irr || '',
             arr: schedule.arr || '',
-            status: schedule.status || 'In Progress' // 状态读取
+            status: schedule.status || 'In Progress', 
+            productionDate: initialProdDate 
         })
     }
 
-    // 处理输入并自动计算 Wastage 和 Prod Delay，以及自动结案判断 (2.0 防呆版)
     const handleUpdateChange = (e) => {
         const { id, value } = e.target;
         let newFormData = { ...updateFormData, [id]: value };
 
-        // Formula: Wastage = Actual Output - Planned Output (Qty)
         if (id === 'actualoutput') {
             const actual = parseFloat(value) || 0;
             const planned = parseFloat(newFormData.qty) || 0;
-            // 抓取修改前的值
             const previousActual = parseFloat(updateFormData.actualoutput) || 0; 
 
             newFormData.wastage = (actual - planned).toFixed(2);
 
-            // 智能化逻辑 2.0：
             if (actual >= planned) {
-                // 1. 只要输入达到或超过计划，自动 Completed
                 newFormData.status = 'Completed';
             } else if (previousActual >= planned && actual < planned) {
-                // 2. 防错：只有从 "原本达标" 改成了 "不达标"（比如打错字删除了），才退回 In Progress
                 newFormData.status = 'In Progress';
             }
         }
 
-        // Formula: Prod Delay = Operating Time - Plan Prod Time
         if (id === 'operatingtime' || id === 'planprodtime') {
             const opTime = parseFloat(id === 'operatingtime' ? value : newFormData.operatingtime) || 0;
             const planTime = parseFloat(id === 'planprodtime' ? value : newFormData.planprodtime) || 0;
@@ -142,7 +135,6 @@ const CustomerOutputs = () => {
         setUpdateFormData(newFormData);
     }
 
-    // 提交数据
     const handleUpdateSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
@@ -169,7 +161,6 @@ const CustomerOutputs = () => {
         }
     }
 
-    // --- 生成与 PDF 完全一致的 Excel (基于 updatedAt) ---
     const executeDownloadReport = async () => {
         setReportError(null); 
         if (!reportRange.start || !reportRange.end) {
@@ -186,16 +177,14 @@ const CustomerOutputs = () => {
         }
 
         const reportData = schedules.filter(job => {
-            if (!job.updatedAt) return false; // 必须有更新时间记录
+            const bizDate = job.productionDate ? new Date(job.productionDate) : new Date(job.updatedAt);
+            if (!bizDate) return false;
             
-            // 只要 Completed 或者有填入实际产量(>0)的才算作有效的 Output 记录
+            const jobBizTime = bizDate.getTime();
             const hasOutput = job.status === 'Completed' || (Number(job.actualoutput) > 0);
             if (!hasOutput) return false;
 
-            const jobUpdatedTime = new Date(job.updatedAt).getTime();
-            
-            // 筛选条件：基于真实输入产量的 updatedAt 时间点
-            return jobUpdatedTime >= startTarget && jobUpdatedTime <= endTarget;
+            return jobBizTime >= startTarget && jobBizTime <= endTarget;
         });
 
         if (reportData.length === 0) {
@@ -211,21 +200,18 @@ const CustomerOutputs = () => {
             worksheet.pageSetup.orientation = 'landscape';
             worksheet.pageSetup.fitToPage = true;
 
-            // Header Title
             worksheet.mergeCells('A1:N1');
             const titleCell = worksheet.getCell('A1');
             titleCell.value = 'PRODUCTION OUTPUT REPORT';
             titleCell.font = { name: 'Arial Black', size: 18, bold: true };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            // Date & Time Info (采用报表结束时间作为主时间显示 [cite: 2, 3, 4])
             const targetDateObj = new Date(reportRange.end);
             worksheet.getCell('M2').value = 'DATE:';
             worksheet.getCell('N2').value = `${targetDateObj.getDate()} ${targetDateObj.toLocaleString('default', { month: 'short' })} ${targetDateObj.getFullYear()}`;
             worksheet.getCell('M3').value = 'TIME:';
             worksheet.getCell('N3').value = targetDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-            // Table Headers
             const headerRow = worksheet.getRow(5);
             const headers = [
                 'No.', 'MC ID', 'LOT NO.', 'COLOR CODE', 'MATERIAL', 
@@ -289,7 +275,6 @@ const CustomerOutputs = () => {
                 currentRowIdx++;
             });
 
-            // TOTAL Row
             const totalRow = worksheet.getRow(currentRowIdx);
             worksheet.mergeCells(`A${currentRowIdx}:E${currentRowIdx}`);
             totalRow.getCell(1).value = 'TOTAL';
@@ -311,14 +296,12 @@ const CustomerOutputs = () => {
                 totalRow.getCell(c).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             }
 
-            // Column Widths
             worksheet.columns = [
                 { width: 5 }, { width: 10 }, { width: 18 }, { width: 20 }, { width: 35 },
                 { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 },
                 { width: 12 }, { width: 12 }, { width: 12 }, { width: 25 }
             ];
 
-            // 加入 NOTE [cite: 9, 10]
             worksheet.getCell(`A${currentRowIdx + 2}`).value = 'NOTE';
             worksheet.getCell(`A${currentRowIdx + 2}`).font = { bold: true };
             worksheet.getCell(`B${currentRowIdx + 2}`).value = 'Production Time calculated is based on Actual Run Rate (ARR), NOT Ideal Run Rate (IRR)';
@@ -327,7 +310,6 @@ const CustomerOutputs = () => {
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             
-            // 使用结束时间做报表命名 [cite: 2, 3, 4]
             const reportDateStr = new Date(reportRange.end).toISOString().slice(0,10).replace(/-/g, '.');
             saveAs(blob, `Weekly Production Planning dtd ${reportDateStr} (Output).xlsx`);
             
@@ -341,7 +323,6 @@ const CustomerOutputs = () => {
         }
     }
 
-    // List Rendering Logic (支持 Search 和 Status Filter)
     const filteredSchedules = schedules.filter(schedule => {
         const matchesSearch = (schedule.code && schedule.code.toLowerCase().includes(searchTerm)) ||
                               (schedule.lotno && schedule.lotno.toLowerCase().includes(searchTerm));
@@ -352,6 +333,80 @@ const CustomerOutputs = () => {
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
     const currentSchedules = filteredSchedules.slice(indexOfFirstItem, indexOfLastItem)
+    const totalEntries = filteredSchedules.length
+    const showingFrom = totalEntries === 0 ? 0 : indexOfFirstItem + 1
+    const showingTo = Math.min(indexOfLastItem, totalEntries)
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const MobileSimplePagination = () => (
+        <div className="flex items-center justify-center space-x-4">
+            <Button size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="flex items-center cursor-pointer">
+                <span>‹</span><span className="ml-1">Previous</span>
+            </Button>
+            <Button size="sm" disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="flex items-center cursor-pointer">
+                <span className="mr-1">Next</span><span>›</span>
+            </Button>
+        </div>
+    )
+
+    const OutputCard = ({ schedule }) => (
+        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+            theme === 'light' ? 'bg-white border border-gray-200 hover:bg-gray-50' : 'bg-gray-800 border border-gray-700 hover:bg-gray-750'
+        }`}>
+            {/* Header */}
+            <div className="mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <div>
+                    <p className="text-sm font-semibold text-gray-500">MC ID</p>
+                    <p className={`text-lg font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.code}</p>
+                </div>
+                <div className="text-right">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${schedule.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {schedule.status || 'In Progress'}
+                    </span>
+                </div>
+            </div>
+            
+            {/* Details */}
+            <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                <div>
+                    <p className="font-semibold text-gray-500 text-xs">Lot No:</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'} font-semibold break-all`}>{schedule.lotno}</p>
+                </div>
+                <div>
+                    <p className="font-semibold text-gray-500 text-xs">Color:</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'} break-all`}>{schedule.colourcode}</p>
+                </div>
+                <div className="col-span-2">
+                    <p className="font-semibold text-gray-500 text-xs">Material:</p>
+                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'} break-words`}>{schedule.material}</p>
+                </div>
+            </div>
+            
+            {/* Plan vs Actual Panel */}
+            <div className={`flex justify-between items-center mb-4 p-2 rounded-md ${theme === 'light' ? 'bg-gray-50 border border-gray-100' : 'bg-gray-700'}`}>
+                <div className="text-center w-1/2 border-r border-gray-200 dark:border-gray-600">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Plan Qty</p>
+                    <p className={`font-bold ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{schedule.qty} KG</p>
+                </div>
+                <div className="text-center w-1/2">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Actual Output</p>
+                    <p className={`font-bold ${schedule.actualoutput > 0 ? 'text-green-500' : 'text-gray-400'}`}>
+                        {schedule.actualoutput || '0'} KG
+                    </p>
+                </div>
+            </div>
+            
+            {/* Action */}
+            <Button outline className='w-full cursor-pointer py-1 text-sm' onClick={() => handleUpdate(schedule)}>
+                Update Output
+            </Button>
+        </div>
+    )
 
     return (
         <div className='min-h-screen'>
@@ -359,7 +414,6 @@ const CustomerOutputs = () => {
                 <h1 className='text-2xl font-semibold'>Production Outputs</h1>
                 <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
                     
-                    {/* --- 新增：状态筛选下拉菜单 --- */}
                     <Select 
                         value={statusFilter} 
                         onChange={(e) => {
@@ -374,7 +428,7 @@ const CustomerOutputs = () => {
                     </Select>
                     
                     <TextInput 
-                        placeholder='Search MC ID / Lot No...' 
+                        placeholder='Enter searching' 
                         value={searchTerm} 
                         onChange={(e) => {
                             setSearchTerm(e.target.value.toLowerCase()); 
@@ -382,15 +436,20 @@ const CustomerOutputs = () => {
                         }} 
                         className='w-full sm:w-auto flex-1'
                     />
-                    {/* 改成调用 handleOpenReportModal 来自动生成时间 */}
-                    <Button color="green" onClick={handleOpenReportModal} className="w-full sm:w-auto">
-                        Export Report
+                    <Button color="green" onClick={handleOpenReportModal} className="w-full sm:w-auto cursor-pointer">
+                        Report
                     </Button>
                 </div>
             </div>
 
-            {/* Desktop Table View */}
-            {!isMobile && (
+            {/* Mobile / Desktop View */}
+            {isMobile ? (
+                <div className="space-y-4 mt-4">
+                    {currentSchedules.map((schedule) => (
+                        <OutputCard key={schedule._id} schedule={schedule} />
+                    ))}
+                </div>
+            ) : (
                 <Table hoverable className="[&_td]:py-2 [&_th]:py-2 shadow-md">
                     <TableHead>
                         <TableRow>
@@ -407,7 +466,6 @@ const CustomerOutputs = () => {
                             <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                 <TableCell className="align-middle font-bold text-lg">{schedule.code}</TableCell>
                                 
-                                {/* 悬浮显示物料信息 */}
                                 <TableCell className="align-middle">
                                     <Popover
                                         trigger="hover"
@@ -448,17 +506,23 @@ const CustomerOutputs = () => {
                 </Table>
             )}
 
-            {/* Pagination Component */}
             <div className="flex-col justify-center text-center mt-4 mb-8">
-                <Pagination
-                    showIcons
-                    currentPage={currentPage}
-                    totalPages={Math.max(1, Math.ceil(filteredSchedules.length / itemsPage))}
-                    onPageChange={setCurrentPage}
-                />
+                <p className={`font-semibold mb-4 ${theme === 'light' ? 'text-gray-500' : ' text-gray-100'}`}>
+                    Showing {showingFrom} to {showingTo} of {totalEntries} Entries
+                </p>
+                {isMobile ? (
+                    <MobileSimplePagination />
+                ) : (
+                    <Pagination
+                        showIcons
+                        currentPage={currentPage}
+                        totalPages={Math.max(1, Math.ceil(totalEntries / itemsPage))}
+                        onPageChange={handlePageChange}
+                    />
+                )}
             </div>
 
-            {/* UPDATE MODAL (KEY IN OUTPUTS) */}
+            {/* UPDATE MODAL */}
             <Modal show={openModalUpdate} onClose={() => setOpenModalUpdate(false)} popup size="xl">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'text-gray-50 bg-gray-900'}`}>
@@ -474,7 +538,17 @@ const CustomerOutputs = () => {
 
                         <form onSubmit={handleUpdateSubmit}>
                             <div className="grid grid-cols-2 gap-4">
-                                
+                                <div className="mb-2 block col-span-2">
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Production Date (If forgot to key in yesterday, change this)</Label>
+                                    <TextInput 
+                                        type='date' 
+                                        id="productionDate" 
+                                        value={updateFormData.productionDate} 
+                                        onChange={handleUpdateChange} 
+                                        required 
+                                    />
+                                </div>
+
                                 <div className="mb-2 block col-span-2">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Job Status (Will Auto-Complete if Actual ≥ Planned)</Label>
                                     <Select id="status" value={updateFormData.status} onChange={handleUpdateChange} required className="font-bold text-blue-600">
@@ -526,7 +600,7 @@ const CustomerOutputs = () => {
                 </ModalBody>
             </Modal>
 
-            {/* REPORT EXPORT MODAL */}
+            {/* REPORT MODAL */}
             <Modal show={openModalReport} onClose={() => setOpenModalReport(false)} popup size="md">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>

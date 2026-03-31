@@ -459,7 +459,7 @@ const Customers = () => {
                 </div>
                 <div className='flex gap-2 w-full sm:w-auto'>
                     <Button className='cursor-pointer flex-1 sm:flex-none' onClick={handleCreateCustomer}>
-                        Create Customer
+                        Create
                     </Button>
                     <Button className='cursor-pointer flex-1 sm:flex-none' color='green' onClick={handleDownloadReport}>
                         Report

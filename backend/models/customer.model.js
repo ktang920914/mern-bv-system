@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
 const customerScheduleSchema = new mongoose.Schema({
-    // --- 计划排程字段 ---
     customerID: { type: String, required: true },
     customerName: { type: String, required: true },
     code: { type: String, required: true }, 
@@ -15,10 +14,11 @@ const customerScheduleSchema = new mongoose.Schema({
     qty: { type: Number, required: true },
     pax: { type: Number, required: true },
 
-    // --- 增加状态控制字段 ---
-    status: { type: String, default: 'In Progress' }, // <--- 这里加上！
+    status: { type: String, default: 'In Progress' },
 
-    // --- 实际生产输出字段 ---
+    // --- 核心改动：业务生产日期 ---
+    productionDate: { type: Date }, 
+
     actualoutput: { type: Number, default: 0 },
     wastage: { type: Number, default: 0 },
     planprodtime: { type: Number, default: 0 },
@@ -30,5 +30,4 @@ const customerScheduleSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const CustomerSchedule = mongoose.model('CustomerSchedule', customerScheduleSchema);
-
 export default CustomerSchedule;
