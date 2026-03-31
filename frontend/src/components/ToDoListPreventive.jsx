@@ -540,27 +540,19 @@ const ToDoListPreventive = () => {
                 verticalCentered: false
             })
             
-            // 设置列宽
+            // 设置列宽 (仅剩 5 列)
             worksheet.columns = [
                 { width: 5 },    // No.
                 { width: 12 },   // Date
                 { width: 20 },   // Item Code
                 { width: 30 },   // Activity
-                { width: 15 },   // Status
-                { width: 15 },   // Repeat Type
-                { width: 15 },   // Repeat Interval
-                { width: 15 },   // Repeat End Date
-                { width: 12 },   // Is Recurring
-                { width: 12 },   // Is Generated
-                { width: 20 },   // Created At
-                { width: 20 }    // Updated At
+                { width: 15 }    // Status
             ]
 
             // 定义样式
             const headerFont = { name: 'Calibri', size: 11, bold: true }
             const titleFont = { name: 'Arial Black', size: 16, bold: true }
             const defaultFont = { name: 'Calibri', size: 11 }
-            const boldFont = { name: 'Calibri', size: 11, bold: true }
             
             const borderStyle = {
                 top: { style: 'thin' },
@@ -579,15 +571,13 @@ const ToDoListPreventive = () => {
             titleRow.getCell(1).value = 'TODO LIST PREVENTIVE REPORT'
             titleRow.getCell(1).font = titleFont
             titleRow.getCell(1).alignment = centerAlignment
-            worksheet.mergeCells('A1:L1')
+            worksheet.mergeCells('A1:E1') // 更新合并范围到 E 列
 
             // 表头行 - 添加过滤器
             const headerRow = worksheet.getRow(2)
             headerRow.height = 25
             const headers = [
-                'No.', 'Date', 'Item Code', 'Activity', 'Status', 'Repeat Type',
-                'Repeat Interval', 'Repeat End Date', 'Is Recurring', 'Is Generated',
-                'Created At', 'Updated At'
+                'No.', 'Date', 'Item Code', 'Activity', 'Status'
             ]
             
             headers.forEach((header, index) => {
@@ -603,39 +593,18 @@ const ToDoListPreventive = () => {
                 }
             })
 
-            // 准备数据
+            // 准备数据 (仅映射需要的字段)
             const excelData = todos.map(todo => ({
                 'Date': todo.date,
                 'Item Code': todo.code,
                 'Activity': todo.activity,
-                'Status': todo.status,
-                'Repeat Type': todo.repeatType || 'None',
-                'Repeat Interval': todo.repeatInterval || 1,
-                'Repeat End Date': todo.repeatEndDate || 'N/A',
-                'Is Recurring': todo.isRecurring ? 'Yes' : 'No',
-                'Is Generated': todo.isGenerated ? 'Yes' : 'No',
-                'Created At': new Date(todo.createdAt).toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                }),
-                'Updated At': new Date(todo.updatedAt).toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                })
+                'Status': todo.status
             }))
 
             // 添加自动过滤器到整个数据范围
             worksheet.autoFilter = {
                 from: 'A2',  // 从A2单元格开始（表头行）
-                to: `L${2 + excelData.length}`  // 到L列，数据行数+2（标题行+表头行+数据行）
+                to: `E${2 + excelData.length}`  // 更新到 E 列
             }
 
             // 数据行
@@ -650,14 +619,7 @@ const ToDoListPreventive = () => {
                     todo['Date'],
                     todo['Item Code'],
                     todo.Activity,
-                    todo.Status,
-                    todo['Repeat Type'],
-                    todo['Repeat Interval'],
-                    todo['Repeat End Date'],
-                    todo['Is Recurring'],
-                    todo['Is Generated'],
-                    todo['Created At'],
-                    todo['Updated At']
+                    todo.Status
                 ]
 
                 rowData.forEach((value, colIndex) => {
@@ -667,9 +629,9 @@ const ToDoListPreventive = () => {
                     cell.border = borderStyle
                     
                     // 不同的列对齐方式
-                    if (colIndex === 0 || colIndex === 6) { // No. 和 Repeat Interval 列居右
+                    if (colIndex === 0) { // No. 列居右
                         cell.alignment = rightAlignment
-                    } else if (colIndex === 4 || colIndex === 8 || colIndex === 9) { // Status, Is Recurring, Is Generated 列居中
+                    } else if (colIndex === 4) { // Status 列居中
                         cell.alignment = centerAlignment
                     } else if (colIndex === 3) { // Activity 列左对齐
                         cell.alignment = leftAlignment
@@ -696,21 +658,9 @@ const ToDoListPreventive = () => {
                         }
                     }
                     
-                    // 为重复类型列添加颜色
-                    if (colIndex === 5) { // Repeat Type 列
-                        if (value !== 'None') {
-                            cell.fill = {
-                                type: 'pattern',
-                                pattern: 'solid',
-                                fgColor: { argb: 'FFFFEB9C' } // 浅黄色
-                            }
-                            cell.font = { ...defaultFont, bold: true }
-                        }
-                    }
-                    
                     // 隔行着色
                     if (rowIndex % 2 === 0) {
-                        if (colIndex !== 4 && colIndex !== 5) { // 保持状态列和重复类型列的颜色
+                        if (colIndex !== 4) { // 保持状态列颜色
                             cell.fill = {
                                 type: 'pattern',
                                 pattern: 'solid',
@@ -727,7 +677,7 @@ const ToDoListPreventive = () => {
             if (excelData.length === 0) {
                 const row = worksheet.getRow(rowIndex)
                 row.getCell(1).value = 'No todo list data available'
-                worksheet.mergeCells(`A${rowIndex}:L${rowIndex}`)
+                worksheet.mergeCells(`A${rowIndex}:E${rowIndex}`) // 更新合并范围
                 row.getCell(1).alignment = centerAlignment
                 row.getCell(1).font = { ...defaultFont, italic: true, color: { argb: 'FFFF0000' } }
                 row.getCell(1).fill = {

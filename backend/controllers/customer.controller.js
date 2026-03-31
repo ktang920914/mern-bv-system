@@ -38,7 +38,21 @@ export const updateSchedule = async (req, res, next) => {
             req.params.customerjobId,
             {
                 $set: {
-                    // ... 保持其他字段
+                    // 加上前端 Modal 里需要 Update 的核心字段
+                    customerID: req.body.customerID,
+                    customerName: req.body.customerName,
+                    code: req.body.code,
+                    prodstart: req.body.prodstart,
+                    prodend: req.body.prodend,
+                    targetcompletion: req.body.targetcompletion,
+                    deliverydate: req.body.deliverydate,
+                    lotno: req.body.lotno,
+                    colourcode: req.body.colourcode,
+                    material: req.body.material,
+                    qty: req.body.qty,
+                    pax: req.body.pax,
+                    
+                    // 保留你原有的其他字段更新
                     status: req.body.status,
                     actualoutput: req.body.actualoutput,
                     wastage: req.body.wastage,
@@ -47,7 +61,6 @@ export const updateSchedule = async (req, res, next) => {
                     proddelay: req.body.proddelay,
                     irr: req.body.irr,
                     arr: req.body.arr,
-                    // 保存生产日期
                     productionDate: req.body.productionDate 
                 }
             },

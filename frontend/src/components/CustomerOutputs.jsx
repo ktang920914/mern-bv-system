@@ -197,116 +197,231 @@ const CustomerOutputs = () => {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Output Report');
 
-            worksheet.pageSetup.orientation = 'landscape';
-            worksheet.pageSetup.fitToPage = true;
+            // ==========================================
+            // Print Setup: A4 Landscape, Fit to 1 Page Width & Height, Align Top
+            // ==========================================
+            worksheet.pageSetup = {
+                paperSize: 9, // 9 = A4 paper
+                orientation: 'landscape',
+                fitToPage: true,
+                fitToWidth: 1,
+                fitToHeight: 1, 
+                horizontalCentered: true, 
+                verticalCentered: false, // 强制不垂直居中，确保内容贴在最上方
+                margins: {
+                    left: 0.25,
+                    right: 0.25,
+                    top: 0.4,
+                    bottom: 0.5,
+                    header: 0.3,
+                    footer: 0.3
+                }
+            };
 
-            worksheet.mergeCells('A1:N1');
+            // set all worksheet font defaults
+            worksheet.properties.defaultRowHeight = 20;
+
+            // ==========================================
+            // 1. TITLE & DATE ROW
+            // ==========================================
             const titleCell = worksheet.getCell('A1');
             titleCell.value = 'PRODUCTION OUTPUT REPORT';
-            titleCell.font = { name: 'Arial Black', size: 18, bold: true };
-            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            titleCell.font = { name: 'Arial Black', size: 14, bold: true };
+            worksheet.mergeCells('A1:D1');
+            
+            // Underline line for title
+            for (let i = 1; i <= 5; i++) {
+                worksheet.getCell(1, i).border = { bottom: { style: 'medium' } };
+            }
 
             const targetDateObj = new Date(reportRange.end);
-            worksheet.getCell('M2').value = 'DATE:';
-            worksheet.getCell('N2').value = `${targetDateObj.getDate()} ${targetDateObj.toLocaleString('default', { month: 'short' })} ${targetDateObj.getFullYear()}`;
-            worksheet.getCell('M3').value = 'TIME:';
-            worksheet.getCell('N3').value = targetDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const dayStr = targetDateObj.getDate().toString();
+            const monthStr = targetDateObj.toLocaleString('default', { month: 'short' });
+            const yearStr = targetDateObj.getFullYear().toString();
+            const timeStr = targetDateObj.toLocaleTimeString('en-US', {hour: 'numeric', hour12: true}).replace(/\s/g, ''); 
 
-            const headerRow = worksheet.getRow(5);
+            worksheet.getCell('G1').value = 'DATE';
+            worksheet.getCell('G1').font = { bold: true, name: 'Arial Black', size: 10 };
+            worksheet.getCell('G1').alignment = { horizontal: 'right', vertical: 'bottom' };
+
+            worksheet.getCell('H1').value = dayStr;
+            worksheet.getCell('H1').font = { bold: true, color: { argb: 'FF0000FF' }, name: 'Arial', size: 11 }; 
+            worksheet.getCell('H1').alignment = { horizontal: 'center', vertical: 'bottom' };
+
+            worksheet.getCell('I1').value = monthStr;
+            worksheet.getCell('I1').font = { bold: true, color: { argb: 'FF0000FF' }, name: 'Arial', size: 11 }; 
+            worksheet.getCell('I1').alignment = { horizontal: 'center', vertical: 'bottom' };
+
+            worksheet.getCell('J1').value = yearStr;
+            worksheet.getCell('J1').font = { bold: true, color: { argb: 'FF0000FF' }, name: 'Arial', size: 11 }; 
+            worksheet.getCell('J1').alignment = { horizontal: 'center', vertical: 'bottom' };
+
+            worksheet.getCell('K1').value = 'TIME';
+            worksheet.getCell('K1').font = { bold: true, name: 'Arial Black', size: 10 };
+            worksheet.getCell('K1').alignment = { horizontal: 'right', vertical: 'bottom' };
+
+            worksheet.getCell('L1').value = timeStr;
+            worksheet.getCell('L1').font = { bold: true, color: { argb: 'FF0000FF' }, name: 'Arial', size: 11 }; 
+            worksheet.getCell('L1').alignment = { horizontal: 'center', vertical: 'bottom' };
+
+            // ==========================================
+            // 2. HEADERS
+            // ==========================================
+            const headerRow = worksheet.getRow(3);
             const headers = [
                 'No.', 'MC ID', 'LOT NO.', 'COLOR CODE', 'MATERIAL', 
-                'PLANNED OUTPUT (KG)', 'ACTUAL OUTPUT (KG)', 'WASTAGE (KG)', 
-                'PLANNED PROD TIME (HRS)', 'OPERATING TIME (HRS)', 'PROD DELAY (HRS)', 
-                'Ideal Run Rate, IRR (KG/MIN)', 'Actual Run Rate, ARR (KG/MIN)', 'REMARKS (REJECT, REASON OF DELAY)'
+                'PLANNED\nOUTPUT (KG)', 'ACTUAL\nOUTPUT (KG)', 'WASTAGE\n(KG)', 
+                'PLANNED\nPROD TIME\n(HRS)', 'OPERATING\nTIME (HRS)', 'PROD\nDELAY\n(HRS)', 
+                'Ideal Run\nRate , IRR\n(KG/MIN)', 'Actual Run\nRate , ARR\n(KG/MIN)', 'REMARKS (REJECT,\nREASON OF DELAY)'
             ];
             
             headers.forEach((header, index) => {
                 const cell = headerRow.getCell(index + 1);
                 cell.value = header;
-                cell.font = { bold: true, size: 10 };
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
-                cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                cell.font = { bold: true, size: 8, name: 'Arial Black' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+                cell.border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'medium'}, right: {style:'thin'} };
                 cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
             });
-            headerRow.height = 40;
+            headerRow.height = 45; 
 
-            let currentRowIdx = 6;
+            // ==========================================
+            // 3. DATA ROWS
+            // ==========================================
+            let currentRowIdx = 4;
             let totals = { qty: 0, actual: 0, wastage: 0, planTime: 0, opTime: 0, delay: 0 };
 
-            reportData.forEach((job, idx) => {
+            const decimalFormat = '#,##0.00;[Red](#,##0.00)';
+
+            // 【关键修改】：将最小行数从 29 增加到 42，这样能在不改变行高格式的前提下刚刚好填满 A4 纸的高度！
+            const rowCount = Math.max(reportData.length, 42);
+
+            for(let i = 0; i < rowCount; i++) {
+                const job = reportData[i];
                 const row = worksheet.getRow(currentRowIdx);
-                
-                row.getCell(1).value = idx + 1;
-                row.getCell(2).value = job.code || '';
-                row.getCell(3).value = job.lotno || '';
-                row.getCell(4).value = job.colourcode || '';
-                row.getCell(5).value = job.material || '';
-                row.getCell(6).value = Number(job.qty) || 0;
-                row.getCell(7).value = Number(job.actualoutput) || 0;
-                
-                const wastage = Number(job.wastage) || 0;
-                row.getCell(8).value = wastage;
-                row.getCell(8).numFmt = '#,##0.00;[Red](#,##0.00)';
-                
-                row.getCell(9).value = Number(job.planprodtime) || 0;
-                row.getCell(10).value = Number(job.operatingtime) || 0;
-                
-                const delay = Number(job.proddelay) || 0;
-                row.getCell(11).value = delay;
-                row.getCell(11).numFmt = '#,##0.00;[Red](#,##0.00)';
 
-                row.getCell(12).value = Number(job.irr) || 0;
-                row.getCell(13).value = Number(job.arr) || 0;
-                
-                row.getCell(14).value = job.status === 'Completed' && (Number(job.actualoutput) < Number(job.qty)) ? 'Force Closed' : ''; 
+                row.getCell(1).value = i + 1; // 序列号 No.
 
-                for(let c=1; c<=14; c++) {
-                    row.getCell(c).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    row.getCell(c).alignment = { vertical: 'middle', horizontal: 'center' };
+                if (job) {
+                    row.getCell(2).value = job.code || '';
+                    row.getCell(3).value = job.lotno || '';
+                    row.getCell(4).value = job.colourcode || '';
+                    row.getCell(5).value = job.material || '';
+                    
+                    row.getCell(6).value = Number(job.qty) || 0;
+                    row.getCell(7).value = Number(job.actualoutput) || 0;
+                    
+                    const wastage = Number(job.wastage) || 0;
+                    row.getCell(8).value = wastage;
+                    
+                    row.getCell(9).value = Number(job.planprodtime) || 0;
+                    row.getCell(10).value = Number(job.operatingtime) || 0;
+                    
+                    const delay = Number(job.proddelay) || 0;
+                    row.getCell(11).value = delay;
+
+                    row.getCell(12).value = Number(job.irr) || 0;
+                    row.getCell(13).value = Number(job.arr) || 0;
+                    
+                    row.getCell(14).value = job.status === 'Completed' && (Number(job.actualoutput) < Number(job.qty)) ? 'Force Closed' : ''; 
+
+                    // sum
+                    totals.qty += Number(job.qty) || 0;
+                    totals.actual += Number(job.actualoutput) || 0;
+                    totals.wastage += wastage;
+                    totals.planTime += Number(job.planprodtime) || 0;
+                    totals.opTime += Number(job.operatingtime) || 0;
+                    totals.delay += delay;
                 }
 
-                totals.qty += Number(job.qty) || 0;
-                totals.actual += Number(job.actualoutput) || 0;
-                totals.wastage += wastage;
-                totals.planTime += Number(job.planprodtime) || 0;
-                totals.opTime += Number(job.operatingtime) || 0;
-                totals.delay += delay;
-
+                // Apply borders & Number Format
+                for(let c = 1; c <= 14; c++) {
+                    const cell = row.getCell(c);
+                    cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    cell.font = { name: 'Arial', size: 9, bold: true }; 
+                    
+                    if (c === 1 || c === 2) {
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    } else if (c >= 6 && c <= 13) {
+                        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+                        cell.numFmt = decimalFormat; 
+                    } else {
+                        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    }
+                }
+                
                 currentRowIdx++;
-            });
+            }
 
+            // ==========================================
+            // 4. TOTAL ROW
+            // ==========================================
             const totalRow = worksheet.getRow(currentRowIdx);
             worksheet.mergeCells(`A${currentRowIdx}:E${currentRowIdx}`);
-            totalRow.getCell(1).value = 'TOTAL';
-            totalRow.getCell(1).font = { bold: true };
-            totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+            
+            const totalTitleCell = totalRow.getCell(1);
+            totalTitleCell.value = 'TOTAL';
+            totalTitleCell.font = { bold: true, name: 'Arial Black', size: 10 };
+            totalTitleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
+            // Values for total
             totalRow.getCell(6).value = totals.qty;
             totalRow.getCell(7).value = totals.actual;
             totalRow.getCell(8).value = totals.wastage;
-            totalRow.getCell(8).numFmt = '#,##0.00;[Red](#,##0.00)';
             totalRow.getCell(9).value = totals.planTime;
             totalRow.getCell(10).value = totals.opTime;
             totalRow.getCell(11).value = totals.delay;
-            totalRow.getCell(11).numFmt = '#,##0.00;[Red](#,##0.00)';
 
-            for(let c=1; c<=14; c++) {
-                totalRow.getCell(c).font = { bold: true };
-                totalRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }; 
-                totalRow.getCell(c).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            const totalNumFormat = '#,##0;[Red](#,##0)';
+
+            // Format Total Numbers
+            for(let c = 6; c <= 11; c++) {
+                const cell = totalRow.getCell(c);
+                cell.font = { bold: true, color: { argb: 'FF0000FF' }, name: 'Arial', size: 10 };
+                cell.numFmt = totalNumFormat;
+                cell.alignment = { horizontal: 'right', vertical: 'middle' };
             }
 
+            // Blackout Columns 12, 13, 14
+            for(let c = 12; c <= 14; c++) {
+                const cell = totalRow.getCell(c);
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
+            }
+
+            for(let c = 1; c <= 14; c++) {
+                totalRow.getCell(c).border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'medium'}, right: {style:'thin'} };
+            }
+
+            // ==========================================
+            // 5. COLUMN WIDTHS
+            // ==========================================
             worksheet.columns = [
-                { width: 5 }, { width: 10 }, { width: 18 }, { width: 20 }, { width: 35 },
-                { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 },
-                { width: 12 }, { width: 12 }, { width: 12 }, { width: 25 }
+                { width: 4.5 }, { width: 8.5 }, { width: 18 },  { width: 22 },  { width: 35 },
+                { width: 11 },  { width: 11 },  { width: 9.5 }, { width: 10 },  { width: 10 }, 
+                { width: 9.5 }, { width: 10 },  { width: 10 },  { width: 25 }   
             ];
 
-            worksheet.getCell(`A${currentRowIdx + 2}`).value = 'NOTE';
-            worksheet.getCell(`A${currentRowIdx + 2}`).font = { bold: true };
-            worksheet.getCell(`B${currentRowIdx + 2}`).value = 'Production Time calculated is based on Actual Run Rate (ARR), NOT Ideal Run Rate (IRR)';
-            worksheet.getCell(`B${currentRowIdx + 2}`).font = { italic: true, color: { argb: 'FFFF0000' } }; 
+            // ==========================================
+            // 6. NOTE ROW
+            // ==========================================
+            const noteRowIdx = currentRowIdx + 1;
+            const noteRow = worksheet.getRow(noteRowIdx);
+            noteRow.getCell(1).value = 'NOTE';
+            noteRow.getCell(1).font = { bold: true, name: 'Arial Black', size: 9 };
+            noteRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
 
+            noteRow.getCell(2).value = {
+                richText: [
+                    { text: 'Production Time calculated is based on ', font: { name: 'Arial', size: 9, bold: true } },
+                    { text: 'Actual Run Rate (ARR)', font: { name: 'Arial', size: 9, bold: true, italic: true } },
+                    { text: ', NOT ', font: { name: 'Arial', size: 9, bold: true } },
+                    { text: 'Ideal Run Rate (IRR)', font: { name: 'Arial', size: 9, bold: true, italic: true } }
+                ]
+            };
+            worksheet.mergeCells(`B${noteRowIdx}:H${noteRowIdx}`);
+            noteRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+
+            // Download
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             
@@ -390,11 +505,11 @@ const CustomerOutputs = () => {
             {/* Plan vs Actual Panel */}
             <div className={`flex justify-between items-center mb-4 p-2 rounded-md ${theme === 'light' ? 'bg-gray-50 border border-gray-100' : 'bg-gray-700'}`}>
                 <div className="text-center w-1/2 border-r border-gray-200 dark:border-gray-600">
-                    <p className="text-xs font-semibold text-gray-500 mb-1">Plan Qty</p>
-                    <p className={`font-bold ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>{schedule.qty} KG</p>
+                    <p className={`${theme === 'light' ? ' text-gray-900' : ' text-gray-300'}`}>Plan Qty</p>
+                    <p className={`font-bold ${theme === 'light' ? 'font-semibold mb-1 text-gray-900' : 'font-semibold mb-1 text-gray-100'}`}>{schedule.qty} KG</p>
                 </div>
                 <div className="text-center w-1/2">
-                    <p className="text-xs font-semibold text-gray-500 mb-1">Actual Output</p>
+                    <p className={`${theme === 'light' ? ' text-gray-900' : ' text-gray-300'}`}>Actual Output</p>
                     <p className={`font-bold ${schedule.actualoutput > 0 ? 'text-green-500' : 'text-gray-400'}`}>
                         {schedule.actualoutput || '0'} KG
                     </p>
@@ -450,7 +565,7 @@ const CustomerOutputs = () => {
                     ))}
                 </div>
             ) : (
-                <Table hoverable className="[&_td]:py-2 [&_th]:py-2 shadow-md">
+                <Table hoverable className="[&_td]:py-1 [&_th]:py-2">
                     <TableHead>
                         <TableRow>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-200 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>MC ID</TableHeadCell>
@@ -464,7 +579,7 @@ const CustomerOutputs = () => {
                     <TableBody>
                         {currentSchedules.map((schedule) => (
                             <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                <TableCell className="align-middle font-bold text-lg">{schedule.code}</TableCell>
+                                <TableCell className="align-middle font-bold">{schedule.code}</TableCell>
                                 
                                 <TableCell className="align-middle">
                                     <Popover
