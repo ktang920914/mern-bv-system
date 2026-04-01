@@ -9,6 +9,40 @@ import { saveAs } from 'file-saver'
 
 const localizer = momentLocalizer(moment)
 
+// 动态获取颜色函数（Statistics 版本，处理 Tailwind 类和内置样式）
+// 同样加入了黄金角度(137.508)来强制分散颜色
+const getDynamicJobColorStats = (code) => {
+  const staticMap = {
+    'L1': { bgClass: 'bg-blue-500', borderClass: 'border-blue-500', hex: '#3B82F6' },
+    'L2': { bgClass: 'bg-green-500', borderClass: 'border-green-500', hex: '#10B981' },
+    'L3': { bgClass: 'bg-purple-500', borderClass: 'border-purple-500', hex: '#8B5CF6' },
+    'L5': { bgClass: 'bg-yellow-500', borderClass: 'border-yellow-500', hex: '#F59E0B' },
+    'L6': { bgClass: 'bg-red-500', borderClass: 'border-red-500', hex: '#EF4444' },
+    'L9': { bgClass: 'bg-pink-500', borderClass: 'border-pink-500', hex: '#EC4899' },
+    'L10': { bgClass: 'bg-cyan-500', borderClass: 'border-cyan-500', hex: '#06B6D4' },
+    'L11': { bgClass: 'bg-lime-500', borderClass: 'border-lime-500', hex: '#84CC16' },
+    'L12': { bgClass: 'bg-orange-500', borderClass: 'border-orange-500', hex: '#F97316' }
+  };
+
+  if (!code) return { bgClass: 'bg-gray-500', borderClass: 'border-gray-500', hex: '#6B7280' };
+  if (staticMap[code]) return staticMap[code];
+
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // 乘以 137.508 确保颜色跳跃极大
+  const h = Math.floor(Math.abs(hash * 137.508) % 360);
+  
+  return {
+    bgClass: '', 
+    borderClass: '', 
+    hex: `hsl(${h}, 75%, 50%)`,
+    isDynamic: true
+  };
+};
+
 const Statistics = () => {
   const { theme } = useThemeStore()
   const [events, setEvents] = useState([])
@@ -471,19 +505,8 @@ const Statistics = () => {
 
   const eventStyleGetter = (event) => {
     const jobCode = event.resource.code || 'L1'
-    const colorMap = {
-      'L1': '#3B82F6',  
-      'L2': '#10B981',  
-      'L3': '#8B5CF6',  
-      'L5': '#F59E0B',  
-      'L6': '#EF4444',  
-      'L9': '#EC4899',  
-      'L10': '#06B6D4', 
-      'L11': '#84CC16', 
-      'L12': '#F97316'  
-    }
-
-    const backgroundColor = colorMap[jobCode] || '#6B7280'
+    const colorData = getDynamicJobColorStats(jobCode)
+    const backgroundColor = colorData.hex
 
     const isMultiDay = event.resource.isMultiDay
     
@@ -757,24 +780,15 @@ const Statistics = () => {
                       {dayEvents.slice(0, 2).map((event, eventIndex) => {
                         const jobCode = event.resource.code || 'L1'
                         const isMultiDay = event.resource.isMultiDay
-                        const colorMap = {
-                          'L1': 'bg-blue-500',
-                          'L2': 'bg-green-500',
-                          'L3': 'bg-purple-500',
-                          'L5': 'bg-yellow-500',
-                          'L6': 'bg-red-500',
-                          'L9': 'bg-pink-500',
-                          'L10': 'bg-cyan-500',
-                          'L11': 'bg-lime-500',
-                          'L12': 'bg-orange-500'
-                        }
-                        const bgColor = colorMap[jobCode] || 'bg-gray-500'
+                        const colorData = getDynamicJobColorStats(jobCode)
+                        const bgColor = colorData.bgClass
                         const borderClass = isMultiDay ? 'border-dashed border border-white' : ''
                         
                         return (
                           <div
                             key={eventIndex}
                             className={`text-[10px] p-1 rounded text-white truncate cursor-pointer ${bgColor} ${borderClass} ${isMultiDay ? 'italic' : ''}`}
+                            style={colorData.isDynamic ? { backgroundColor: colorData.hex } : {}}
                             title={`${event.resource.code} - ${event.resource.lotno} ${isMultiDay ? '(Multi-day)' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation() 
@@ -834,26 +848,20 @@ const Statistics = () => {
   const EventLegend = () => {
     const jobCodes = [...new Set(jobsData.map(job => job.code).filter(Boolean))]
     
-    const colorMap = {
-      'L1': 'bg-blue-500',
-      'L2': 'bg-green-500',
-      'L3': 'bg-purple-500',
-      'L5': 'bg-yellow-500',
-      'L6': 'bg-red-500',
-      'L9': 'bg-pink-500',
-      'L10': 'bg-cyan-500',
-      'L11': 'bg-lime-500',
-      'L12': 'bg-orange-500'
-    }
-    
     return (
       <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        {jobCodes.map(code => (
-          <div key={code} className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded ${colorMap[code] || 'bg-gray-500'}`} />
-            <span className="text-sm text-gray-700 dark:text-gray-300">{code}</span>
-          </div>
-        ))}
+        {jobCodes.map(code => {
+          const colorData = getDynamicJobColorStats(code);
+          return (
+            <div key={code} className="flex items-center space-x-2">
+              <div 
+                className={`w-3 h-3 rounded ${colorData.bgClass}`} 
+                style={colorData.isDynamic ? { backgroundColor: colorData.hex } : {}}
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">{code}</span>
+            </div>
+          )
+        })}
         <div className="flex items-center space-x-2 ml-auto">
           <div className="w-3 h-3 rounded border-dashed border border-gray-400" />
           <span className="text-sm text-gray-700 dark:text-gray-300">Multi-day</span>
@@ -1410,19 +1418,9 @@ const Statistics = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {sortedJobsByCode.map((jobData, index) => {
                   const percentage = (jobData.count / totalJobs * 100).toFixed(1)
-                  const colorMap = {
-                    'L1': 'border-blue-500',
-                    'L2': 'border-green-500',
-                    'L3': 'border-purple-500',
-                    'L5': 'border-yellow-500',
-                    'L6': 'border-red-500',
-                    'L9': 'border-pink-500',
-                    'L10': 'border-cyan-500',
-                    'L11': 'border-lime-500',
-                    'L12': 'border-orange-500'
-                  }
+                  const colorData = getDynamicJobColorStats(jobData.code);
                   const rankBgClass = getRankColor(index)
-                  const borderColor = colorMap[jobData.code] || 'border-gray-500'
+                  const borderColor = colorData.borderClass
                   const bgClass = `${rankBgClass} ${borderColor}`
                   
                   const wastageRate = jobData.totalOutput > 0 
@@ -1437,6 +1435,7 @@ const Statistics = () => {
                     <div 
                       key={jobData.code} 
                       className={`p-3 rounded-lg border-l-4 ${bgClass} transition-all duration-300 hover:shadow-md`}
+                      style={colorData.isDynamic ? { borderLeftColor: colorData.hex } : {}}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2">

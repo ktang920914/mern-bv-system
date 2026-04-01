@@ -43,12 +43,31 @@ const jobCodeColors = {
   'L2': { bg: 'rgba(16, 185, 129, 0.5)', border: 'rgba(16, 185, 129, 1)' },  // 绿色
   'L3': { bg: 'rgba(139, 92, 246, 0.5)', border: 'rgba(139, 92, 246, 1)' },  // 紫色
   'L5': { bg: 'rgba(245, 158, 11, 0.5)', border: 'rgba(245, 158, 11, 1)' },  // 黄色
-  'L6': { bg: 'rgba(239, 68, 68, 0.5)', border: 'rgba(239, 68, 68, 1)' },     // 红色
+  'L6': { bg: 'rgba(239, 68, 68, 0.5)', border: 'rgba(239, 68, 68, 1)' },      // 红色
   'L9': { bg: 'rgba(236, 72, 153, 0.5)', border: 'rgba(236, 72, 153, 1)' },  // 粉色
   'L10': { bg: 'rgba(6, 182, 212, 0.5)', border: 'rgba(6, 182, 212, 1)' },    // 青色
   'L11': { bg: 'rgba(132, 204, 22, 0.5)', border: 'rgba(132, 204, 22, 1)' },  // 青绿色
   'L12': { bg: 'rgba(249, 115, 22, 0.5)', border: 'rgba(249, 115, 22, 1)' }   // 橙色
 }
+
+// 动态获取颜色函数：利用黄金角度(137.5度)强制打散颜色，保证新机器颜色差异极大
+const getDynamicJobColor = (code) => {
+  if (!code) return { bg: 'rgba(59, 130, 246, 0.5)', border: 'rgba(59, 130, 246, 1)' };
+  if (jobCodeColors[code]) return jobCodeColors[code];
+
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // 乘以 137.508 (黄金角度)，确保名字相近的机器在色轮上相差十万八千里
+  const h = Math.floor(Math.abs(hash * 137.508) % 360);
+  
+  return {
+    bg: `hsla(${h}, 75%, 60%, 0.6)`,
+    border: `hsl(${h}, 75%, 45%)`
+  };
+};
 
 const Outputs = () => {
     const {theme} = useThemeStore()
@@ -225,52 +244,22 @@ const Outputs = () => {
         return colors;
     };
 
-    // 生成颜色 - 优先使用 jobCodeColors
+    // 生成颜色 - 优先使用 jobCodeColors (已修改为使用 getDynamicJobColor)
     const generateColors = (count, jobCodes = []) => {
         const colors = [];
         
         // 如果提供了jobCodes，使用对应的颜色
         jobCodes.forEach((code, index) => {
-            if (jobCodeColors[code]) {
-                colors.push(jobCodeColors[code]);
-            } else {
-                // 如果没有对应的颜色，使用默认颜色
-                const baseColors = [
-                    { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
-                    { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
-                    { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
-                    { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
-                    { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
-                    { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
-                    { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
-                    { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
-                    { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
-                    { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' }
-                ];
-                colors.push(baseColors[index % baseColors.length]);
-            }
+            colors.push(getDynamicJobColor(code));
         });
         
         // 如果colors数量不够，补充颜色
         if (colors.length < count) {
-            const baseColors = [
-                { bg: 'rgba(54, 162, 235, 0.5)', border: 'rgba(54, 162, 235, 1)' },
-                { bg: 'rgba(255, 99, 132, 0.5)', border: 'rgba(255, 99, 132, 1)' },
-                { bg: 'rgba(75, 192, 192, 0.5)', border: 'rgba(75, 192, 192, 1)' },
-                { bg: 'rgba(255, 159, 64, 0.5)', border: 'rgba(255, 159, 64, 1)' },
-                { bg: 'rgba(153, 102, 255, 0.5)', border: 'rgba(153, 102, 255, 1)' },
-                { bg: 'rgba(255, 205, 86, 0.5)', border: 'rgba(255, 205, 86, 1)' },
-                { bg: 'rgba(201, 203, 207, 0.5)', border: 'rgba(201, 203, 207, 1)' },
-                { bg: 'rgba(255, 99, 71, 0.5)', border: 'rgba(255, 99, 71, 1)' },
-                { bg: 'rgba(46, 204, 113, 0.5)', border: 'rgba(46, 204, 113, 1)' },
-                { bg: 'rgba(155, 89, 182, 0.5)', border: 'rgba(155, 89, 182, 1)' }
-            ];
-            
             for (let i = colors.length; i < count; i++) {
-                const hue = (i * 137.5) % 360;
+                const hue = (i * 137.508) % 360;
                 colors.push({
-                    bg: `hsla(${hue}, 70%, 65%, 0.5)`,
-                    border: `hsl(${hue}, 70%, 50%)`
+                    bg: `hsla(${hue}, 75%, 60%, 0.5)`,
+                    border: `hsl(${hue}, 75%, 45%)`
                 });
             }
         }
@@ -465,12 +454,8 @@ const Outputs = () => {
                     return typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0;
                 });
                 
-                const backgroundColors = selectedData.map(item => {
-                    return jobCodeColors[item.code]?.bg || 'rgba(200, 200, 200, 0.5)';
-                });
-                const borderColors = selectedData.map(item => {
-                    return jobCodeColors[item.code]?.border || 'rgba(200, 200, 200, 1)';
-                });
+                const backgroundColors = selectedData.map(item => getDynamicJobColor(item.code).bg);
+                const borderColors = selectedData.map(item => getDynamicJobColor(item.code).border);
 
                 chartData = {
                     labels: labels,
@@ -492,10 +477,7 @@ const Outputs = () => {
                     });
 
                     const jobCode = dataItem.code || 'All';
-                    const color = jobCodeColors[jobCode] || { 
-                        bg: 'rgba(59, 130, 246, 0.5)', 
-                        border: 'rgba(59, 130, 246, 1)' 
-                    };
+                    const color = getDynamicJobColor(jobCode);
 
                     return {
                         label: `${jobCode} - ${dataTypes.find(dt => dt.value === selectedDataType)?.label}`,
@@ -517,10 +499,7 @@ const Outputs = () => {
             // 普通模式：单个数据集 (保持不变，显示月份分布)
             const singleData = Array.isArray(selectedData) ? selectedData[0] : selectedData;
             const jobCode = singleData.code || 'All';
-            const color = jobCodeColors[jobCode] || { 
-                bg: 'rgba(59, 130, 246, 0.5)', 
-                border: 'rgba(59, 130, 246, 1)' 
-            };
+            const color = getDynamicJobColor(jobCode);
             
             const data = monthFields.map(month => {
                 const value = singleData[month.key];
@@ -1314,7 +1293,7 @@ const Outputs = () => {
                 
                 <div className="flex flex-wrap gap-1 mb-2">
                     {selectedCodes.map(code => {
-                        const color = jobCodeColors[code] || { bg: '#6B7280', border: '#6B7280' };
+                        const color = getDynamicJobColor(code);
                         return (
                             <Badge 
                                 key={code} 
@@ -1340,7 +1319,7 @@ const Outputs = () => {
                 
                 <div className="flex flex-wrap gap-1 mb-2">
                     {availableCodes.map(code => {
-                        const color = jobCodeColors[code] || { bg: '#6B7280', border: '#6B7280' };
+                        const color = getDynamicJobColor(code);
                         
                         return (
                             <div 
