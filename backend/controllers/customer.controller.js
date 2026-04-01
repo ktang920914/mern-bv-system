@@ -4,14 +4,14 @@ import { errorHandler } from "../utils/error.js";
 // 1. 创建排程 (Create)
 export const createSchedule = async (req, res, next) => {
     try {
-        const { customerID, customerName, code, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax } = req.body;
+        const { customerID, customerName, code, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark } = req.body;
 
         if (!customerID || !customerName || !code || !prodstart || !prodend || !lotno || !targetcompletion || !deliverydate) {
             return next(errorHandler(400, 'Please provide all required fields.'));
         }
 
         const newSchedule = new CustomerSchedule({
-            customerID, customerName, code, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax
+            customerID, customerName, code, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark
         });
 
         const savedSchedule = await newSchedule.save();
@@ -61,7 +61,10 @@ export const updateSchedule = async (req, res, next) => {
                     proddelay: req.body.proddelay,
                     irr: req.body.irr,
                     arr: req.body.arr,
-                    productionDate: req.body.productionDate 
+                    productionDate: req.body.productionDate, 
+
+                    // --- 新增代码 ---
+                    remark: req.body.remark
                 }
             },
             { new: true } 

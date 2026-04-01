@@ -7,22 +7,37 @@ import useThemeStore from '../themeStore'
 
 const localizer = momentLocalizer(moment)
 
-// 智能颜色生成器：确保任何新机器（如 CR-1）都有全系统统一且鲜艳的颜色
-export const getSolidColor = (code) => {
-    if (!code) return '#6B7280';
-    const HEX_COLORS = {
-        'L1': '#3B82F6', 'L2': '#10B981', 'L3': '#8B5CF6', 
-        'L5': '#F59E0B', 'L6': '#EF4444', 'L9': '#EC4899', 
-        'L10': '#06B6D4', 'L11': '#84CC16', 'L12': '#F97316'
-    };
-    if (HEX_COLORS[code]) return HEX_COLORS[code];
+// 智能颜色生成器：和 Statistics.jsx 保持完全一致，使用 137.508 黄金角度强制打散新机器颜色
+export const getDynamicJobColorStats = (code) => {
+  const staticMap = {
+    'L1': { bgClass: 'bg-blue-500', borderClass: 'border-blue-500', hex: '#3B82F6' },
+    'L2': { bgClass: 'bg-green-500', borderClass: 'border-green-500', hex: '#10B981' },
+    'L3': { bgClass: 'bg-purple-500', borderClass: 'border-purple-500', hex: '#8B5CF6' },
+    'L5': { bgClass: 'bg-yellow-500', borderClass: 'border-yellow-500', hex: '#F59E0B' },
+    'L6': { bgClass: 'bg-red-500', borderClass: 'border-red-500', hex: '#EF4444' },
+    'L9': { bgClass: 'bg-pink-500', borderClass: 'border-pink-500', hex: '#EC4899' },
+    'L10': { bgClass: 'bg-cyan-500', borderClass: 'border-cyan-500', hex: '#06B6D4' },
+    'L11': { bgClass: 'bg-lime-500', borderClass: 'border-lime-500', hex: '#84CC16' },
+    'L12': { bgClass: 'bg-orange-500', borderClass: 'border-orange-500', hex: '#F97316' }
+  };
 
-    // 哈希算法生成固定鲜活的颜色
-    let hash = 0;
-    for (let i = 0; i < code.length; i++) hash = code.charCodeAt(i) + ((hash << 5) - hash);
-    const hue = Math.abs(hash % 360);
-    return `hsl(${hue}, 70%, 45%)`; 
-}
+  if (!code) return { bgClass: 'bg-gray-500', borderClass: 'border-gray-500', hex: '#6B7280' };
+  if (staticMap[code]) return staticMap[code];
+
+  // 哈希算法 + 黄金角度，生成跨度极大的鲜艳颜色
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.floor(Math.abs(hash * 137.508) % 360);
+  
+  return {
+    bgClass: '', 
+    borderClass: '', 
+    hex: `hsl(${h}, 75%, 50%)`,
+    isDynamic: true
+  };
+};
 
 const CustomerDetails = () => {
     const { theme } = useThemeStore()
@@ -85,22 +100,31 @@ const CustomerDetails = () => {
         fetchSchedules()
     }, [])
 
-    // 日历事件样式
+    // 日历事件样式 - 完全对齐 Statistics.jsx
     const eventStyleGetter = (event) => {
         const jobCode = event.resource.code || 'UNKNOWN';
-        const backgroundColor = getSolidColor(jobCode); 
+        const colorData = getDynamicJobColorStats(jobCode);
         const isCompleted = event.resource.status === 'Completed';
+        const isMultiDay = event.resource.isMultiDay;
 
         return {
             style: {
-                backgroundColor: isCompleted ? '#6B7280' : backgroundColor, 
+                backgroundColor: isCompleted ? '#6B7280' : colorData.hex,
                 borderRadius: '4px',
-                opacity: isCompleted ? 0.7 : 1,
+                opacity: isCompleted ? 0.7 : 0.9,
                 color: 'white',
                 border: '0px',
-                fontSize: '11px',
-                padding: '2px 5px',
-                fontWeight: '500',
+                fontSize: isMultiDay ? '10px' : '11px',
+                padding: isMultiDay ? '2px 4px' : '1px 3px',
+                fontWeight: isMultiDay ? 'normal' : '500',
+                margin: '1px 0',
+                height: isMultiDay ? '18px' : '20px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                borderStyle: isMultiDay && !isCompleted ? 'dashed' : 'none',
+                borderWidth: isMultiDay && !isCompleted ? '1px' : '0',
                 textDecoration: isCompleted ? 'line-through' : 'none'
             }
         }
@@ -111,25 +135,84 @@ const CustomerDetails = () => {
         setShowJobDetails(true)
     }
 
-    // 自定义日历头部
+    // 自定义日历头部 - 完全对齐 Statistics.jsx
     const CustomToolbar = ({ onNavigate, date }) => {
+        const goToBack = () => {
+            const newDate = moment(date).subtract(1, 'month')
+            setCurrentDate(newDate)
+            onNavigate('PREV')
+        }
+
+        const goToNext = () => {
+            const newDate = moment(date).add(1, 'month')
+            setCurrentDate(newDate)
+            onNavigate('NEXT')
+        }
+
+        const goToCurrent = () => {
+            const today = moment()
+            setCurrentDate(today)
+            setCalendarYear(today.year())
+            onNavigate('TODAY')
+        }
+
+        const goToPrevYear = () => {
+            const newDate = moment(date).subtract(1, 'year')
+            setCalendarYear(newDate.year())
+            setCurrentDate(newDate)
+        }
+
+        const goToNextYear = () => {
+            const newDate = moment(date).add(1, 'year')
+            setCalendarYear(newDate.year())
+            setCurrentDate(newDate)
+        }
+
         return (
-            <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex space-x-1">
-                    <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(moment(date).subtract(1, 'year'))} color="gray">«</Button>
-                    <Button size="sm" className='cursor-pointer px-2' onClick={() => onNavigate('PREV')} color="gray">‹</Button>
-                    <Button size="sm" className='cursor-pointer' onClick={() => onNavigate('TODAY')} color="gray">Today</Button>
-                    <Button size="sm" className='cursor-pointer px-2' onClick={() => onNavigate('NEXT')} color="gray">›</Button>
-                    <Button size="sm" className='cursor-pointer px-2' onClick={() => setCurrentDate(moment(date).add(1, 'year'))} color="gray">»</Button>
+            <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex space-x-2">
+                    <Button size="sm" className='cursor-pointer' onClick={goToBack} color="gray">‹</Button>
+                    <Button size="sm" className='cursor-pointer' onClick={goToCurrent} color="gray">Today</Button>
+                    <Button size="sm" className='cursor-pointer' onClick={goToNext} color="gray">›</Button>
                 </div>
+                
                 <div className="flex-1 text-center">
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                        {moment(date).format('MMMM YYYY')}
-                    </span>
+                    <div className="flex justify-center items-center space-x-4">
+                        <Button size="xs" className='cursor-pointer' onClick={goToPrevYear} color="gray">«</Button>
+                        <span className="text-lg font-semibold">
+                            {moment(date).format('MMMM YYYY')}
+                        </span>
+                        <Button size="xs" className='cursor-pointer' onClick={goToNextYear} color="gray">»</Button>
+                    </div>
                 </div>
-                <div className="w-20 text-sm font-bold text-blue-600 dark:text-blue-400 text-right">
-                    {moment(date).year()}
+                
+                <div className="w-20 text-sm font-medium text-blue-600 dark:text-blue-400">
+                    {calendarYear}
                 </div>
+            </div>
+        )
+    }
+
+    // 自定义事件区块内容 - 完全对齐 Statistics.jsx
+    const CustomEvent = ({ event }) => {
+        const isMultiDay = event.resource.isMultiDay;
+        const isCompleted = event.resource.status === 'Completed';
+        
+        return (
+            <div className="text-xs p-0.5">
+                <div className={`font-semibold truncate ${isMultiDay ? 'text-[10px]' : ''}`} title={event.title}>
+                    {event.resource.code} - {event.resource.customerName || 'N/A'}
+                </div>
+                {!isMultiDay && (
+                    <div className="text-[10px] opacity-90">
+                        {event.resource.qty ? `${event.resource.qty} KG` : ''}
+                    </div>
+                )}
+                {isMultiDay && (
+                    <div className="text-[9px] opacity-80 italic">
+                        {moment(event.start).format('MM/DD HH:mm')} → {moment(event.end).format('MM/DD HH:mm')}
+                    </div>
+                )}
             </div>
         )
     }
@@ -163,7 +246,7 @@ const CustomerDetails = () => {
         <div className="min-h-screen mb-8">
             <div className="mb-6 flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Customer Details & Overview</h1>
+                    <h1 className='text-2xl font-semibold'>Customer Details & Overview</h1>
                     <p className={`${theme === 'light' ? ' text-gray-500' : 'text-gray-400'}`}>
                         Production Schedule and Outputs for {calendarYear}
                     </p>
@@ -178,20 +261,14 @@ const CustomerDetails = () => {
                         <span className="flex items-center text-gray-500 dark:text-gray-400">
                             <span className="w-3 h-3 bg-gray-500 rounded-sm mr-1"></span> Completed
                         </span>
+                        <span className="flex items-center text-gray-500 dark:text-gray-400">
+                            <span className="w-3 h-3 border-dashed border border-gray-400 rounded-sm mr-1"></span> Multi-day
+                        </span>
                     </div>
                 </div>
                 
-                {/* 强制覆盖 react-big-calendar 的样式确保完美的暗黑模式 */}
-                <div 
-                    className="h-[600px] 
-                    [&_.rbc-month-view]:dark:border-gray-700 
-                    [&_.rbc-header]:dark:border-gray-700 [&_.rbc-header]:dark:text-black [&_.rbc-header]:py-2 [&_.rbc-header]:font-bold
-                    [&_.rbc-day-bg]:dark:border-gray-700 
-                    [&_.rbc-date-cell]:dark:text-black [&_.rbc-date-cell]:pr-2 [&_.rbc-date-cell]:pt-1 [&_.rbc-date-cell]:font-medium
-                    [&_.rbc-off-range-bg]:dark:bg-gray-800/60 
-                    [&_.rbc-off-range_.rbc-date-cell]:dark:text-gray-500 
-                    [&_.rbc-today]:dark:bg-gray-700"
-                >
+                {/* 使用与 Statistics.jsx 一致的容器包裹 */}
+                <div style={{ height: '600px' }} className={theme === 'dark' ? 'text-gray-900' : ''}>
                     <Calendar
                         localizer={localizer}
                         events={events}
@@ -203,7 +280,10 @@ const CustomerDetails = () => {
                         date={currentDate.toDate()}
                         onNavigate={(newDate) => setCurrentDate(moment(newDate))}
                         onSelectEvent={handleSelectEvent}
-                        components={{ toolbar: CustomToolbar }} 
+                        components={{ 
+                            toolbar: CustomToolbar,
+                            event: CustomEvent
+                        }} 
                         popup
                     />
                 </div>
@@ -256,6 +336,11 @@ const CustomerDetails = () => {
                 <Modal show={showJobDetails} onClose={() => setShowJobDetails(false)} size="lg">
                     <ModalHeader className="dark:bg-gray-800 dark:border-gray-700 [&>h3]:dark:text-white">
                         {selectedJob.customerName} - {selectedJob.code}
+                        {selectedJob.isMultiDay && (
+                            <Badge color="blue" size="sm" className="ml-2 inline-block">
+                                Multi-day Job
+                            </Badge>
+                        )}
                     </ModalHeader>
                     <ModalBody className="dark:bg-gray-800 dark:text-gray-200">
                         <div className="grid grid-cols-2 gap-4 text-sm">

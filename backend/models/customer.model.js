@@ -25,7 +25,10 @@ const customerScheduleSchema = new mongoose.Schema({
     operatingtime: { type: Number, default: 0 },
     proddelay: { type: Number, default: 0 },
     irr: { type: Number, default: 0 },
-    arr: { type: Number, default: 0 }
+    arr: { type: Number, default: 0 },
+
+    // --- 新增代码 ---
+    remark: { type: String, default: '' }
 
 }, { timestamps: true });
 

@@ -104,7 +104,9 @@ const CustomerOutputs = () => {
             irr: schedule.irr || '',
             arr: schedule.arr || '',
             status: schedule.status || 'In Progress', 
-            productionDate: initialProdDate 
+            productionDate: initialProdDate,
+            // --- 加上 remark 初始化 ---
+            remark: schedule.remark || '' 
         })
     }
 
@@ -323,7 +325,8 @@ const CustomerOutputs = () => {
                     row.getCell(12).value = Number(job.irr) || 0;
                     row.getCell(13).value = Number(job.arr) || 0;
                     
-                    row.getCell(14).value = job.status === 'Completed' && (Number(job.actualoutput) < Number(job.qty)) ? 'Force Closed' : ''; 
+                    // --- 核心修改：只输出用户填写的 remark，不再自动生成 Force Closed ---
+                    row.getCell(14).value = job.remark || ''; 
 
                     // sum
                     totals.qty += Number(job.qty) || 0;
@@ -518,7 +521,7 @@ const CustomerOutputs = () => {
             
             {/* Action */}
             <Button outline className='w-full cursor-pointer py-1 text-sm' onClick={() => handleUpdate(schedule)}>
-                Update Output
+                Update
             </Button>
         </div>
     )
@@ -702,6 +705,18 @@ const CustomerOutputs = () => {
                                 <div className="mb-2 block">
                                     <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Actual Run Rate (ARR)</Label>
                                     <TextInput type='number' step='0.01' id="arr" value={updateFormData.arr} onChange={handleUpdateChange} onWheel={(e) => e.target.blur()} required/>
+                                </div>
+
+                                {/* --- 修改部分：添加真正输入 Remark 的框 --- */}
+                                <div className="mb-2 block col-span-2">
+                                    <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Remarks</Label>
+                                    <TextInput 
+                                        type='text' 
+                                        id="remark" 
+                                        value={updateFormData.remark} 
+                                        onChange={handleUpdateChange} 
+                                        placeholder="Enter remarks..." 
+                                    />
                                 </div>
                             </div>
 
