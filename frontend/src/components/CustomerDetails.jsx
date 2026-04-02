@@ -49,9 +49,27 @@ const CustomerDetails = () => {
     const [showJobDetails, setShowJobDetails] = useState(false)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
-    // 新增：和 Statistics.jsx 一样，用于控制点击日期弹出的 Modal
     const [selectedDay, setSelectedDay] = useState(null)
     const [showDayEvents, setShowDayEvents] = useState(false)
+
+    // 新增：月份选择状态
+    const [selectedMonth, setSelectedMonth] = useState('all')
+
+    const monthOptions = [
+        { value: 'all', label: 'All Months' },
+        { value: '1', label: 'January' },
+        { value: '2', label: 'February' },
+        { value: '3', label: 'March' },
+        { value: '4', label: 'April' },
+        { value: '5', label: 'May' },
+        { value: '6', label: 'June' },
+        { value: '7', label: 'July' },
+        { value: '8', label: 'August' },
+        { value: '9', label: 'September' },
+        { value: '10', label: 'October' },
+        { value: '11', label: 'November' },
+        { value: '12', label: 'December' }
+    ]
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -88,7 +106,7 @@ const CustomerDetails = () => {
                         resource: {
                             ...job,
                             isMultiDay,
-                            actualStart: start.toISOString(), // 增加方便日历排序的值
+                            actualStart: start.toISOString(),
                             actualEnd: end.toISOString()
                         }
                     }
@@ -105,7 +123,6 @@ const CustomerDetails = () => {
         fetchSchedules()
     }, [])
 
-    // 日历事件样式 - 完全对齐 Statistics.jsx
     const eventStyleGetter = (event) => {
         const jobCode = event.resource.code || 'UNKNOWN';
         const colorData = getDynamicJobColorStats(jobCode);
@@ -140,7 +157,6 @@ const CustomerDetails = () => {
         setShowJobDetails(true)
     }
 
-    // 新增：Web 端大日历点击空位/日期的功能（和 Statistics 一样）
     const handleSelectSlot = (slotInfo) => {
         const dayEvents = events
             .filter(event => {
@@ -162,7 +178,6 @@ const CustomerDetails = () => {
         }
     }
 
-    // 自定义日历头部 - 完全对齐 Statistics.jsx
     const CustomToolbar = ({ onNavigate, date }) => {
         const goToBack = () => {
             const newDate = moment(date).subtract(1, 'month')
@@ -220,10 +235,8 @@ const CustomerDetails = () => {
         )
     }
 
-    // 自定义事件区块内容 - 完全对齐 Statistics.jsx
     const CustomEvent = ({ event }) => {
         const isMultiDay = event.resource.isMultiDay;
-        const isCompleted = event.resource.status === 'Completed';
         
         return (
             <div className="text-xs p-0.5">
@@ -244,7 +257,6 @@ const CustomerDetails = () => {
         )
     }
 
-    // --- 完全复刻 Statistics.jsx 的 Mobile Calendar，代码不做任何其他更改 ---
     const MobileCalendar = () => {
         const generateCalendar = () => {
             const firstDayOfMonth = currentDate.clone().startOf('month')
@@ -273,7 +285,6 @@ const CustomerDetails = () => {
 
         return (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-                {/* 移动端专用头部 */}
                 <div className="p-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex space-x-1">
@@ -320,12 +331,10 @@ const CustomerDetails = () => {
                     </div>
                 </div>
 
-                {/* 星期行 */}
                 <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     {weekDays.map((d, i) => <div key={i} className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">{d}</div>)}
                 </div>
 
-                {/* 日期网格 */}
                 <div className="divide-y divide-gray-200 dark:divide-gray-600">
                     {calendar.map((week, wIdx) => (
                         <div key={wIdx} className="grid grid-cols-7">
@@ -361,7 +370,6 @@ const CustomerDetails = () => {
                                             )}
                                         </div>
 
-                                        {/* View All 按钮 - 复刻核心功能 */}
                                         {dayEvents.length > 0 && (
                                             <div className="mt-1.5 text-center border-t border-gray-100 dark:border-gray-700 pt-1">
                                                 <button className="text-[9px] text-blue-600 dark:text-blue-400 underline font-bold"
@@ -380,7 +388,6 @@ const CustomerDetails = () => {
         );
     };
 
-    // --- 完全复刻 Statistics 的 DayEventsModal，调整为 Customer 字段 ---
     const DayEventsModal = () => {
         if (!selectedDay) return null
         
@@ -478,9 +485,12 @@ const CustomerDetails = () => {
         )
     }
 
+    // 过滤年份和月份的数据
     const yearlyJobs = jobsData.filter(job => {
         const jobDate = job.prodstart ? moment(job.prodstart) : null;
-        return jobDate && jobDate.year() === calendarYear;
+        if (!jobDate || jobDate.year() !== calendarYear) return false;
+        if (selectedMonth !== 'all' && (jobDate.month() + 1) !== parseInt(selectedMonth)) return false;
+        return true;
     });
 
     const totalJobs = yearlyJobs.length;
@@ -528,7 +538,6 @@ const CustomerDetails = () => {
                     </div>
                 </div>
                 
-                {/* 核心判断：如果是手机，用复刻版的 MobileCalendar，如果是网页，用 Big Calendar 并开启 selectable */}
                 {isMobile ? (
                     <MobileCalendar />
                 ) : (
@@ -556,11 +565,26 @@ const CustomerDetails = () => {
                 )}
             </Card>
             
-            {/* 新增：挂载每日弹窗（Web 和 Mobile 都可用） */}
             <DayEventsModal />
 
             {/* --- STATISTICS --- */}
-            <h3 className={`${theme === 'light' ? 'mb-4 text-lg font-bold text-gray-900' : 'mb-4 text-lg font-bold text-gray-300'}`}>Yearly Summary ({calendarYear})</h3>
+            <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h3 className={`${theme === 'light' ? 'text-lg font-bold text-gray-900' : 'text-lg font-bold text-gray-300'}`}>
+                    Summary ({calendarYear}{selectedMonth !== 'all' ? ` - ${monthOptions.find(m => m.value === selectedMonth)?.label}` : ''})
+                </h3>
+                <select 
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="text-sm border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 min-w-[150px] cursor-pointer dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                    {monthOptions.map(month => (
+                        <option key={month.value} value={month.value}>
+                            {month.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-transform hover:scale-105">
                     <div className="text-4xl font-black text-blue-600 dark:text-blue-400 mb-1">{totalJobs}</div>
@@ -576,7 +600,7 @@ const CustomerDetails = () => {
                     </div>
                     <div className="text-sm text-gray-700 dark:text-gray-300 font-bold">Total Planned Qty</div>
                     <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-medium">
-                        Target for {calendarYear}
+                        Target for {calendarYear} {selectedMonth !== 'all' ? `in ${monthOptions.find(m => m.value === selectedMonth)?.label}` : ''}
                     </div>
                 </div>
 

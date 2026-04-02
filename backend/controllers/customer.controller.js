@@ -1,17 +1,18 @@
 import CustomerSchedule from "../models/customer.model.js";
 import { errorHandler } from "../utils/error.js";
 
-// 1. 创建排程 (Create)
+// 1. Create
 export const createSchedule = async (req, res, next) => {
     try {
-        const { customerID, customerName, code, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark } = req.body;
+        const { customerID, customerName, code, orderdate, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark } = req.body;
 
-        if (!customerID || !customerName || !code || !prodstart || !prodend || !lotno || !targetcompletion || !deliverydate) {
+        // 验证中加入 orderdate
+        if (!customerID || !customerName || !code || !orderdate || !prodstart || !prodend || !lotno || !targetcompletion || !deliverydate) {
             return next(errorHandler(400, 'Please provide all required fields.'));
         }
 
         const newSchedule = new CustomerSchedule({
-            customerID, customerName, code, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark
+            customerID, customerName, code, orderdate, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark
         });
 
         const savedSchedule = await newSchedule.save();
@@ -21,7 +22,7 @@ export const createSchedule = async (req, res, next) => {
     }
 };
 
-// 2. 获取所有排程 (Read)
+// 2. Read
 export const getSchedules = async (req, res, next) => {
     try {
         const schedules = await CustomerSchedule.find().sort({ createdAt: -1 });
@@ -31,17 +32,17 @@ export const getSchedules = async (req, res, next) => {
     }
 };
 
-// 3. 更新排程 (Update)
+// 3. Update
 export const updateSchedule = async (req, res, next) => {
     try {
         const updatedSchedule = await CustomerSchedule.findByIdAndUpdate(
             req.params.customerjobId,
             {
                 $set: {
-                    // 加上前端 Modal 里需要 Update 的核心字段
                     customerID: req.body.customerID,
                     customerName: req.body.customerName,
                     code: req.body.code,
+                    orderdate: req.body.orderdate, // 新增
                     prodstart: req.body.prodstart,
                     prodend: req.body.prodend,
                     targetcompletion: req.body.targetcompletion,
@@ -52,7 +53,6 @@ export const updateSchedule = async (req, res, next) => {
                     qty: req.body.qty,
                     pax: req.body.pax,
                     
-                    // 保留你原有的其他字段更新
                     status: req.body.status,
                     actualoutput: req.body.actualoutput,
                     wastage: req.body.wastage,
@@ -62,9 +62,12 @@ export const updateSchedule = async (req, res, next) => {
                     irr: req.body.irr,
                     arr: req.body.arr,
                     productionDate: req.body.productionDate, 
+                    remark: req.body.remark,
 
                     // --- 新增代码 ---
-                    remark: req.body.remark
+                    qctime: req.body.qctime,
+                    so: req.body.so,
+                    startup: req.body.startup
                 }
             },
             { new: true } 
@@ -77,7 +80,7 @@ export const updateSchedule = async (req, res, next) => {
     }
 };
 
-// 4. 删除排程 (Delete)
+// 4. Delete
 export const deleteSchedule = async (req, res, next) => {
     try {
         const deletedSchedule = await CustomerSchedule.findByIdAndDelete(req.params.customerjobId);
@@ -87,4 +90,3 @@ export const deleteSchedule = async (req, res, next) => {
         next(error);
     }
 };
-
