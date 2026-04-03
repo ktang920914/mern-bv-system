@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, ModalBody, ModalHeader, Pagination, Popover, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TextInput, ToggleSwitch } from 'flowbite-react'
 import { useEffect, useState } from 'react'
 import useUserstore from '../store'
 import { HiOutlineExclamationCircle } from "react-icons/hi";
@@ -104,15 +104,9 @@ const CustomerSchedule = () => {
 
     const handleCreateSchedule = () => {
         const now = new Date();
-        
-        // 1. 设置 Start 为今天 08:00 AM
         const startTarget = new Date(now);
         startTarget.setHours(8, 0, 0, 0);
-
-        // 2. 计算距离这个星期日还有几天 (0 是星期日)
         const daysUntilSunday = now.getDay() === 0 ? 0 : 7 - now.getDay();
-        
-        // 3. 设置 End 为这个星期日 08:30 AM
         const endTarget = new Date(now);
         endTarget.setDate(endTarget.getDate() + daysUntilSunday);
         endTarget.setHours(8, 30, 0, 0);
@@ -124,7 +118,9 @@ const CustomerSchedule = () => {
 
         setFormData({
             prodstart: formatForInput(startTarget),
-            prodend: formatForInput(endTarget)
+            prodend: formatForInput(endTarget),
+            isShutdown: false,
+            shutdownReason: ''
         });
 
         setErrorMessage(null);
@@ -134,11 +130,26 @@ const CustomerSchedule = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        
+        let payload = { ...formData };
+        if (payload.isShutdown) {
+            payload.customerID = 'SHUTDOWN';
+            payload.customerName = 'PLAN SHUT DOWN';
+            payload.lotno = '-';
+            payload.colourcode = '-';
+            payload.material = '-';
+            payload.qty = 0;
+            payload.pax = 0;
+            payload.orderdate = '';
+            payload.deliverydate = '';
+            payload.targetcompletion = payload.shutdownReason || 'NO ORDER';
+        }
+
         try {
             const res = await fetch('/api/customerschedule/customerjob', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             })
             const data = await res.json()
             if (data.success === false) {
@@ -158,14 +169,22 @@ const CustomerSchedule = () => {
         }
     }
 
+    // 修复后的 Delete 逻辑：先确保删除成功，再关闭 Modal，避免请求被中止
     const handleDelete = async () => {
-        setOpenModalDeleteSchedule(false)
         try {
-            const res = await fetch(`/api/customerschedule/delete/${scheduleIdToDelete}`, { method: 'DELETE' })
+            const res = await fetch(`/api/customerschedule/delete/${scheduleIdToDelete}`, { 
+                method: 'DELETE' 
+            })
             if (res.ok) {
                 setSchedules((prev) => prev.filter((schedule) => schedule._id !== scheduleIdToDelete))
+                setOpenModalDeleteSchedule(false)
+            } else {
+                const data = await res.json()
+                console.log(data.message)
             }
-        } catch (error) { console.log(error.message) }
+        } catch (error) { 
+            console.log(error.message) 
+        }
     }
 
     const formatForUpdateInput = (timeStr) => {
@@ -177,15 +196,18 @@ const CustomerSchedule = () => {
     }
 
     const handleUpdate = (schedule) => {
+        const isShutDownJob = schedule.customerName === 'PLAN SHUT DOWN';
+        
         setScheduleIdToUpdate(schedule._id)
         setOpenModalUpdateSchedule(true)
         setErrorMessage(null)
         setLoading(false)
+        
         setUpdateFormData({
             customerID: schedule.customerID,
             customerName: schedule.customerName, 
             code: schedule.code, 
-            orderdate: schedule.orderdate || '', // Populate Order Date
+            orderdate: schedule.orderdate || '', 
             prodstart: formatForUpdateInput(schedule.prodstart),
             prodend: formatForUpdateInput(schedule.prodend),    
             targetcompletion: schedule.targetcompletion, 
@@ -194,7 +216,9 @@ const CustomerSchedule = () => {
             colourcode: schedule.colourcode, 
             material: schedule.material, 
             qty: schedule.qty,
-            pax: schedule.pax
+            pax: schedule.pax,
+            isShutdown: isShutDownJob,
+            shutdownReason: isShutDownJob ? schedule.targetcompletion : ''
         })
     }
 
@@ -209,11 +233,26 @@ const CustomerSchedule = () => {
     const handleUpdateSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        
+        let payload = { ...updateFormData };
+        if (payload.isShutdown) {
+            payload.customerID = 'SHUTDOWN';
+            payload.customerName = 'PLAN SHUT DOWN';
+            payload.lotno = '-';
+            payload.colourcode = '-';
+            payload.material = '-';
+            payload.qty = 0;
+            payload.pax = 0;
+            payload.orderdate = '';
+            payload.deliverydate = '';
+            payload.targetcompletion = payload.shutdownReason || 'NO ORDER';
+        }
+
         try {
             const res = await fetch(`/api/customerschedule/update/${scheduleIdToUpdate}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateFormData)
+                body: JSON.stringify(payload)
             })
             const data = await res.json()
             if (data.success === false) {
@@ -269,12 +308,9 @@ const CustomerSchedule = () => {
 
     const handleOpenReportModal = () => {
         const now = new Date();
-        
         const startTarget = new Date(now);
         startTarget.setHours(8, 0, 0, 0);
-
         const daysUntilSunday = now.getDay() === 0 ? 0 : 7 - now.getDay();
-        
         const endTarget = new Date(now);
         endTarget.setDate(endTarget.getDate() + daysUntilSunday);
         endTarget.setHours(8, 30, 0, 0);
@@ -613,88 +649,110 @@ const CustomerSchedule = () => {
         </div>
     )
 
-    const ScheduleCard = ({ schedule }) => (
-        <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
-            theme === 'light' ? 'bg-white border border-gray-200 hover:bg-gray-50' : 'bg-gray-800 border border-gray-700 hover:bg-gray-750'
-        }`}>
-            <div className="mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 flex justify-between">
-                <div>
-                    <p className="text-sm font-semibold text-gray-500">Customer</p>
-                    <p className={`text-lg font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.customerName}</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-500">Ext</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'} font-bold`}>{schedule.code}</p>
-                </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                <div>
-                    <p className="font-semibold text-gray-500">Prod Start:</p>
-                    <p className='text-green-500 font-semibold'>{formatDisplayTime(schedule.prodstart)}</p>
-                </div>
-                <div>
-                    <p className="font-semibold text-gray-500">Prod End:</p>
-                    <p className='text-red-500 font-semibold'>{formatDisplayTime(schedule.prodend)}</p>
-                </div>
-                <div>
-                    <p className="font-semibold text-gray-500">Target:</p>
-                    <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.targetcompletion)}</p>
-                </div>
-                <div>
-                    <p className="font-semibold text-gray-500">Delivery:</p>
-                    <p className='text-rose-500 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
-                </div>
-            </div>
-            
-            <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-500">Lot No / Details</p>
-                <Popover 
-                    className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-                    content={
-                        <div className="p-3 max-w-xs">
-                            <p className="font-semibold text-sm">Order Date:</p>
-                            <p className="text-xs mb-2 text-indigo-500 font-semibold">{schedule.orderdate ? schedule.orderdate.substring(0, 10) : ''}</p>
-                            
-                            <p className="font-semibold text-sm">Colour code:</p>
-                            <p className="text-xs mb-2">{schedule.colourcode}</p>
-                            <p className="font-semibold text-sm">Material:</p>
-                            <p className="text-xs mb-2">{schedule.material}</p>
-                            
-                            <p className="font-semibold text-sm">Qty (Remaining):</p>
-                            <p className="text-xs mb-2 font-semibold">
-                                {schedule.actualoutput > 0 ? (
-                                    <span className="text-orange-500">
-                                        {schedule.qty - schedule.actualoutput} <span className="text-gray-500 font-normal">(Total: {schedule.qty})</span>
-                                    </span>
-                                ) : (
-                                    <span className="text-blue-500">{schedule.qty}</span>
-                                )}
-                            </p>
-                            
-                            <p className="font-semibold text-sm">Pax:</p>
-                            <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
-                        </div>
-                    }
-                    trigger='hover' placement="top" arrow={false}
-                >
-                    <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
-                        theme === 'light' ? 'text-blue-600' : 'text-blue-400'
-                    }`}>
-                        {schedule.lotno}
-                    </span>
-                </Popover>
-            </div>
+    const ScheduleCard = ({ schedule }) => {
+        const isShutDownJob = schedule.customerName === 'PLAN SHUT DOWN';
 
-            <div className="flex gap-2">
-                <Button outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => handleUpdate(schedule)}>Edit</Button>
-                <Button color='red' outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => {
-                    setScheduleIdToDelete(schedule._id)
-                    setOpenModalDeleteSchedule(true)
-                }}>Delete</Button>
+        return (
+            <div className={`p-4 mb-4 rounded-lg shadow transition-all duration-200 ${
+                theme === 'light' ? 'bg-white border border-gray-200 hover:bg-gray-50' : 'bg-gray-800 border border-gray-700 hover:bg-gray-750'
+            }`}>
+                <div className="mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 flex justify-between">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-500">Customer</p>
+                        {isShutDownJob ? (
+                            <p className="text-lg font-bold text-red-500 uppercase">PLAN SHUT DOWN</p>
+                        ) : (
+                            <p className={`text-lg font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.customerName}</p>
+                        )}
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-500">Ext</p>
+                        <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-100'} font-bold`}>{schedule.code}</p>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                    <div>
+                        <p className="font-semibold text-gray-500">Prod Start:</p>
+                        <p className='text-green-500 font-semibold'>{formatDisplayTime(schedule.prodstart)}</p>
+                    </div>
+                    <div>
+                        <p className="font-semibold text-gray-500">Prod End:</p>
+                        <p className='text-red-500 font-semibold'>{formatDisplayTime(schedule.prodend)}</p>
+                    </div>
+                    
+                    {isShutDownJob ? (
+                        <div className="col-span-2">
+                            <p className="font-semibold text-gray-500">Reason:</p>
+                            <p className="font-bold text-red-500 uppercase">{schedule.targetcompletion}</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div>
+                                <p className="font-semibold text-gray-500">Target:</p>
+                                <p className={`${theme === 'light' ? 'text-gray-900' : 'text-gray-300'}`}>{formatDisplayTime(schedule.targetcompletion)}</p>
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-500">Delivery:</p>
+                                <p className='text-rose-500 font-semibold'>{formatDisplayTime(schedule.deliverydate)}</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+                
+                {/* 隐藏掉不需要的数据展示 */}
+                {!isShutDownJob && (
+                    <div className="mb-3">
+                        <p className="text-sm font-semibold text-gray-500">Lot No / Details</p>
+                        <Popover 
+                            className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                            content={
+                                <div className="p-3 max-w-xs">
+                                    <p className="font-semibold text-sm">Order Date:</p>
+                                    <p className="text-xs mb-2 text-indigo-500 font-semibold">{schedule.orderdate ? schedule.orderdate.substring(0, 10) : ''}</p>
+                                    
+                                    <p className="font-semibold text-sm">Colour code:</p>
+                                    <p className="text-xs mb-2">{schedule.colourcode}</p>
+                                    <p className="font-semibold text-sm">Material:</p>
+                                    <p className="text-xs mb-2">{schedule.material}</p>
+                                    
+                                    <p className="font-semibold text-sm">Qty (Remaining):</p>
+                                    <p className="text-xs mb-2 font-semibold">
+                                        {schedule.actualoutput > 0 ? (
+                                            <span className="text-orange-500">
+                                                {schedule.qty - schedule.actualoutput} <span className="text-gray-500 font-normal">(Total: {schedule.qty})</span>
+                                            </span>
+                                        ) : (
+                                            <span className="text-blue-500">{schedule.qty}</span>
+                                        )}
+                                    </p>
+                                    
+                                    <p className="font-semibold text-sm">Pax:</p>
+                                    <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
+                                </div>
+                            }
+                            trigger='hover' placement="top" arrow={false}
+                        >
+                            <span className={`cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center ${
+                                theme === 'light' ? 'text-blue-600' : 'text-blue-400'
+                            }`}>
+                                {schedule.lotno}
+                            </span>
+                        </Popover>
+                    </div>
+                )}
+
+                {/* 恢复正常的按钮样式 */}
+                <div className="flex gap-2">
+                    <Button outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => handleUpdate(schedule)}>Edit</Button>
+                    <Button color='red' outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => {
+                        setScheduleIdToDelete(schedule._id)
+                        setOpenModalDeleteSchedule(true)
+                    }}>Delete</Button>
+                </div>
             </div>
-        </div>
-    )
+        )
+    }
 
     return (
         <div className='min-h-screen'>
@@ -737,67 +795,88 @@ const CustomerSchedule = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {currentSchedules.map((schedule) => (
-                            <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                                <TableCell className={`align-middle font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.customerName}</TableCell>
-                                <TableCell className="align-middle font-semibold">{schedule.code}</TableCell>
-                                
-                                <TableCell className="align-middle text-xs">
-                                    <div className="text-green-500 font-semibold">{formatDisplayTime(schedule.prodstart)}</div>
-                                    <div className="text-red-500 font-semibold">{formatDisplayTime(schedule.prodend)}</div>
-                                </TableCell>
-                                
-                                <TableCell className="align-middle text-xs">
-                                    <div className="font-bold">{formatDisplayTime(schedule.targetcompletion)}</div>
-                                    <div className="text-rose-500 font-semibold">{formatDisplayTime(schedule.deliverydate)}</div>
-                                </TableCell>
-                                
-                                <TableCell className="align-middle">
-                                    <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
-                                        content={
-                                            <div className="p-3 max-w-xs">
-                                                <p className="font-semibold text-sm">Order Date:</p>
-                                                <p className="text-xs mb-2 text-indigo-500 font-semibold">{schedule.orderdate ? schedule.orderdate.substring(0, 10) : ''}</p>
-                                                
-                                                <p className="font-semibold text-sm">Colour code:</p>
-                                                <p className="text-xs mb-2">{schedule.colourcode}</p>
-                                                <p className="font-semibold text-sm">Material:</p>
-                                                <p className="text-xs mb-2">{schedule.material}</p>
-                                                
-                                                <p className="font-semibold text-sm">Qty (Remaining):</p>
-                                                <p className="text-xs mb-2 font-semibold">
-                                                    {schedule.actualoutput > 0 ? (
-                                                        <span className="text-orange-500">
-                                                            {schedule.qty - schedule.actualoutput} <span className="text-gray-500 font-normal">(Total: {schedule.qty})</span>
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-blue-500">{schedule.qty}</span>
-                                                    )}
-                                                </p>
+                        {currentSchedules.map((schedule) => {
+                            const isShutDownJob = schedule.customerName === 'PLAN SHUT DOWN';
 
-                                                <p className="font-semibold text-sm">Pax:</p>
-                                                <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
-                                            </div>
-                                        }
-                                        trigger='hover' placement="top" arrow={false}
-                                    >
-                                        <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
-                                            {schedule.lotno}
-                                        </span>
-                                    </Popover>
-                                </TableCell>
+                            return (
+                                <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                    <TableCell className={`align-middle font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>
+                                        {isShutDownJob ? (
+                                            <span className="text-red-500 uppercase">PLAN SHUT DOWN</span>
+                                        ) : (
+                                            schedule.customerName
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="align-middle font-semibold">{schedule.code}</TableCell>
+                                    
+                                    <TableCell className="align-middle text-xs">
+                                        <div className="text-green-500 font-semibold">{formatDisplayTime(schedule.prodstart)}</div>
+                                        <div className="text-red-500 font-semibold">{formatDisplayTime(schedule.prodend)}</div>
+                                    </TableCell>
+                                    
+                                    <TableCell className="align-middle text-xs">
+                                        {isShutDownJob ? (
+                                            <div className="font-bold text-red-500 uppercase">{schedule.targetcompletion}</div>
+                                        ) : (
+                                            <>
+                                                <div className="font-bold">{formatDisplayTime(schedule.targetcompletion)}</div>
+                                                <div className="text-rose-500 font-semibold">{formatDisplayTime(schedule.deliverydate)}</div>
+                                            </>
+                                        )}
+                                    </TableCell>
+                                    
+                                    <TableCell className="align-middle">
+                                        {isShutDownJob ? (
+                                            <span className="text-gray-400 font-semibold">-</span>
+                                        ) : (
+                                            <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
+                                                content={
+                                                    <div className="p-3 max-w-xs">
+                                                        <p className="font-semibold text-sm">Order Date:</p>
+                                                        <p className="text-xs mb-2 text-indigo-500 font-semibold">{schedule.orderdate ? schedule.orderdate.substring(0, 10) : ''}</p>
+                                                        
+                                                        <p className="font-semibold text-sm">Colour code:</p>
+                                                        <p className="text-xs mb-2">{schedule.colourcode}</p>
+                                                        <p className="font-semibold text-sm">Material:</p>
+                                                        <p className="text-xs mb-2">{schedule.material}</p>
+                                                        
+                                                        <p className="font-semibold text-sm">Qty (Remaining):</p>
+                                                        <p className="text-xs mb-2 font-semibold">
+                                                            {schedule.actualoutput > 0 ? (
+                                                                <span className="text-orange-500">
+                                                                    {schedule.qty - schedule.actualoutput} <span className="text-gray-500 font-normal">(Total: {schedule.qty})</span>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-blue-500">{schedule.qty}</span>
+                                                            )}
+                                                        </p>
 
-                                <TableCell className="align-middle">
-                                    <div className="flex gap-2">
-                                        <Button outline size="xs" className='cursor-pointer' onClick={() => handleUpdate(schedule)}>Edit</Button>
-                                        <Button color='red' outline size="xs" className='cursor-pointer' onClick={() => {
-                                            setScheduleIdToDelete(schedule._id)
-                                            setOpenModalDeleteSchedule(true)
-                                        }}>Delete</Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                                                        <p className="font-semibold text-sm">Pax:</p>
+                                                        <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pax}</p>
+                                                    </div>
+                                                }
+                                                trigger='hover' placement="top" arrow={false}
+                                            >
+                                                <span className="cursor-pointer hover:text-blue-600 transition-colors border-b border-dashed inline-flex items-center h-full">
+                                                    {schedule.lotno}
+                                                </span>
+                                            </Popover>
+                                        )}
+                                    </TableCell>
+
+                                    {/* 恢复正常的按钮 */}
+                                    <TableCell className="align-middle">
+                                        <div className="flex gap-2">
+                                            <Button outline size="xs" className='cursor-pointer' onClick={() => handleUpdate(schedule)}>Edit</Button>
+                                            <Button color='red' outline size="xs" className='cursor-pointer' onClick={() => {
+                                                setScheduleIdToDelete(schedule._id)
+                                                setOpenModalDeleteSchedule(true)
+                                            }}>Delete</Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
                     </TableBody>
                 </Table>
             )}
@@ -884,36 +963,17 @@ const CustomerSchedule = () => {
                     <div className="space-y-6">
                         <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Create Schedule</h3>
                         <form onSubmit={handleSubmit}>
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Customer</Label>
-                                <Select 
-                                    id="customerSelect" 
-                                    className='mb-4' 
-                                    required
-                                    onFocus={handleFocus}
-                                    onChange={(e) => {
-                                        const selectedId = e.target.value;
-                                        const selectedCustomer = customers.find(c => c._id === selectedId);
-                                        if (selectedCustomer) {
-                                            setFormData({ 
-                                                ...formData, 
-                                                customerID: selectedCustomer.clientID || selectedCustomer._id,
-                                                customerName: selectedCustomer.clientName 
-                                            });
-                                        } else {
-                                            setFormData({ ...formData, customerID: '', customerName: '' });
-                                        }
-                                    }}
-                                >
-                                    <option value="">Select a customer...</option>
-                                    {customers.map((customer) => (
-                                        <option key={customer._id} value={customer._id}>
-                                            {customer.clientID} - {customer.clientName}
-                                        </option>
-                                    ))}
-                                </Select>
+                            
+                            {/* Shutdown Toggle */}
+                            <div className="mb-6 flex items-center justify-between border-b pb-4 border-gray-600">
+                                <h4 className="text-md font-semibold text-red-500">Is this a Plan Shut Down?</h4>
+                                <ToggleSwitch
+                                    checked={formData.isShutdown || false}
+                                    onChange={(checked) => setFormData({ ...formData, isShutdown: checked, shutdownReason: checked ? 'NO ORDER' : '' })}
+                                />
                             </div>
 
+                            {/* Always visible fields */}
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Extruder</Label>
                                 <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
@@ -922,12 +982,6 @@ const CustomerSchedule = () => {
                                         <option key={extruder._id} value={extruder.code}>{`${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
                                     ))}
                                 </Select>
-                            </div>
-
-                            {/* 新增: Order Date */}
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order Date</Label>
-                                <TextInput type='date' id="orderdate" value={formData.orderdate || ''} onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
 
                             <div className="mb-4 block">
@@ -939,81 +993,136 @@ const CustomerSchedule = () => {
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod End</Label>
                                 <TextInput value={formData.prodend || ''} type='datetime-local' id="prodend" onChange={handleChange} onFocus={handleFocus} required/>
                             </div>
-                                
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Target Completion</Label>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='datetime-local' 
-                                        id="targetcompletion" 
-                                        value={isDateTimeFormat(formData.targetcompletion) ? formData.targetcompletion : ''}
-                                        onChange={(e) => setFormData({ ...formData, targetcompletion: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
-                                    <span className="text-gray-500 font-medium text-center">OR</span>
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='text' 
-                                        id="targetcompletion_text" 
-                                        placeholder='e.g., KIV RESIN-TBA' 
-                                        value={!isDateTimeFormat(formData.targetcompletion) ? (formData.targetcompletion || '') : ''}
-                                        onChange={(e) => setFormData({ ...formData, targetcompletion: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
+
+                            {/* Conditional Rendering based on Shutdown toggle */}
+                            {formData.isShutdown ? (
+                                <div className="mb-4 block">
+                                    <Label className="text-red-500 mb-2 block">Shut Down Reason</Label>
+                                    <Select 
+                                        id="shutdownReason" 
+                                        value={formData.shutdownReason || 'NO ORDER'}
+                                        onChange={(e) => setFormData({...formData, shutdownReason: e.target.value})} 
+                                        required
+                                    >
+                                        <option value="NO ORDER">NO ORDER</option>
+                                        <option value="KIV RESIN">KIV RESIN</option>
+                                        <option value="KIV FORMULA/ADDITIVE">KIV FORMULA/ADDITIVE</option>
+                                        <option value="MAINTENANCE">MAINTENANCE</option>
+                                    </Select>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Customer</Label>
+                                        <Select 
+                                            id="customerSelect" 
+                                            className='mb-4' 
+                                            required
+                                            onFocus={handleFocus}
+                                            onChange={(e) => {
+                                                const selectedId = e.target.value;
+                                                const selectedCustomer = customers.find(c => c._id === selectedId);
+                                                if (selectedCustomer) {
+                                                    setFormData({ 
+                                                        ...formData, 
+                                                        customerID: selectedCustomer.clientID || selectedCustomer._id,
+                                                        customerName: selectedCustomer.clientName 
+                                                    });
+                                                } else {
+                                                    setFormData({ ...formData, customerID: '', customerName: '' });
+                                                }
+                                            }}
+                                        >
+                                            <option value="">Select a customer...</option>
+                                            {customers.map((customer) => (
+                                                <option key={customer._id} value={customer._id}>
+                                                    {customer.clientID} - {customer.clientName}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Delivery Date</Label>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='date' 
-                                        id="deliverydate" 
-                                        value={isDateTimeFormat(formData.deliverydate) ? formData.deliverydate.substring(0, 10) : ''}
-                                        onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
-                                    <span className="text-gray-500 font-medium text-center">OR</span>
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='text' 
-                                        id="deliverydate_text" 
-                                        placeholder='e.g., URGENT' 
-                                        value={!isDateTimeFormat(formData.deliverydate) ? (formData.deliverydate || '') : ''}
-                                        onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
-                                </div>
-                            </div>
-        
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
-                                <TextInput id="lotno" placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order Date</Label>
+                                        <TextInput type='date' id="orderdate" value={formData.orderdate || ''} onChange={handleChange} onFocus={handleFocus} required/>
+                                    </div>
+                                        
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Target Completion</Label>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='datetime-local' 
+                                                id="targetcompletion" 
+                                                value={isDateTimeFormat(formData.targetcompletion) ? formData.targetcompletion : ''}
+                                                onChange={(e) => setFormData({ ...formData, targetcompletion: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                            <span className="text-gray-500 font-medium text-center">OR</span>
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='text' 
+                                                id="targetcompletion_text" 
+                                                placeholder='e.g., KIV RESIN-TBA' 
+                                                value={!isDateTimeFormat(formData.targetcompletion) ? (formData.targetcompletion || '') : ''}
+                                                onChange={(e) => setFormData({ ...formData, targetcompletion: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
-                                <TextInput id="colourcode" placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Delivery Date</Label>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='date' 
+                                                id="deliverydate" 
+                                                value={isDateTimeFormat(formData.deliverydate) ? formData.deliverydate.substring(0, 10) : ''}
+                                                onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                            <span className="text-gray-500 font-medium text-center">OR</span>
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='text' 
+                                                id="deliverydate_text" 
+                                                placeholder='e.g., URGENT' 
+                                                value={!isDateTimeFormat(formData.deliverydate) ? (formData.deliverydate || '') : ''}
+                                                onChange={(e) => setFormData({ ...formData, deliverydate: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                        </div>
+                                    </div>
+                
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
+                                        <TextInput id="lotno" placeholder='Enter lot no' onChange={handleChange} onFocus={handleFocus} required/>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
-                                <TextInput id="material" placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
+                                        <TextInput id="colourcode" placeholder='Enter colour code' onChange={handleChange} onFocus={handleFocus} required/>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
-                                <TextInput type='number' min='0' id="qty" step='0.01' placeholder='Enter Qty' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
+                                        <TextInput id="material" placeholder='Enter material' onChange={handleChange} onFocus={handleFocus} required/>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
-                                <TextInput type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
+                                        <TextInput type='number' min='0' id="qty" step='0.01' placeholder='Enter Qty' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
+                                    </div>
+
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
+                                        <TextInput type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
+                                    </div>
+                                </>
+                            )}
                                 
-                            <div className='mb-4 block'>
+                            <div className='mb-4 block mt-6'>
                                 <Button className='cursor-pointer w-full' type='submit' disabled={loading}>
                                     {loading ? <Spinner size='md' color='failure'/> : 'S U B M I T'}
                                 </Button>
@@ -1050,33 +1159,14 @@ const CustomerSchedule = () => {
                     <div className="space-y-6">
                         <h3 className={`text-xl font-medium ${theme === 'light' ? '' : 'text-gray-50'}`}>Update Schedule</h3>
                         <form onSubmit={handleUpdateSubmit}>
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Customer</Label>
-                                <Select 
-                                    id="customerUpdateSelect" 
-                                    className='mb-4' 
-                                    required
-                                    value={customers.find(c => c.clientName === updateFormData.customerName)?._id || ''} 
-                                    onFocus={handleFocus}
-                                    onChange={(e) => {
-                                        const selectedId = e.target.value;
-                                        const selectedCustomer = customers.find(c => c._id === selectedId);
-                                        if (selectedCustomer) {
-                                            setUpdateFormData({ 
-                                                ...updateFormData, 
-                                                customerID: selectedCustomer.clientID || selectedCustomer._id,
-                                                customerName: selectedCustomer.clientName 
-                                            });
-                                        }
-                                    }}
-                                >
-                                    <option value="">Select a customer...</option>
-                                    {customers.map((customer) => (
-                                        <option key={customer._id} value={customer._id}>
-                                            {customer.clientID} - {customer.clientName}
-                                        </option>
-                                    ))}
-                                </Select>
+
+                            {/* Shutdown Toggle for Update */}
+                            <div className="mb-6 flex items-center justify-between border-b pb-4 border-gray-600">
+                                <h4 className="text-md font-semibold text-red-500">Is this a Plan Shut Down?</h4>
+                                <ToggleSwitch
+                                    checked={updateFormData.isShutdown || false}
+                                    onChange={(checked) => setUpdateFormData({ ...updateFormData, isShutdown: checked, shutdownReason: checked ? (updateFormData.shutdownReason || 'NO ORDER') : '' })}
+                                />
                             </div>
 
                             <div className="mb-4 block">
@@ -1089,12 +1179,6 @@ const CustomerSchedule = () => {
                                 </Select>
                             </div>
 
-                            {/* 新增: Order Date Update */}
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order Date</Label>
-                                <TextInput type='date' id="orderdate" value={updateFormData.orderdate ? updateFormData.orderdate.substring(0, 10) : ''} onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                            </div>
-
                             <div className="mb-4 block">
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod Start</Label>
                                 <TextInput value={updateFormData.prodstart || ''} type='datetime-local' id="prodstart" onChange={handleUpdateChange} onFocus={handleFocus} required/>
@@ -1104,81 +1188,135 @@ const CustomerSchedule = () => {
                                 <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Prod End</Label>
                                 <TextInput value={updateFormData.prodend || ''} type='datetime-local' id="prodend" onChange={handleUpdateChange} onFocus={handleFocus} required/>
                             </div>
-                                
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Target Completion</Label>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='datetime-local' 
-                                        id="targetcompletion" 
-                                        value={isDateTimeFormat(updateFormData.targetcompletion) ? updateFormData.targetcompletion : ''}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
-                                    <span className="text-gray-500 font-medium text-center">OR</span>
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='text' 
-                                        id="targetcompletion_text"
-                                        placeholder='e.g., KIV RESIN-TBA' 
-                                        value={!isDateTimeFormat(updateFormData.targetcompletion) ? (updateFormData.targetcompletion || '') : ''}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
+
+                            {/* Conditional Rendering based on Shutdown toggle */}
+                            {updateFormData.isShutdown ? (
+                                <div className="mb-4 block">
+                                    <Label className="text-red-500 mb-2 block">Shut Down Reason</Label>
+                                    <Select 
+                                        id="shutdownReason" 
+                                        value={updateFormData.shutdownReason || 'NO ORDER'}
+                                        onChange={(e) => setUpdateFormData({...updateFormData, shutdownReason: e.target.value})} 
+                                        required
+                                    >
+                                        <option value="NO ORDER">NO ORDER</option>
+                                        <option value="KIV RESIN">KIV RESIN</option>
+                                        <option value="KIV FORMULA/ADDITIVE">KIV FORMULA/ADDITIVE</option>
+                                        <option value="MAINTENANCE">MAINTENANCE</option>
+                                    </Select>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Customer</Label>
+                                        <Select 
+                                            id="customerUpdateSelect" 
+                                            className='mb-4' 
+                                            required
+                                            value={customers.find(c => c.clientName === updateFormData.customerName)?._id || ''} 
+                                            onFocus={handleFocus}
+                                            onChange={(e) => {
+                                                const selectedId = e.target.value;
+                                                const selectedCustomer = customers.find(c => c._id === selectedId);
+                                                if (selectedCustomer) {
+                                                    setUpdateFormData({ 
+                                                        ...updateFormData, 
+                                                        customerID: selectedCustomer.clientID || selectedCustomer._id,
+                                                        customerName: selectedCustomer.clientName 
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            <option value="">Select a customer...</option>
+                                            {customers.map((customer) => (
+                                                <option key={customer._id} value={customer._id}>
+                                                    {customer.clientID} - {customer.clientName}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Delivery Date</Label>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='date' 
-                                        id="deliverydate" 
-                                        value={isDateTimeFormat(updateFormData.deliverydate) ? updateFormData.deliverydate.substring(0, 10) : ''}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
-                                    <span className="text-gray-500 font-medium text-center">OR</span>
-                                    <TextInput 
-                                        className="flex-1"
-                                        type='text' 
-                                        id="deliverydate_text"
-                                        placeholder='e.g., URGENT' 
-                                        value={!isDateTimeFormat(updateFormData.deliverydate) ? (updateFormData.deliverydate || '') : ''}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
-                                        onFocus={handleFocus} 
-                                    />
-                                </div>
-                            </div>
-        
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
-                                <TextInput value={updateFormData.lotno || ''} id="lotno" placeholder='Enter lot no' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Order Date</Label>
+                                        <TextInput type='date' id="orderdate" value={updateFormData.orderdate ? updateFormData.orderdate.substring(0, 10) : ''} onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                    </div>
+                                        
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Target Completion</Label>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='datetime-local' 
+                                                id="targetcompletion" 
+                                                value={isDateTimeFormat(updateFormData.targetcompletion) ? updateFormData.targetcompletion : ''}
+                                                onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                            <span className="text-gray-500 font-medium text-center">OR</span>
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='text' 
+                                                id="targetcompletion_text"
+                                                placeholder='e.g., KIV RESIN-TBA' 
+                                                value={!isDateTimeFormat(updateFormData.targetcompletion) ? (updateFormData.targetcompletion || '') : ''}
+                                                onChange={(e) => setUpdateFormData({ ...updateFormData, targetcompletion: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
-                                <TextInput value={updateFormData.colourcode || ''} id="colourcode" placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Delivery Date</Label>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='date' 
+                                                id="deliverydate" 
+                                                value={isDateTimeFormat(updateFormData.deliverydate) ? updateFormData.deliverydate.substring(0, 10) : ''}
+                                                onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                            <span className="text-gray-500 font-medium text-center">OR</span>
+                                            <TextInput 
+                                                className="flex-1"
+                                                type='text' 
+                                                id="deliverydate_text"
+                                                placeholder='e.g., URGENT' 
+                                                value={!isDateTimeFormat(updateFormData.deliverydate) ? (updateFormData.deliverydate || '') : ''}
+                                                onChange={(e) => setUpdateFormData({ ...updateFormData, deliverydate: e.target.value })} 
+                                                onFocus={handleFocus} 
+                                            />
+                                        </div>
+                                    </div>
+                
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Lot no</Label>
+                                        <TextInput value={updateFormData.lotno || ''} id="lotno" placeholder='Enter lot no' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
-                                <TextInput value={updateFormData.material || ''} id="material" placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Colour code</Label>
+                                        <TextInput value={updateFormData.colourcode || ''} id="colourcode" placeholder='Enter colour code' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
-                                <TextInput value={updateFormData.qty || ''} type='number' min='0' step='0.01' id="qty" placeholder='Enter Qty' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Material</Label>
+                                        <TextInput value={updateFormData.material || ''} id="material" placeholder='Enter material' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                                    </div>
 
-                            <div className="mb-4 block">
-                                <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
-                                <TextInput value={updateFormData.pax || ''} type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
-                            </div>
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Qty</Label>
+                                        <TextInput value={updateFormData.qty || ''} type='number' min='0' step='0.01' id="qty" placeholder='Enter Qty' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
+                                    </div>
+
+                                    <div className="mb-4 block">
+                                        <Label className={`${theme === 'light' ? '' : 'text-gray-50'}`}>Pax</Label>
+                                        <TextInput value={updateFormData.pax || ''} type='number' min='0' id="pax" placeholder='Enter Manpower Pax' onChange={handleUpdateChange} onFocus={handleFocus} onWheel={(e) => e.target.blur()} required/>
+                                    </div>
+                                </>
+                            )}
                                 
-                            <div className='mb-4 block'>
+                            <div className='mb-4 block mt-6'>
                                 <Button color="blue" className='cursor-pointer w-full' type='submit' disabled={loading}>
                                     {loading ? <Spinner size='md'/> : 'S U B M I T'}
                                 </Button>

@@ -6,9 +6,18 @@ export const createSchedule = async (req, res, next) => {
     try {
         const { customerID, customerName, code, orderdate, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax, remark } = req.body;
 
-        // 验证中加入 orderdate
-        if (!customerID || !customerName || !code || !orderdate || !prodstart || !prodend || !lotno || !targetcompletion || !deliverydate) {
-            return next(errorHandler(400, 'Please provide all required fields.'));
+        const isShutDown = customerName === 'PLAN SHUT DOWN';
+
+        if (isShutDown) {
+            // 如果是 Shut Down，只强制要求 Extruder (code), Prod Start, Prod End 和 Reason (targetcompletion)
+            if (!code || !prodstart || !prodend || !targetcompletion) {
+                return next(errorHandler(400, 'For Plan Shut Down, Extruder, Prod Start, Prod End, and Reason are required.'));
+            }
+        } else {
+            // 正常的 Production，强制要求所有资料
+            if (!customerID || !customerName || !code || !orderdate || !prodstart || !prodend || !lotno || !targetcompletion || !deliverydate) {
+                return next(errorHandler(400, 'Please provide all required fields.'));
+            }
         }
 
         const newSchedule = new CustomerSchedule({
@@ -35,24 +44,26 @@ export const getSchedules = async (req, res, next) => {
 // 3. Update
 export const updateSchedule = async (req, res, next) => {
     try {
+        const { customerID, customerName, code, orderdate, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax } = req.body;
+
+        const isShutDown = customerName === 'PLAN SHUT DOWN';
+
+        // Update 同样加上验证逻辑
+        if (isShutDown) {
+            if (!code || !prodstart || !prodend || !targetcompletion) {
+                return next(errorHandler(400, 'For Plan Shut Down, Extruder, Prod Start, Prod End, and Reason are required.'));
+            }
+        } else {
+            if (!customerID || !customerName || !code || !orderdate || !prodstart || !prodend || !lotno || !targetcompletion || !deliverydate) {
+                return next(errorHandler(400, 'Please provide all required fields.'));
+            }
+        }
+
         const updatedSchedule = await CustomerSchedule.findByIdAndUpdate(
             req.params.customerjobId,
             {
                 $set: {
-                    customerID: req.body.customerID,
-                    customerName: req.body.customerName,
-                    code: req.body.code,
-                    orderdate: req.body.orderdate, // 新增
-                    prodstart: req.body.prodstart,
-                    prodend: req.body.prodend,
-                    targetcompletion: req.body.targetcompletion,
-                    deliverydate: req.body.deliverydate,
-                    lotno: req.body.lotno,
-                    colourcode: req.body.colourcode,
-                    material: req.body.material,
-                    qty: req.body.qty,
-                    pax: req.body.pax,
-                    
+                    customerID, customerName, code, orderdate, prodstart, prodend, targetcompletion, deliverydate, lotno, colourcode, material, qty, pax,
                     status: req.body.status,
                     actualoutput: req.body.actualoutput,
                     wastage: req.body.wastage,
@@ -63,8 +74,6 @@ export const updateSchedule = async (req, res, next) => {
                     arr: req.body.arr,
                     productionDate: req.body.productionDate, 
                     remark: req.body.remark,
-
-                    // --- 新增代码 ---
                     qctime: req.body.qctime,
                     so: req.body.so,
                     startup: req.body.startup

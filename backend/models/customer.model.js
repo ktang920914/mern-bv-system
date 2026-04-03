@@ -1,38 +1,65 @@
 import mongoose from "mongoose";
 
-const customerScheduleSchema = new mongoose.Schema({
-    customerID: { type: String, required: true },
-    customerName: { type: String, required: true },
-    code: { type: String, required: true }, 
-    orderdate: { type: String, required: true }, // 新增: 订单日期 (纯日期不带时间)
-    prodstart: { type: String, required: true }, 
-    prodend: { type: String, required: true }, 
-    targetcompletion: { type: String, required: true },
-    deliverydate: { type: String, required: true },
-    lotno: { type: String, required: true },
-    colourcode: { type: String, required: true },
-    material: { type: String, required: true },
-    qty: { type: Number, required: true },
-    pax: { type: Number, required: true },
+const customerScheduleSchema = new mongoose.Schema(
+  {
+    code: {
+      type: String,
+      required: true, // Extruder 永远是必须的
+    },
+    prodstart: {
+      type: String,
+      required: true, // Prod Start 永远是必须的
+    },
+    prodend: {
+      type: String,
+      required: true, // Prod End 永远是必须的
+    },
+    targetcompletion: {
+      type: String,
+      required: true, // Reason/Target 永远是必须的
+    },
+    customerID: {
+      type: String,
+      required: true, // 填入 'SHUTDOWN' 所以这个可以保留 true
+    },
+    customerName: {
+      type: String,
+      required: true, // 填入 'PLAN SHUT DOWN'，所以可以保留 true
+    },
+    // ------------- 以下字段请去掉 required: true -------------
+    orderdate: {
+      type: String,
+      required: false, // 改为 false，因为 shut down 传进来是 ''
+    },
+    deliverydate: {
+      type: String,
+      required: false, // 改为 false
+    },
+    lotno: {
+      type: String,
+      required: false, // 设为 false，即便我们传了 '-'
+    },
+    colourcode: {
+      type: String,
+      required: false, 
+    },
+    material: {
+      type: String,
+      required: false, 
+    },
+    qty: {
+      type: Number,
+      required: false, 
+    },
+    pax: {
+      type: Number,
+      required: false, 
+    },
+    // ... 其他字段 (status, actualoutput 等等) 保持原样 ...
+  },
+  { timestamps: true }
+);
 
-    status: { type: String, default: 'In Progress' },
-    productionDate: { type: Date }, 
+const CustomerSchedule = mongoose.model("CustomerSchedule", customerScheduleSchema);
 
-    actualoutput: { type: Number, default: 0 },
-    wastage: { type: Number, default: 0 },
-    planprodtime: { type: Number, default: 0 },
-    operatingtime: { type: Number, default: 0 },
-    proddelay: { type: Number, default: 0 },
-    irr: { type: Number, default: 0 },
-    arr: { type: Number, default: 0 },
-    remark: { type: String, default: '' },
-
-    // --- 新增用于自动计算的字段 (单位：分钟) ---
-    qctime: { type: Number, default: 0 },
-    so: { type: Number, default: 0 },
-    startup: { type: Number, default: 0 }
-
-}, { timestamps: true });
-
-const CustomerSchedule = mongoose.model('CustomerSchedule', customerScheduleSchema);
 export default CustomerSchedule;
