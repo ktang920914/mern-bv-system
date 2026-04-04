@@ -169,7 +169,6 @@ const CustomerSchedule = () => {
         }
     }
 
-    // 修复后的 Delete 逻辑：先确保删除成功，再关闭 Modal，避免请求被中止
     const handleDelete = async () => {
         try {
             const res = await fetch(`/api/customerschedule/delete/${scheduleIdToDelete}`, { 
@@ -481,56 +480,76 @@ const CustomerSchedule = () => {
 
                 jobs.forEach(job => {
                     const row = worksheet.getRow(currentRowIdx);
+                    const isShutDownJob = job.customerName === 'PLAN SHUT DOWN';
                     
                     const tc = job.targetcompletion || '';
-                    if (tc && !/KIV|TBA|URGENT/i.test(tc) && !isNaN(parseDateTime(tc).getTime())) {
+                    if (!isShutDownJob && tc && !/KIV|TBA|URGENT/i.test(tc) && !isNaN(parseDateTime(tc).getTime())) {
                         hasDate = true;
-                    } else if (!fallbackText && tc) {
+                    } else if (!fallbackText && tc && isShutDownJob) {
                         fallbackText = tc; 
+                    }
+
+                    // ====== 这里是修改后的 Excel 行数据填充逻辑 ======
+                    
+                    // 1. 先把所有格子的边框画上，避免合并后丢失
+                    for(let c=1; c<=10; c++) {
+                        row.getCell(c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        row.getCell(c).value = ''; // 预先清空
                     }
 
                     row.getCell(1).value = ''; 
                     row.getCell(2).value = job.code || '';
-                    row.getCell(3).value = job.customerID || '';
-                    row.getCell(4).value = job.customerName || ''; 
-                    
-                    row.getCell(5).value = job.lotno || '';
-                    row.getCell(5).font = { color: { argb: 'FF0000FF' }, bold: true }; 
-                    
-                    row.getCell(6).value = job.colourcode || '';
-                    row.getCell(6).font = { color: { argb: 'FF0000FF' }, bold: true }; 
-                    
-                    row.getCell(7).value = job.material || '';
-                    row.getCell(7).font = { bold: true }; 
 
-                    const plannedQty = Number(job.qty) || 0;
-                    const actualQty = Number(job.actualoutput) || 0;
-                    let remainingQty = plannedQty - actualQty;
-                    if (remainingQty < 0) remainingQty = 0;
-
-                    row.getCell(8).value = remainingQty;
-                    row.getCell(8).font = { bold: true }; 
-                    row.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
-
-                    const targetStr = formatDisplayTime(job.targetcompletion);
-                    row.getCell(9).value = targetStr;
-                    if (targetStr.toUpperCase().includes('URGENT') || targetStr.toUpperCase().includes('KIV')) {
-                        row.getCell(9).font = { color: { argb: 'FFFF0000' }, bold: true };
+                    if (isShutDownJob) {
+                        // 当是 Plan Shut Down 时：
+                        // 直接在第3格 (Cust ID) 写入 "PLAN SHUT DOWN - NO ORDER"
+                        row.getCell(3).value = `PLAN SHUT DOWN - ${job.targetcompletion}`;
+                        row.getCell(3).font = { bold: true, color: { argb: 'FFFF0000' } }; // 红色粗体
+                        row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+                        
+                        // 合并从 Col 3 到 Col 10
+                        worksheet.mergeCells(currentRowIdx, 3, currentRowIdx, 10);
+                        
                     } else {
-                        row.getCell(9).font = { color: { argb: 'FF0000FF' }, bold: true };
-                    }
+                        // 普通订单正常填充
+                        row.getCell(3).value = job.customerID || '';
+                        row.getCell(4).value = job.customerName || ''; 
+                        
+                        row.getCell(5).value = job.lotno || '';
+                        row.getCell(5).font = { color: { argb: 'FF0000FF' }, bold: true }; 
+                        
+                        row.getCell(6).value = job.colourcode || '';
+                        row.getCell(6).font = { color: { argb: 'FF0000FF' }, bold: true }; 
+                        
+                        row.getCell(7).value = job.material || '';
+                        row.getCell(7).font = { bold: true }; 
 
-                    const deliveryStr = formatDisplayTime(job.deliverydate);
-                    row.getCell(10).value = deliveryStr;
-                    if (deliveryStr.toUpperCase().includes('URGENT') || deliveryStr.toUpperCase().includes('KIV')) {
-                        row.getCell(10).font = { color: { argb: 'FFFF0000' }, bold: true };
-                    }
+                        const plannedQty = Number(job.qty) || 0;
+                        const actualQty = Number(job.actualoutput) || 0;
+                        let remainingQty = plannedQty - actualQty;
+                        if (remainingQty < 0) remainingQty = 0;
 
-                    for(let c=1; c<=10; c++) {
-                        row.getCell(c).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        row.getCell(8).value = remainingQty;
+                        row.getCell(8).font = { bold: true }; 
+                        row.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                        const targetStr = formatDisplayTime(job.targetcompletion);
+                        row.getCell(9).value = targetStr;
+                        if (targetStr.toUpperCase().includes('URGENT') || targetStr.toUpperCase().includes('KIV')) {
+                            row.getCell(9).font = { color: { argb: 'FFFF0000' }, bold: true };
+                        } else {
+                            row.getCell(9).font = { color: { argb: 'FF0000FF' }, bold: true };
+                        }
+
+                        const deliveryStr = formatDisplayTime(job.deliverydate);
+                        row.getCell(10).value = deliveryStr;
+                        if (deliveryStr.toUpperCase().includes('URGENT') || deliveryStr.toUpperCase().includes('KIV')) {
+                            row.getCell(10).font = { color: { argb: 'FFFF0000' }, bold: true };
+                        }
+                        
+                        groupTotalQty += remainingQty;
                     }
                     
-                    groupTotalQty += remainingQty;
                     currentRowIdx++;
                 });
 
@@ -660,7 +679,7 @@ const CustomerSchedule = () => {
                     <div>
                         <p className="text-sm font-semibold text-gray-500">Customer</p>
                         {isShutDownJob ? (
-                            <p className="text-lg font-bold text-red-500 uppercase">PLAN SHUT DOWN</p>
+                            <p className="text-lg font-bold text-red-500 uppercase">PLAN SHUT DOWN - {schedule.targetcompletion}</p>
                         ) : (
                             <p className={`text-lg font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>{schedule.customerName}</p>
                         )}
@@ -681,12 +700,7 @@ const CustomerSchedule = () => {
                         <p className='text-red-500 font-semibold'>{formatDisplayTime(schedule.prodend)}</p>
                     </div>
                     
-                    {isShutDownJob ? (
-                        <div className="col-span-2">
-                            <p className="font-semibold text-gray-500">Reason:</p>
-                            <p className="font-bold text-red-500 uppercase">{schedule.targetcompletion}</p>
-                        </div>
-                    ) : (
+                    {!isShutDownJob && (
                         <>
                             <div>
                                 <p className="font-semibold text-gray-500">Target:</p>
@@ -700,7 +714,6 @@ const CustomerSchedule = () => {
                     )}
                 </div>
                 
-                {/* 隐藏掉不需要的数据展示 */}
                 {!isShutDownJob && (
                     <div className="mb-3">
                         <p className="text-sm font-semibold text-gray-500">Lot No / Details</p>
@@ -742,7 +755,6 @@ const CustomerSchedule = () => {
                     </div>
                 )}
 
-                {/* 恢复正常的按钮样式 */}
                 <div className="flex gap-2">
                     <Button outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => handleUpdate(schedule)}>Edit</Button>
                     <Button color='red' outline className='cursor-pointer flex-1 py-2 text-sm' onClick={() => {
@@ -802,7 +814,7 @@ const CustomerSchedule = () => {
                                 <TableRow key={schedule._id} className={`${theme === 'light' ? ' text-gray-900 hover:bg-gray-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                                     <TableCell className={`align-middle font-bold ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}>
                                         {isShutDownJob ? (
-                                            <span className="text-red-500 uppercase">PLAN SHUT DOWN</span>
+                                            <span className="text-red-500 uppercase">PLAN SHUT DOWN - {schedule.targetcompletion}</span>
                                         ) : (
                                             schedule.customerName
                                         )}
@@ -816,7 +828,7 @@ const CustomerSchedule = () => {
                                     
                                     <TableCell className="align-middle text-xs">
                                         {isShutDownJob ? (
-                                            <div className="font-bold text-red-500 uppercase">{schedule.targetcompletion}</div>
+                                            <div className="font-bold text-gray-500">-</div>
                                         ) : (
                                             <>
                                                 <div className="font-bold">{formatDisplayTime(schedule.targetcompletion)}</div>
@@ -864,7 +876,6 @@ const CustomerSchedule = () => {
                                         )}
                                     </TableCell>
 
-                                    {/* 恢复正常的按钮 */}
                                     <TableCell className="align-middle">
                                         <div className="flex gap-2">
                                             <Button outline size="xs" className='cursor-pointer' onClick={() => handleUpdate(schedule)}>Edit</Button>
