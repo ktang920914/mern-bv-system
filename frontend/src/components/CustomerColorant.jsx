@@ -24,7 +24,7 @@ const CustomerColorant = () => {
     const [errorMessage, setErrorMessage] = useState(null)
     const [loading, setLoading] = useState(false)
     
-    // --- Report State (NEW) ---
+    // --- Report State ---
     const [isExporting, setIsExporting] = useState(false)
     const [reportError, setReportError] = useState(null)
     const [reportStartDate, setReportStartDate] = useState('')
@@ -37,8 +37,9 @@ const CustomerColorant = () => {
     const [scheduleIdToDelete, setScheduleIdToDelete] = useState('')
     const [scheduleIdToUpdate, setScheduleIdToUpdate] = useState('')
     
-    // --- Pagination & Search ---
+    // --- Pagination, Search & Filter ---
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
+    const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All') // NEW: Status State
     const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(15) 
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -49,6 +50,7 @@ const CustomerColorant = () => {
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
+    // UPDATED: Sync Status Filter with URL Search Params
     useEffect(() => {
         const params = new URLSearchParams(searchParams)
         if (currentPage === 1) params.delete('page')
@@ -56,9 +58,12 @@ const CustomerColorant = () => {
         
         if (searchTerm === '') params.delete('search')
         else params.set('search', searchTerm)
+
+        if (statusFilter === 'All') params.delete('status')
+        else params.set('status', statusFilter)
         
         setSearchParams(params)
-    }, [currentPage, searchTerm, searchParams, setSearchParams])
+    }, [currentPage, searchTerm, statusFilter, searchParams, setSearchParams])
 
     useEffect(() => {
         const fetchExtruders = async () => {
@@ -223,9 +228,7 @@ const CustomerColorant = () => {
         }
     }
 
-    // =======================================================
-    // --- EXCEL REPORT GENERATION (Enhanced format & Date Filter) ---
-    // =======================================================
+    // --- EXCEL REPORT GENERATION ---
     const executeDownloadReport = async () => {
         if (!reportStartDate || !reportEndDate) {
             setReportError("Please select both Start Date and End Date.");
@@ -245,21 +248,18 @@ const CustomerColorant = () => {
             worksheet.pageSetup.fitToWidth = 1;
             worksheet.pageSetup.fitToHeight = 0;
 
-            // 1. Header Title "COLORANT SCHEDULE PLANNING" (A1:F2)
             worksheet.mergeCells('A1:F2');
             const titleCell = worksheet.getCell('A1');
             titleCell.value = 'COLORANT SCHEDULE PLANNING';
             titleCell.font = { name: 'Arial Black', size: 20, bold: true };
             titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-            // 2. "TODAY DATE" (G1:H2)
             worksheet.mergeCells('G1:H2');
             const todayTextCell = worksheet.getCell('G1');
             todayTextCell.value = 'TODAY DATE';
-            todayTextCell.font = { bold: true, color: { argb: 'FF0000FF' }, size: 11 }; // Blue text
+            todayTextCell.font = { bold: true, color: { argb: 'FF0000FF' }, size: 11 }; 
             todayTextCell.alignment = { horizontal: 'right', vertical: 'middle' };
 
-            // 3. Time Box Red Background (I1:K2)
             worksheet.mergeCells('I1:K2');
             const now = new Date();
             const timeStr = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear().toString().slice(-2)} ${now.getHours() % 12 || 12}:${now.getMinutes().toString().padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
@@ -267,7 +267,7 @@ const CustomerColorant = () => {
             const dateBlockCell = worksheet.getCell('I1');
             dateBlockCell.value = timeStr;
             dateBlockCell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 12 };
-            dateBlockCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; // Dark red
+            dateBlockCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; 
             dateBlockCell.alignment = { horizontal: 'center', vertical: 'middle' };
             
             for(let r=1; r<=2; r++) {
@@ -276,7 +276,6 @@ const CustomerColorant = () => {
                 }
             }
 
-            // 4. Table Headers (Added 2 new columns to match screenshot)
             const headerRow = worksheet.getRow(3);
             headerRow.height = 30;
             const headers = ['Mixer\nID', 'Type', 'Customer', 'Lot No', 'Colour Code', 'Material', 'Pigment\n(kg)', 'Additive\n(kg)', 'Target\nCompletion', 'Delivery\nDate', 'Order\nDate', 'Pigment\nLead Time', 'Late\nDelivery'];
@@ -286,18 +285,16 @@ const CustomerColorant = () => {
                 cell.value = h;
                 cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
                 
-                // Color formatting: Last 2 headers are Red, others are Dark Grey
                 if (i >= 11) {
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; // Red
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; 
                 } else {
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF262626' } }; // Dark grey/black
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF262626' } }; 
                 }
                 
                 cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
                 cell.border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'medium'}, right: {style:'thin'} };
             });
 
-            // 5. Data Processing & FILTERING BY DATE
             const startLimit = new Date(reportStartDate);
             startLimit.setHours(0, 0, 0, 0);
             const endLimit = new Date(reportEndDate);
@@ -305,9 +302,7 @@ const CustomerColorant = () => {
 
             const activeJobs = schedules.filter(job => {
                 if (job.status === 'Completed') return false;
-                
-                // --- Apply Date Filter logic ---
-                if (!job.productiondate) return false; // Skip if no date
+                if (!job.productiondate) return false; 
                 const prodDate = new Date(job.productiondate);
                 if (prodDate < startLimit || prodDate > endLimit) {
                     return false;
@@ -355,7 +350,6 @@ const CustomerColorant = () => {
 
             let currentRowIdx = 4;
 
-            // Render normal jobs grouped by Date and Category
             Object.keys(groupedByDate).forEach(dateKey => {
                 const group = groupedByDate[dateKey];
                 
@@ -366,7 +360,6 @@ const CustomerColorant = () => {
                     const r = worksheet.getRow(currentRowIdx);
                     r.height = 20;
                     
-                    // Col A & B: Category Name (合并 Mixer ID 和 Type 列)
                     worksheet.mergeCells(currentRowIdx, 1, currentRowIdx, 2);
                     const cellA = r.getCell(1);
                     cellA.value = catName;
@@ -376,21 +369,18 @@ const CustomerColorant = () => {
                     r.getCell(1).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                     r.getCell(2).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                     
-                    // Col C: Date / 生产日期 (放在 Customer 列，红底白字)
                     const cellDate = r.getCell(3);
                     cellDate.value = dateStr;
                     cellDate.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-                    cellDate.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; // 红色背景
+                    cellDate.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; 
                     cellDate.alignment = { horizontal: 'center', vertical: 'middle' };
                     cellDate.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                     
-                    // Col D-M: 星期几 (合并 Lot No 到最后一列)
                     worksheet.mergeCells(currentRowIdx, 4, currentRowIdx, 13);
                     const cellDay = r.getCell(4);
                     cellDay.value = dayStr;
                     cellDay.font = { bold: true, size: 10, color: { argb: 'FF000000' } }; 
                     
-                    // 为剩余合并区域填充颜色和边框
                     for(let c=4; c<=13; c++) {
                         const cell = r.getCell(c);
                         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColorHex } };
@@ -420,15 +410,14 @@ const CustomerColorant = () => {
                     const targetStr = formatDisplayDate(job.targetcompletion) || job.targetcompletion;
                     r.getCell(9).value = targetStr;
                     if ((targetStr || '').toUpperCase().includes('KIV')) {
-                        r.getCell(9).font = { bold: true, color: { argb: 'FFFF0000' } }; // KIV text is RED
+                        r.getCell(9).font = { bold: true, color: { argb: 'FFFF0000' } }; 
                     } else {
-                        r.getCell(9).font = { bold: true, color: { argb: 'FF0000FF' } }; // Normal is BLUE
+                        r.getCell(9).font = { bold: true, color: { argb: 'FF0000FF' } }; 
                     }
 
                     r.getCell(10).value = isDateTimeFormat(job.deliverydate) ? formatDisplayDate(job.deliverydate) : (job.deliverydate || '');
                     r.getCell(11).value = isDateTimeFormat(job.orderdate) ? formatDisplayDate(job.orderdate) : (job.orderdate || '');
 
-                    // Empty placeholders for new columns
                     r.getCell(12).value = ''; 
                     r.getCell(13).value = '';
 
@@ -444,17 +433,16 @@ const CustomerColorant = () => {
                 };
 
                 if (otherCategory.length > 0) {
-                    renderCategoryHeader('OTHER', 'FFFFC000', dateKey, group.day); // Gold/Orange color
+                    renderCategoryHeader('OTHER', 'FFFFC000', dateKey, group.day); 
                     otherCategory.forEach(renderJobRow);
                 }
 
                 if (pigmentCategory.length > 0) {
-                    renderCategoryHeader('PIGMENT', 'FF54FF9F', dateKey, group.day); // Mint Green color
+                    renderCategoryHeader('PIGMENT', 'FF54FF9F', dateKey, group.day); 
                     pigmentCategory.forEach(renderJobRow);
                 }
             });
 
-            // Render KIV Jobs
             if (kivJobs.length > 0) {
                 worksheet.mergeCells(currentRowIdx, 1, currentRowIdx, 13);
                 const kivCell = worksheet.getCell(currentRowIdx, 1);
@@ -469,7 +457,6 @@ const CustomerColorant = () => {
                 worksheet.getRow(currentRowIdx).height = 25;
                 currentRowIdx++;
 
-                // Repeat headers for KIV
                 const kivSubHeader = worksheet.getRow(currentRowIdx);
                 headers.forEach((h, i) => {
                     const c = kivSubHeader.getCell(i + 1);
@@ -521,36 +508,33 @@ const CustomerColorant = () => {
                 });
             }
 
-            // Exactly matched Column Widths
             worksheet.columns = [
-                { width: 8 },   // A: Mixer ID
-                { width: 8 },   // B: Type
-                { width: 15 },  // C: Customer
-                { width: 16 },  // D: Lot No
-                { width: 22 },  // E: Colour Code
-                { width: 35 },  // F: Material
-                { width: 10 },  // G: Pigment
-                { width: 10 },  // H: Additive
-                { width: 16 },  // I: Target Completion
-                { width: 12 },  // J: Delivery Date
-                { width: 12 },  // K: Order Date
-                { width: 14 },  // L: Pigment Lead Time
-                { width: 14 },  // M: Late Delivery
+                { width: 8 },   
+                { width: 8 },   
+                { width: 15 },  
+                { width: 16 },  
+                { width: 22 },  
+                { width: 35 },  
+                { width: 10 },  
+                { width: 10 },  
+                { width: 16 },  
+                { width: 12 },  
+                { width: 12 },  
+                { width: 14 },  
+                { width: 14 },  
             ];
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-// 获取当天日期并格式化为 YYYY.MM.DD
-const today = new Date();
-const yyyy = today.getFullYear();
-const mm = String(today.getMonth() + 1).padStart(2, '0');
-const dd = String(today.getDate()).padStart(2, '0');
-const currentDateStr = `${yyyy}.${mm}.${dd}`;
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const currentDateStr = `${yyyy}.${mm}.${dd}`;
 
-// 使用新的文件名格式
-saveAs(blob, `Colorant Schedule ${currentDateStr}.xlsx`);
-setOpenModalReport(false);
+            saveAs(blob, `Colorant Schedule ${currentDateStr}.xlsx`);
+            setOpenModalReport(false);
         } catch (error) {
             console.error('Error generating Excel:', error);
             setReportError('Failed to generate report.');
@@ -559,18 +543,24 @@ setOpenModalReport(false);
         }
     };
 
-    // --- Search & Filter ---
+    // --- UPDATED Search & Filter ---
     const handleSearch = (e) => {
         setSearchTerm(e.target.value.toLowerCase())
         setCurrentPage(1)
     }
 
-    const filteredSchedules = schedules.filter(schedule => 
-        (schedule.customerName && schedule.customerName.toLowerCase().includes(searchTerm)) || 
-        (schedule.lotno && schedule.lotno.toLowerCase().includes(searchTerm)) ||
-        (schedule.category && schedule.category.toLowerCase().includes(searchTerm)) ||
-        (schedule.mixerID && schedule.mixerID.toLowerCase().includes(searchTerm))
-    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    const filteredSchedules = schedules.filter(schedule => {
+        // 1. Check Search Match
+        const matchesSearch = (schedule.customerName && schedule.customerName.toLowerCase().includes(searchTerm)) || 
+                              (schedule.lotno && schedule.lotno.toLowerCase().includes(searchTerm)) ||
+                              (schedule.category && schedule.category.toLowerCase().includes(searchTerm)) ||
+                              (schedule.mixerID && schedule.mixerID.toLowerCase().includes(searchTerm));
+        
+        // 2. Check Status Match (NEW)
+        const matchesStatus = statusFilter === 'All' ? true : schedule.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     const indexOfLastItem = currentPage * itemsPage
     const indexOfFirstItem = indexOfLastItem - itemsPage
@@ -648,15 +638,14 @@ setOpenModalReport(false);
                 </div>
                 
                 <div className="grid grid-cols-2 gap-x-2 gap-y-2 text-xs mb-4">
-                    <div>
-                        <span className="text-gray-500 font-semibold">Status:</span> 
-                        <span className={`ml-1 font-bold ${schedule.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'}`}>
+                    <div className="flex items-center">
+                        <span className="text-gray-500 font-semibold mr-2">Status:</span> 
+                        {/* UPDATED: Status CSS formatting */}
+                        <span className={`text-xs font-bold px-2 py-1 rounded-md ${schedule.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                             {schedule.status || 'In Progress'}
                         </span>
                     </div>
-                    <div>
-                        {/* Placeholder to keep grid layout balanced if needed */}
-                    </div>
+                    <div></div>
                     
                     <div>
                         <span className="text-gray-500 font-semibold">Target:</span> 
@@ -689,6 +678,13 @@ setOpenModalReport(false);
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
                 <h1 className='text-2xl font-semibold'>Colorant Schedule</h1>
                 <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
+                    {/* NEW: Status Filter Dropdown */}
+                    <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className='w-full sm:w-40'>
+                        <option value="All">All Status</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </Select>
+
                     <TextInput placeholder='Enter searching' value={searchTerm} onChange={handleSearch} className='w-full sm:w-64'/>
                     <Button color="green" onClick={() => setOpenModalReport(true)} className='w-full sm:w-auto cursor-pointer'>Report</Button>
                     <Button color="blue" className='cursor-pointer w-full sm:w-auto' onClick={() => {setFormData({}); setOpenModalCreate(true)}}>Create Colorant Job</Button>
@@ -706,7 +702,7 @@ setOpenModalReport(false);
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Customer</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod Date</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot No</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'} text-center`}>Status</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Target / Delivery</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Actions</TableHeadCell>
                         </TableRow>
@@ -747,11 +743,14 @@ setOpenModalReport(false);
                                             </span>
                                         </Popover>
                                     </TableCell>
-                                    <TableCell className="text-xs font-bold">
-                                        <span className={`${schedule.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'}`}>
+                                    
+                                    {/* UPDATED: Status CSS formatting */}
+                                    <TableCell className="align-middle text-center">
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-md ${schedule.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                                             {schedule.status || 'In Progress'}
                                         </span>
                                     </TableCell>
+                                    
                                     <TableCell className="text-xs">
                                         <div className={`font-bold ${isHold ? 'text-red-500' : 'text-blue-500'}`}>{formatDisplayDate(schedule.targetcompletion) || schedule.targetcompletion || '-'}</div>
                                         <div className="text-rose-500">{formatDisplayDate(schedule.deliverydate) || schedule.deliverydate || '-'}</div>
@@ -786,7 +785,7 @@ setOpenModalReport(false);
                 <Pagination showIcons currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
             </div>
 
-            {/* EXCEL REPORT MODAL (UPDATED WITH DATE FILTER) */}
+            {/* EXCEL REPORT MODAL */}
             <Modal show={openModalReport} onClose={() => setOpenModalReport(false)} popup size="md">
                 <ModalHeader className={`${theme === 'light' ? '' : 'bg-gray-900'}`}/>
                 <ModalBody className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>
