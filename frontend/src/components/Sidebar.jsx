@@ -226,6 +226,16 @@ const DashSidebar = () => {
                     Details
                   </SidebarItem>
                 </Link>
+                <Link to='/?tab=Colorantschedule'>
+                  <SidebarItem 
+                    onClick={() => setSidebarOpen(false)} 
+                    active={tab === 'Colorantschedule'} 
+                    as='div'
+                    className={tab === 'Colorantschedule' ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    Colorant
+                  </SidebarItem>
+                </Link>
                 
               </SidebarCollapse>
               

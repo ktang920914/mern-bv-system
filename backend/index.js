@@ -25,6 +25,7 @@ import otherRoute from './routes/rest.route.js'
 import fileRoute from './routes/file.route.js'
 import clientRoute from './routes/client.route.js'
 import customerRoute from './routes/customer.route.js'
+import colorantRoute from './routes/colorant.route.js'
 import https from 'https'
 import fs from 'fs'
 
@@ -62,6 +63,7 @@ app.use('/api/stock', movementRoute)
 app.use('/api/preventive', preventiveRoute)
 app.use('/api/client', clientRoute)
 app.use('/api/customerschedule', customerRoute)
+app.use('/api/colorant', colorantRoute)
 app.use('/api/file', fileRoute)
 
 app.get('/', (req,res) => {

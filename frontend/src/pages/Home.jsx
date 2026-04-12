@@ -31,6 +31,7 @@ import Customers from "../components/Customers"
 import CustomerSchedule from "../components/CustomerSchedule"
 import CustomerOutputs from "../components/CustomerOutputs"
 import CustomerDetails from "../components/CustomerDetails"
+import CustomerColorant from "../components/CustomerColorant"
 
 const Home = () => {
   const { theme } = useThemeStore()
@@ -79,6 +80,7 @@ const Home = () => {
           {tab === 'Customerschedule' && <CustomerSchedule/>}
           {tab === 'Customeroutput' && <CustomerOutputs/>}
           {tab === 'Customerdetail' && <CustomerDetails/>}
+          {tab === 'Colorantschedule' && <CustomerColorant/>}
           {tab === 'Suppliers' && <Suppliers/>}
           {tab === 'Orders' && <Orders/>}
           {tab === 'Costs' && <Costs/>}
