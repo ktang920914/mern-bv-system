@@ -540,9 +540,17 @@ const CustomerColorant = () => {
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            saveAs(blob, `Colorant Schedule Planning (${reportStartDate} to ${reportEndDate}).xlsx`);
-            setOpenModalReport(false);
 
+// 获取当天日期并格式化为 YYYY.MM.DD
+const today = new Date();
+const yyyy = today.getFullYear();
+const mm = String(today.getMonth() + 1).padStart(2, '0');
+const dd = String(today.getDate()).padStart(2, '0');
+const currentDateStr = `${yyyy}.${mm}.${dd}`;
+
+// 使用新的文件名格式
+saveAs(blob, `Colorant Schedule ${currentDateStr}.xlsx`);
+setOpenModalReport(false);
         } catch (error) {
             console.error('Error generating Excel:', error);
             setReportError('Failed to generate report.');
@@ -618,6 +626,12 @@ const CustomerColorant = () => {
                                     <p className="text-xs mb-2">{schedule.colourcode}</p>
                                     <p className="font-semibold text-sm">Material:</p>
                                     <p className="text-xs mb-2">{schedule.material}</p>
+                                    <div className="mt-3 border-t border-gray-400 pt-2">
+                                        <p className="font-semibold text-sm">Pigment (kg):</p>
+                                        <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pigmentKg}</p>
+                                        <p className="font-semibold text-sm">Additive (kg):</p>
+                                        <p className="text-xs font-bold text-blue-500">{schedule.additiveKg}</p>
+                                    </div>
                                 </div>
                             }
                             trigger='hover' placement="top" arrow={false}
@@ -635,10 +649,13 @@ const CustomerColorant = () => {
                 
                 <div className="grid grid-cols-2 gap-x-2 gap-y-2 text-xs mb-4">
                     <div>
-                        <span className="text-gray-500 font-semibold">Pigment:</span> <span className="ml-1 font-bold text-orange-500">{schedule.pigmentKg} kg</span>
+                        <span className="text-gray-500 font-semibold">Status:</span> 
+                        <span className={`ml-1 font-bold ${schedule.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'}`}>
+                            {schedule.status || 'In Progress'}
+                        </span>
                     </div>
                     <div>
-                        <span className="text-gray-500 font-semibold">Additive:</span> <span className="ml-1 font-bold text-blue-500">{schedule.additiveKg} kg</span>
+                        {/* Placeholder to keep grid layout balanced if needed */}
                     </div>
                     
                     <div>
@@ -689,7 +706,7 @@ const CustomerColorant = () => {
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Customer</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Prod Date</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Lot No</TableHeadCell>
-                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Pigment / Additive</TableHeadCell>
+                            <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Target / Delivery</TableHeadCell>
                             <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Actions</TableHeadCell>
                         </TableRow>
@@ -715,6 +732,12 @@ const CustomerColorant = () => {
                                                     <p className="text-xs mb-2">{schedule.colourcode}</p>
                                                     <p className="font-semibold text-sm">Material:</p>
                                                     <p className="text-xs mb-2">{schedule.material}</p>
+                                                    <div className="mt-3 border-t border-gray-400 pt-2">
+                                                        <p className="font-semibold text-sm">Pigment (kg):</p>
+                                                        <p className="text-xs mb-2 font-bold text-orange-500">{schedule.pigmentKg}</p>
+                                                        <p className="font-semibold text-sm">Additive (kg):</p>
+                                                        <p className="text-xs font-bold text-blue-500">{schedule.additiveKg}</p>
+                                                    </div>
                                                 </div>
                                             }
                                             trigger='hover' placement="top" arrow={false}
@@ -724,9 +747,10 @@ const CustomerColorant = () => {
                                             </span>
                                         </Popover>
                                     </TableCell>
-                                    <TableCell className="text-xs">
-                                        <div className="font-bold text-orange-500">Pigment: {schedule.pigmentKg}</div>
-                                        <div className="font-bold text-blue-500">Addictive: {schedule.additiveKg}</div>
+                                    <TableCell className="text-xs font-bold">
+                                        <span className={`${schedule.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'}`}>
+                                            {schedule.status || 'In Progress'}
+                                        </span>
                                     </TableCell>
                                     <TableCell className="text-xs">
                                         <div className={`font-bold ${isHold ? 'text-red-500' : 'text-blue-500'}`}>{formatDisplayDate(schedule.targetcompletion) || schedule.targetcompletion || '-'}</div>
