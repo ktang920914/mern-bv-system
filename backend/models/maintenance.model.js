@@ -1,41 +1,89 @@
 import mongoose from "mongoose";
 
-const maintenanceSchema = new mongoose.Schema({
-    jobtype:{
-        type:String,
+const maintenanceSchema = new mongoose.Schema(
+  {
+    jobtype: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    code:{
-        type:String,
+    code: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    jobdate:{
-        type:String,
+    jobdate: {
+      type: String,
+      default: "",
     },
-    problem:{
-        type:String,
+    problem: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    jobdetail:{
-        type:String,
+    jobdetail: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    rootcause:{
-        type:String,
+    rootcause: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    cost:{
-        type:Number,
+    cost: {
+      type: Number,
+      default: 0,
     },
-    completiondate:{
-        type:String,
+    completiondate: {
+      type: String,
+      default: "",
     },
-    jobtime: {  // 新增字段
-        type: Number, // 单位：分钟
+    jobtime: {
+      type: Number, // minutes
+      default: 0,
     },
-    supplier:{
-        type:String,
+    supplier: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    status:{
-        type:String,
-    }
-},{timestamps:true})
+    status: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
-const Maintenance = mongoose.model('Maintenance', maintenanceSchema)
+    // --- New MRF fields ---
+    requestby: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    checkedrequestorby: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    verifiedbyhod: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    commentPreventive: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    comment: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+  },
+  { timestamps: true }
+);
 
-export default Maintenance
+const Maintenance = mongoose.model("Maintenance", maintenanceSchema);
+
+export default Maintenance;
