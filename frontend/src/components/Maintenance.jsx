@@ -1876,7 +1876,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   return (
     <div className='min-h-screen'>
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4'>
-        <h1 className='text-2xl font-semibold'>Maintenance</h1>
+        <h1 className='text-2xl font-semibold'>Machine Maintenance History Record</h1>
         
         {/* --- 顶部控制栏 (排序、搜索、按钮) --- */}
         <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
