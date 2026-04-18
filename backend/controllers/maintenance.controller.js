@@ -28,7 +28,7 @@ const calculateJobTime = (jobdate, completiondate) => {
 
 // 验证和格式化日期时间
 const validateDateTime = (dateTimeStr) => {
-  if (!dateTimeStr) return null;
+  if (!dateTimeStr) return "";
 
   try {
     if (dateTimeStr.includes("T")) {
@@ -126,19 +126,19 @@ export const maintenance = async (req, res, next) => {
       !payload.problem ||
       !payload.jobdetail ||
       !payload.rootcause ||
-      !payload.completiondate ||
       !payload.status ||
-      !payload.requestby ||
-      !payload.verifiedbyhod
+      !payload.requestby
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Please fill in all required fields including Request By and Verified By HOD.",
+          "Please fill in all required fields including Request By.",
       });
     }
 
-    const jobtime = calculateJobTime(payload.jobdate, payload.completiondate);
+    const jobtime = payload.completiondate
+      ? calculateJobTime(payload.jobdate, payload.completiondate)
+      : 0;
 
     const newMaintenance = new Maintenance({
       ...payload,
@@ -231,19 +231,19 @@ export const updateMaintenance = async (req, res, next) => {
       !payload.problem ||
       !payload.jobdetail ||
       !payload.rootcause ||
-      !payload.completiondate ||
       !payload.status ||
-      !payload.requestby ||
-      !payload.verifiedbyhod
+      !payload.requestby
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Please fill in all required fields including Request By and Verified By HOD.",
+          "Please fill in all required fields including Request By.",
       });
     }
 
-    const jobtime = calculateJobTime(payload.jobdate, payload.completiondate);
+    const jobtime = payload.completiondate
+      ? calculateJobTime(payload.jobdate, payload.completiondate)
+      : 0;
 
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       req.params.maintenanceId,
