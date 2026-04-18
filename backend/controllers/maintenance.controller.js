@@ -1,9 +1,16 @@
 import Activity from "../models/activity.model.js";
 import Maintenance from "../models/maintenance.model.js";
 
-// 计算作业时间（completiondate - jobdate）
-const calculateJobTime = (jobdate, completiondate) => {
-  if (!jobdate || !completiondate) {
+const isIncompleteStatus = (status = "") => {
+  const normalizedStatus = String(status).toLowerCase().trim();
+  return (
+    normalizedStatus.includes("minor incomplete") ||
+    normalizedStatus.includes("major incomplete")
+  );
+};
+
+const calculateJobTime = (jobdate, completiondate, status = "") => {
+  if (isIncompleteStatus(status) || !jobdate || !completiondate) {
     return 0;
   }
 
@@ -12,38 +19,36 @@ const calculateJobTime = (jobdate, completiondate) => {
     const endDate = new Date(completiondate);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.log("Invalid date format:", { jobdate, completiondate });
+      console.log("Invalid date format:", { jobdate, completiondate, status });
       return 0;
     }
 
     const timeDiff = endDate.getTime() - startDate.getTime();
     const minutesDiff = timeDiff / (1000 * 60);
 
-    return Math.round(minutesDiff);
+    return minutesDiff > 0 ? Math.round(minutesDiff) : 0;
   } catch (error) {
     console.error("Error calculating job time:", error);
     return 0;
   }
 };
 
-// 验证和格式化日期时间
 const validateDateTime = (dateTimeStr) => {
-  if (!dateTimeStr) return "";
+  if (!dateTimeStr) return null;
 
   try {
     if (dateTimeStr.includes("T")) {
       return new Date(dateTimeStr).toISOString();
-    } else if (dateTimeStr.includes(":")) {
-      return new Date(dateTimeStr).toISOString();
-    } else {
-      return new Date(`${dateTimeStr}T00:00`).toISOString();
     }
+    if (dateTimeStr.includes(":")) {
+      return new Date(dateTimeStr).toISOString();
+    }
+    return new Date(`${dateTimeStr}T00:00`).toISOString();
   } catch (error) {
     return dateTimeStr;
   }
 };
 
-// 格式化日期时间显示
 const formatDateTime = (dateTimeStr) => {
   if (!dateTimeStr) return "";
 
@@ -70,6 +75,10 @@ const normalizeText = (value) => {
 
 const sanitizeMaintenancePayload = (body) => {
   const requestby = normalizeText(body.requestby);
+  const status = normalizeText(body.status);
+  const completiondate = isIncompleteStatus(status)
+    ? null
+    : validateDateTime(body.completiondate);
 
   return {
     jobtype: normalizeText(body.jobtype),
@@ -82,12 +91,11 @@ const sanitizeMaintenancePayload = (body) => {
       body.cost === "" || body.cost === undefined || body.cost === null
         ? 0
         : Number(body.cost),
-    completiondate: validateDateTime(body.completiondate),
+    completiondate,
     supplier: normalizeText(body.supplier),
-    status: normalizeText(body.status),
-
+    status,
     requestby,
-    checkedrequestorby: requestby, // auto = requestby
+    checkedrequestorby: requestby,
     verifiedbyhod: normalizeText(body.verifiedbyhod),
     commentPreventive: normalizeText(body.commentPreventive),
     comment: normalizeText(body.comment),
@@ -97,7 +105,11 @@ const sanitizeMaintenancePayload = (body) => {
 const formatMaintenanceResponse = (maintenance) => {
   let jobtime = maintenance.jobtime;
   if (jobtime === undefined || jobtime === null) {
-    jobtime = calculateJobTime(maintenance.jobdate, maintenance.completiondate);
+    jobtime = calculateJobTime(
+      maintenance.jobdate,
+      maintenance.completiondate,
+      maintenance.status
+    );
   }
 
   return {
@@ -114,10 +126,10 @@ const formatMaintenanceResponse = (maintenance) => {
   };
 };
 
-// 创建维护记录
 export const maintenance = async (req, res, next) => {
   try {
     const payload = sanitizeMaintenancePayload(req.body);
+    const requiresCompletionDate = !isIncompleteStatus(payload.status);
 
     if (
       !payload.jobtype ||
@@ -126,19 +138,22 @@ export const maintenance = async (req, res, next) => {
       !payload.problem ||
       !payload.jobdetail ||
       !payload.rootcause ||
+      (requiresCompletionDate && !payload.completiondate) ||
       !payload.status ||
       !payload.requestby
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Please fill in all required fields including Request By.",
+          "Please fill in all required fields. Completion Date is only required when status is not Incomplete.",
       });
     }
 
-    const jobtime = payload.completiondate
-      ? calculateJobTime(payload.jobdate, payload.completiondate)
-      : 0;
+    const jobtime = calculateJobTime(
+      payload.jobdate,
+      payload.completiondate,
+      payload.status
+    );
 
     const newMaintenance = new Maintenance({
       ...payload,
@@ -165,7 +180,6 @@ export const maintenance = async (req, res, next) => {
   }
 };
 
-// 获取所有维护记录
 export const getMaintenances = async (req, res, next) => {
   try {
     const { year } = req.query;
@@ -176,7 +190,6 @@ export const getMaintenances = async (req, res, next) => {
     }
 
     const maintenances = await Maintenance.find(query).sort({ updatedAt: -1 });
-
     const formattedMaintenances = maintenances.map((item) =>
       formatMaintenanceResponse(item)
     );
@@ -187,7 +200,6 @@ export const getMaintenances = async (req, res, next) => {
   }
 };
 
-// 删除维护记录
 export const deleteMaintenance = async (req, res, next) => {
   try {
     const deletedMaintenance = await Maintenance.findByIdAndDelete(
@@ -219,10 +231,10 @@ export const deleteMaintenance = async (req, res, next) => {
   }
 };
 
-// 更新维护记录
 export const updateMaintenance = async (req, res, next) => {
   try {
     const payload = sanitizeMaintenancePayload(req.body);
+    const requiresCompletionDate = !isIncompleteStatus(payload.status);
 
     if (
       !payload.jobtype ||
@@ -231,19 +243,22 @@ export const updateMaintenance = async (req, res, next) => {
       !payload.problem ||
       !payload.jobdetail ||
       !payload.rootcause ||
+      (requiresCompletionDate && !payload.completiondate) ||
       !payload.status ||
       !payload.requestby
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Please fill in all required fields including Request By.",
+          "Please fill in all required fields. Completion Date is only required when status is not Incomplete.",
       });
     }
 
-    const jobtime = payload.completiondate
-      ? calculateJobTime(payload.jobdate, payload.completiondate)
-      : 0;
+    const jobtime = calculateJobTime(
+      payload.jobdate,
+      payload.completiondate,
+      payload.status
+    );
 
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       req.params.maintenanceId,
@@ -282,7 +297,6 @@ export const updateMaintenance = async (req, res, next) => {
   }
 };
 
-// 获取单个维护记录
 export const getMaintenanceById = async (req, res, next) => {
   try {
     const maintenance = await Maintenance.findById(req.params.maintenanceId);
@@ -299,3 +313,4 @@ export const getMaintenanceById = async (req, res, next) => {
     next(error);
   }
 };
+

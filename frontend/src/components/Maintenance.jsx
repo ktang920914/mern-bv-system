@@ -11,6 +11,24 @@ const Maintenance = () => {
 
   const {theme} = useThemeStore()
   const {currentUser} = useUserstore()
+
+  const initialFormData = {
+    jobtype: '',
+    code: '',
+    jobdate: '',
+    problem: '',
+    jobdetail: '',
+    rootcause: '',
+    cost: '',
+    completiondate: '',
+    supplier: '',
+    status: '',
+    requestby: '',
+    checkedrequestorby: '',
+    verifiedbyhod: '',
+    commentPreventive: '',
+    comment: '',
+  }
   const [errorMessage,setErrorMessage] = useState(null)
   const [loading,setLoading] = useState(false)
   const [openModalCreateJob,setOpenModalCreateJob] = useState(false)
@@ -18,8 +36,8 @@ const Maintenance = () => {
   const [openModalUpdateMaintenance,setOpenModalUpdateMaintenance] = useState(false)
   const [openModalMFR, setOpenModalMFR] = useState(false)
   const [selectedMaintenanceForMFR, setSelectedMaintenanceForMFR] = useState(null)
-  const [formData,setFormData] = useState({})
-  const [updateFormData,setUpdateFormData] = useState({})
+  const [formData,setFormData] = useState(initialFormData)
+  const [updateFormData,setUpdateFormData] = useState(initialFormData)
   const [extruders,setExtruders] = useState([])
   const [items,setItems] = useState([])
   const [spareparts,setSpareparts] = useState([])
@@ -50,6 +68,33 @@ const Maintenance = () => {
   const [saveMessage, setSaveMessage] = useState('')
   const [saveDetails, setSaveDetails] = useState({ fileName: '', path: '' })
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  const isIncompleteStatus = (status = '') => {
+    const normalizedStatus = String(status).toLowerCase().trim()
+    return normalizedStatus.includes('minor incomplete') || normalizedStatus.includes('major incomplete')
+  }
+
+  const calculateJobTimeValue = (jobdate, completiondate, status = '') => {
+    if (isIncompleteStatus(status) || !jobdate || !completiondate) {
+      return 0
+    }
+
+    try {
+      const startDate = new Date(jobdate)
+      const endDate = new Date(completiondate)
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return 0
+      }
+
+      const timeDiff = endDate.getTime() - startDate.getTime()
+      const minutesDiff = Math.round(timeDiff / (1000 * 60))
+
+      return minutesDiff > 0 ? minutesDiff : 0
+    } catch (error) {
+      return 0
+    }
+  }
 
   // 将分钟转换为易读的时间格式
   const formatJobTime = (minutes) => {
@@ -279,32 +324,29 @@ const Maintenance = () => {
           console.log(data.message)
         }
         if(res.ok){
-          // 确保每个维护记录都有 jobtime
           const maintenancesWithJobTime = data.map(maintenance => {
-            if (maintenance.jobtime === undefined || maintenance.jobtime === null) {
-              // 如果后端没有返回 jobtime，这里计算一下
-              const jobdate = maintenance.jobdate;
-              const completiondate = maintenance.completiondate;
-              
-              if (jobdate && completiondate) {
-                try {
-                  const startDate = new Date(jobdate);
-                  const endDate = new Date(completiondate);
-                  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                    const timeDiff = endDate.getTime() - startDate.getTime();
-                    const minutesDiff = Math.round(timeDiff / (1000 * 60));
-                    return { ...maintenance, jobtime: minutesDiff };
-                  }
-                } catch (error) {
-                  console.log("Error calculating jobtime:", error);
-                }
-              }
-              return { ...maintenance, jobtime: 0 };
+            let updatedMaintenance = { ...maintenance }
+
+            if (isIncompleteStatus(updatedMaintenance.status) || !updatedMaintenance.completiondate) {
+              updatedMaintenance.jobtime = 0
+            } else if (updatedMaintenance.jobtime === undefined || updatedMaintenance.jobtime === null) {
+              updatedMaintenance.jobtime = calculateJobTimeValue(
+                updatedMaintenance.jobdate,
+                updatedMaintenance.completiondate,
+                updatedMaintenance.status
+              )
             }
-            return maintenance;
-          });
+
+            updatedMaintenance.requestby = updatedMaintenance.requestby || ''
+            updatedMaintenance.checkedrequestorby = updatedMaintenance.checkedrequestorby || updatedMaintenance.requestby || ''
+            updatedMaintenance.verifiedbyhod = updatedMaintenance.verifiedbyhod || ''
+            updatedMaintenance.commentPreventive = updatedMaintenance.commentPreventive || ''
+            updatedMaintenance.comment = updatedMaintenance.comment || ''
+
+            return updatedMaintenance
+          })
           
-          setMaintenances(maintenancesWithJobTime);
+          setMaintenances(maintenancesWithJobTime)
         }
       } catch (error) {
         console.log(error.message)
@@ -317,13 +359,7 @@ const Maintenance = () => {
     setOpenModalCreateJob(!openModalCreateJob)
     setErrorMessage(null)
     setLoading(false)
-    setFormData({
-      requestby: currentUser?.username || '',
-      checkedrequestorby: currentUser?.username || '',
-      verifiedbyhod: '',
-      commentPreventive: '',
-      comment: '',
-    });
+    setFormData(initialFormData)
   }
 
   const handleFocus = () => {
@@ -332,47 +368,55 @@ const Maintenance = () => {
   }
 
   const handleChange = (e) => {
-    const { id, value } = e.target
+    const fieldId = e.target.id
+    const fieldValue = (
+      fieldId === 'supplier' ||
+      fieldId === 'problem' ||
+      fieldId === 'jobdetail' ||
+      fieldId === 'rootcause' ||
+      fieldId === 'commentPreventive' ||
+      fieldId === 'comment'
+    ) ? e.target.value : e.target.value.trim()
 
-    if (
-      id === 'problem' ||
-      id === 'jobdetail' ||
-      id === 'rootcause' ||
-      id === 'commentPreventive' ||
-      id === 'comment'
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        [id]: value,
-      }))
+    if (fieldId === 'requestby') {
+      setFormData({
+        ...formData,
+        requestby: fieldValue,
+        checkedrequestorby: fieldValue,
+      })
       return
     }
 
-    if (id === 'requestby') {
-      const trimmedValue = value.trim()
-      setFormData((prev) => ({
-        ...prev,
-        requestby: trimmedValue,
-        checkedrequestorby: trimmedValue,
-      }))
+    if (fieldId === 'status') {
+      setFormData({
+        ...formData,
+        status: fieldValue,
+        completiondate: isIncompleteStatus(fieldValue) ? '' : formData.completiondate,
+      })
       return
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value.trim(),
-    }))
+    setFormData({
+      ...formData,
+      [fieldId]: fieldValue,
+    })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+
+    const submitPayload = {
+      ...formData,
+      completiondate: isIncompleteStatus(formData.status) ? '' : formData.completiondate,
+      checkedrequestorby: formData.requestby?.trim() || ''
+    }
     
     try {
       const res = await fetch('/api/maintenance/job',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(formData)
+        body:JSON.stringify(submitPayload)
       })
       const data = await res.json()
       if(data.success === false){
@@ -382,14 +426,24 @@ const Maintenance = () => {
       if(res.ok){
         setOpenModalCreateJob(false)
         setLoading(false)
+        setFormData(initialFormData)
         
-        // 重新获取维护记录
         const fetchMaintenances = async () => {
           try {
             const res = await fetch('/api/maintenance/getmaintenances')
             const data = await res.json()
             if(res.ok){
-              setMaintenances(data)
+              setMaintenances(data.map(m => ({
+                ...m,
+                jobtime: isIncompleteStatus(m.status) || !m.completiondate
+                  ? 0
+                  : (m.jobtime ?? calculateJobTimeValue(m.jobdate, m.completiondate, m.status)),
+                requestby: m.requestby || '',
+                checkedrequestorby: m.checkedrequestorby || m.requestby || '',
+                verifiedbyhod: m.verifiedbyhod || '',
+                commentPreventive: m.commentPreventive || '',
+                comment: m.comment || '',
+              })))
             }
           } catch (error) {
             console.log(error.message)
@@ -435,12 +489,8 @@ const Maintenance = () => {
       cost: maintenance.cost, 
       completiondate: formatDateTimeForInput(maintenance.completiondate), 
       jobtype: maintenance.jobtype,
-      requestby: maintenance.requestby || currentUser?.username || '',
-      checkedrequestorby:
-        maintenance.checkedrequestorby ||
-        maintenance.requestby ||
-        currentUser?.username ||
-        '',
+      requestby: maintenance.requestby || '',
+checkedrequestorby: maintenance.checkedrequestorby || maintenance.requestby || '',
       verifiedbyhod: maintenance.verifiedbyhod || '',
       commentPreventive: maintenance.commentPreventive || '',
       comment: maintenance.comment || '',
@@ -451,48 +501,55 @@ const Maintenance = () => {
   }
 
   const handleUpdateChange = (e) => {
-    const { id, value } = e.target
+    const fieldId = e.target.id
+    const fieldValue = (
+      fieldId === 'supplier' ||
+      fieldId === 'problem' ||
+      fieldId === 'jobdetail' ||
+      fieldId === 'rootcause' ||
+      fieldId === 'commentPreventive' ||
+      fieldId === 'comment'
+    ) ? e.target.value : e.target.value.trim()
 
-    if (
-      id === 'supplier' ||
-      id === 'problem' ||
-      id === 'jobdetail' ||
-      id === 'rootcause' ||
-      id === 'commentPreventive' ||
-      id === 'comment'
-    ) {
-      setUpdateFormData((prev) => ({
-        ...prev,
-        [id]: value,
-      }))
+    if (fieldId === 'requestby') {
+      setUpdateFormData({
+        ...updateFormData,
+        requestby: fieldValue,
+        checkedrequestorby: fieldValue,
+      })
       return
     }
 
-    if (id === 'requestby') {
-      const trimmedValue = value.trim()
-      setUpdateFormData((prev) => ({
-        ...prev,
-        requestby: trimmedValue,
-        checkedrequestorby: trimmedValue,
-      }))
+    if (fieldId === 'status') {
+      setUpdateFormData({
+        ...updateFormData,
+        status: fieldValue,
+        completiondate: isIncompleteStatus(fieldValue) ? '' : updateFormData.completiondate,
+      })
       return
     }
 
-    setUpdateFormData((prev) => ({
-      ...prev,
-      [id]: value.trim(),
-    }))
+    setUpdateFormData({
+      ...updateFormData,
+      [fieldId]: fieldValue,
+    })
   }
 
   const handleUpdateSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+
+    const submitPayload = {
+      ...updateFormData,
+      completiondate: isIncompleteStatus(updateFormData.status) ? '' : updateFormData.completiondate,
+      checkedrequestorby: updateFormData.requestby?.trim() || ''
+    }
     
     try {
       const res = await fetch(`/api/maintenance/update/${maintenanceIdToUpdate}`,{
         method:'PUT',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(updateFormData)
+        body:JSON.stringify(submitPayload)
       })
       const data = await res.json()
       if(data.success === false){
@@ -503,13 +560,22 @@ const Maintenance = () => {
         setOpenModalUpdateMaintenance(false)
         setLoading(false)
         
-        // 重新获取维护记录
         const fetchMaintenances = async () => {
           try {
             const res = await fetch('/api/maintenance/getmaintenances')
             const data = await res.json()
             if(res.ok){
-              setMaintenances(data)
+              setMaintenances(data.map(m => ({
+                ...m,
+                jobtime: isIncompleteStatus(m.status) || !m.completiondate
+                  ? 0
+                  : (m.jobtime ?? calculateJobTimeValue(m.jobdate, m.completiondate, m.status)),
+                requestby: m.requestby || '',
+                checkedrequestorby: m.checkedrequestorby || m.requestby || '',
+                verifiedbyhod: m.verifiedbyhod || '',
+                commentPreventive: m.commentPreventive || '',
+                comment: m.comment || '',
+              })))
             }
           } catch (error) {
             console.log(error.message)
@@ -755,7 +821,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   const row5 = worksheet.getRow(rowIndex++)
   row5.height = 16.5
   // A5-B5: Request By
-  row5.getCell(1).value = maintenance.requestby || currentUser.username || 'N/A'
+  row5.getCell(1).value = maintenance.requestby || 'N/A'
   row5.getCell(1).font = defaultFont
   // C5-D5: 作业日期（带时间）
   row5.getCell(3).value = formatDateTimeForMRF(maintenance.jobdate) || 'N/A'
@@ -1184,17 +1250,12 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
   worksheet.mergeCells(`A${row56.number}:B${row56.number}`)
   worksheet.mergeCells(`C${row56.number}:D${row56.number}`)
     
-  // 第57-59行: 状态选项 (第二部分 - 保持逻辑一致)
+  // 第57-59行: 状态选项 (第二部分保持空白，不显示 X)
   const row57 = worksheet.getRow(rowIndex++)
   row57.height = 16.5
+  row57.getCell(1).value = ''
   row57.getCell(2).value = 'Job completed satisfactory'
   row57.getCell(2).font = defaultFont
-  
-  if (maintenance.status && maintenance.status.toLowerCase().includes('satisfactory')) {
-      row57.getCell(1).value = checkMark
-      row57.getCell(1).alignment = centerStyle
-      row57.getCell(1).font = { ...defaultFont, bold: true }
-  }
 
   row57.getCell(1).border = borderStyle
   row57.getCell(2).border = borderStyle
@@ -1203,14 +1264,9 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
     
   const row58 = worksheet.getRow(rowIndex++)
   row58.height = 16.5
+  row58.getCell(1).value = ''
   row58.getCell(2).value = 'Job completed and need follow-up'
   row58.getCell(2).font = defaultFont
-
-  if (maintenance.status && maintenance.status.toLowerCase().includes('follow-up')) {
-      row58.getCell(1).value = checkMark
-      row58.getCell(1).alignment = centerStyle
-      row58.getCell(1).font = { ...defaultFont, bold: true }
-  }
 
   row58.getCell(1).border = borderStyle
   row58.getCell(2).border = borderStyle
@@ -1219,14 +1275,9 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
     
   const row59 = worksheet.getRow(rowIndex++)
   row59.height = 16.5
+  row59.getCell(1).value = ''
   row59.getCell(2).value = 'Job not completed'
   row59.getCell(2).font = defaultFont
-
-  if (maintenance.status && maintenance.status.toLowerCase().includes('incomplete')) {
-      row59.getCell(1).value = checkMark
-      row59.getCell(1).alignment = centerStyle
-      row59.getCell(1).font = { ...defaultFont, bold: true }
-  }
 
   row59.getCell(1).border = borderStyle
   row59.getCell(2).border = borderStyle
@@ -2164,7 +2215,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
             <form onSubmit={handleSubmit}>
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job type</Label>
-                <Select id="jobtype" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                <Select value={formData.jobtype || ''} id="jobtype" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
                   <option>Breakdown</option>
                   <option>Kaizen</option>
@@ -2175,7 +2226,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Item</Label>
-                <Select id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                <Select value={formData.code || ''} id="code" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
                   {extruders.map((extruder) => (
                     <option key={extruder._id} value={extruder.code}>{`EXTRUDER ${extruder.code} --- ${extruder.type} --- ${extruder.status}`}</option>
@@ -2194,27 +2245,27 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job date</Label>
-                <TextInput type='datetime-local' id="jobdate" onChange={handleChange} onFocus={handleFocus} required/>
+                <TextInput value={formData.jobdate || ''} type='datetime-local' id="jobdate" onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Problem</Label>
-                <Textarea id="problem" placeholder='Enter problem' onChange={handleChange} onFocus={handleFocus} required/>
+                <Textarea value={formData.problem || ''} id="problem" placeholder='Enter problem' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job detail</Label>
-                <Textarea id="jobdetail" placeholder='Enter job detail' onChange={handleChange} onFocus={handleFocus} required/>
+                <Textarea value={formData.jobdetail || ''} id="jobdetail" placeholder='Enter job detail' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Root cause</Label>
-                <Textarea id="rootcause" placeholder='Enter root cause' onChange={handleChange} onFocus={handleFocus} required/>
+                <Textarea value={formData.rootcause || ''} id="rootcause" placeholder='Enter root cause' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Supplier</Label>
-                <Select id="supplier" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                <Select value={formData.supplier || ''} id="supplier" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
                   {suppliers.map((supplier) => (
                     <option key={supplier._id} value={supplier.supplier}>{`${supplier.supplier} --- ${supplier.status}`}</option>
@@ -2224,17 +2275,17 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Cost</Label>
-                <TextInput id="cost" type='number' min='0' placeholder='Enter cost' step='0.01' onChange={handleChange} onFocus={handleFocus} required/>
+                <TextInput value={formData.cost || ''} id="cost" type='number' min='0' placeholder='Enter cost' step='0.01' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Completion date</Label>
-                <TextInput type='datetime-local' id="completiondate" onChange={handleChange} onFocus={handleFocus}/>
+                <TextInput value={formData.completiondate || ''} type='datetime-local' id="completiondate" onChange={handleChange} onFocus={handleFocus} required={!isIncompleteStatus(formData.status)} disabled={isIncompleteStatus(formData.status)}/>
               </div>
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Status</Label>
-                <Select id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
+                <Select value={formData.status || ''} id="status" className='mb-4' onChange={handleChange} onFocus={handleFocus} required>
                   <option></option>
                   <option>Minor Complete - Satisfactory</option>
                   <option>Minor Complete - Need Follow-up</option>
@@ -2249,7 +2300,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Request by</Label>
                 <TextInput
                   id="requestby"
-                  value={formData.requestby || currentUser?.username || ''}
+                  value={formData.requestby || ''}
                   placeholder='Enter request by'
                   onChange={handleChange}
                   onFocus={handleFocus}
@@ -2261,7 +2312,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Checked by requestor</Label>
                 <TextInput
                   id="checkedrequestorby"
-                  value={formData.checkedrequestorby || formData.requestby || currentUser?.username || ''}
+                  value={formData.checkedrequestorby || formData.requestby || ''}
                   readOnly
                 />
               </div>
@@ -2415,7 +2466,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
 
               <div className="mb-4 block">
                 <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Completion date</Label>
-                <TextInput value={updateFormData.completiondate} type='datetime-local' id="completiondate" onChange={handleUpdateChange} onFocus={handleFocus}/>
+                <TextInput value={updateFormData.completiondate || ''} type='datetime-local' id="completiondate" onChange={handleUpdateChange} onFocus={handleFocus} required={!isIncompleteStatus(updateFormData.status)} disabled={isIncompleteStatus(updateFormData.status)}/>
               </div>
 
               <div className="mb-4 block">

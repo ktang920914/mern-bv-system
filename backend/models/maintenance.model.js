@@ -4,31 +4,31 @@ const maintenanceSchema = new mongoose.Schema(
   {
     jobtype: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     code: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     jobdate: {
       type: String,
-      default: "",
+      required: true,
     },
     problem: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     jobdetail: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     rootcause: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     cost: {
@@ -39,25 +39,19 @@ const maintenanceSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    jobtime: {
-      type: Number, // minutes
-      default: 0,
-    },
     supplier: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     status: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
-
-    // --- New MRF fields ---
     requestby: {
       type: String,
-      default: "",
+      required: true,
       trim: true,
     },
     checkedrequestorby: {
@@ -80,8 +74,14 @@ const maintenanceSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    jobtime: {
+      type: Number,
+      default: 0,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 const Maintenance = mongoose.model("Maintenance", maintenanceSchema);
