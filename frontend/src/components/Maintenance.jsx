@@ -1935,7 +1935,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
           className={`${theme === 'light' ? 'text-gray-900 bg-gray-200' : 'bg-gray-800 text-gray-300'}`}
           content={
             <div className="p-3 max-w-xs">
-              <p className="font-semibold text-sm">Job detail:</p>
+              <p className="font-semibold text-sm">Corrective action:</p>
               <p className="text-xs mb-2">{maintenance.jobdetail}</p>
             </div>
           }
@@ -2097,7 +2097,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                   <Popover className={`${theme === 'light' ? ' text-gray-900 bg-gray-200 hover:bg-gray-100' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                     content={
                       <div className="p-3 max-w-xs">
-                        <p className="font-semibold text-sm">Job detail:</p>
+                        <p className="font-semibold text-sm">Corrective action:</p>
                         <p className="text-xs mb-2">{maintenance.jobdetail}</p>
                       </div>
                     }

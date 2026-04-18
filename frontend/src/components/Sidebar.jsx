@@ -368,6 +368,19 @@ const DashSidebar = () => {
                   </SidebarItem>
                 </Link>
 
+                <Link to="/?tab=Maintcalender">
+                  <SidebarItem
+                    onClick={() => setSidebarOpen(false)}
+                    active={tab === "Maintcalender"}
+                    as="div"
+                    className={tab === "Maintcalender" ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    <span className={itemTextClass}>
+                      Calender
+                    </span>
+                  </SidebarItem>
+                </Link>
+
                 <Link to="/?tab=Cases">
                   <SidebarItem
                     onClick={() => setSidebarOpen(false)}
