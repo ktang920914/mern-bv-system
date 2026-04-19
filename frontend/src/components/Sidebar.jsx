@@ -108,7 +108,7 @@ const DashSidebar = () => {
                   className={tab === "Dashboard" ? currentTheme.itemActive : currentTheme.item}
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <span className={itemTextClass}>Dashboard</span>
+                  <span>Dashboard</span>
                 </SidebarItem>
               </Link>
 
