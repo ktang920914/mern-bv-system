@@ -1649,7 +1649,7 @@ const handleDownloadObjectiveReport = async () => {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
-              color="success"
+              color="green"
               className="cursor-pointer"
               onClick={handleDownloadObjectiveReport}
               isProcessing={isGeneratingObjectiveReport}
