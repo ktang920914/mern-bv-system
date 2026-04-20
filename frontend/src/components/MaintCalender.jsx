@@ -178,6 +178,19 @@ const formatMinutesToObjectiveTime = (minutes) => {
   return `${hours}:${String(mins).padStart(2, '0')}`
 }
 
+const getJobObjectiveDate = (item) => {
+  return (
+    parseDate(item?.endtime) ||
+    parseDate(item?.starttime) ||
+    parseDate(item?.orderdate)
+  )
+}
+
+const formatObjectiveRate = (value) => {
+  const safeValue = Number(value) || 0
+  return `${(safeValue * 100).toFixed(2)}%`
+}
+
 const buildObjective1Data = (records, year, extruderCodeSet) => {
   const extruderJobs = (Array.isArray(records) ? records : []).filter((item) => {
     const jobDate = parseDate(item.jobdate)
@@ -231,6 +244,69 @@ const buildObjective1Data = (records, year, extruderCodeSet) => {
   }
 }
 
+const buildObjective2Data = (records, year, extruderCodeSet) => {
+  const extruderJobs = (Array.isArray(records) ? records : []).filter((item) => {
+    const jobDate = getJobObjectiveDate(item)
+    if (!jobDate) return false
+    if (jobDate.year() !== Number(year)) return false
+    return isExtruderObjectiveJob(item, extruderCodeSet)
+  })
+
+  const monthly = Array.from({ length: 12 }, (_, monthIndex) => {
+    const jobs = extruderJobs.filter((job) => {
+      const jobDate = getJobObjectiveDate(job)
+      if (!jobDate) return false
+      return jobDate.month() === monthIndex
+    })
+
+    const totalDowntimeMinutes = jobs.reduce((sum, job) => {
+      return sum + (Number(job.downtime) || 0)
+    }, 0)
+
+    const totalPlannedProductionTime = jobs.reduce((sum, job) => {
+      return sum + (Number(job.planprodtime) || 0)
+    }, 0)
+
+    const resultRate =
+      totalPlannedProductionTime > 0
+        ? totalDowntimeMinutes / totalPlannedProductionTime
+        : 0
+
+    return {
+      totalDowntimeMinutes,
+      totalPlannedProductionTime,
+      resultRate,
+      hasData: jobs.length > 0,
+    }
+  })
+
+  const yearlyTotalDowntimeMinutes = monthly.reduce(
+    (sum, item) => sum + item.totalDowntimeMinutes,
+    0
+  )
+
+  const yearlyTotalPlannedProductionTime = monthly.reduce(
+    (sum, item) => sum + item.totalPlannedProductionTime,
+    0
+  )
+
+  const yearlyResultRate =
+    yearlyTotalPlannedProductionTime > 0
+      ? yearlyTotalDowntimeMinutes / yearlyTotalPlannedProductionTime
+      : 0
+
+  return {
+    extruderJobs,
+    monthly,
+    yearly: {
+      totalDowntimeMinutes: yearlyTotalDowntimeMinutes,
+      totalPlannedProductionTime: yearlyTotalPlannedProductionTime,
+      resultRate: yearlyResultRate,
+      hasData: extruderJobs.length > 0,
+    },
+  }
+}
+
 const setupWorksheetPrint = (worksheet, options = {}) => {
   const {
     paperSize = 9,
@@ -270,6 +346,7 @@ const MaintCalender = () => {
   const { theme } = useThemeStore()
 
   const [maintenances, setMaintenances] = useState([])
+  const [jobs, setJobs] = useState([])
   const [extruders, setExtruders] = useState([])
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -326,6 +403,32 @@ const MaintCalender = () => {
     }
 
     fetchExtruders()
+  }, [])
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const res = await fetch('/api/analysis/getjobs')
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data?.message || 'Failed to fetch job records')
+        }
+
+        const normalized = (Array.isArray(data) ? data : []).map((item) => ({
+          ...item,
+          downtime: Number(item.downtime) || 0,
+          planprodtime: Number(item.planprodtime) || 0,
+        }))
+
+        setJobs(normalized)
+      } catch (error) {
+        console.log(error.message || 'Error fetching job records')
+        setJobs([])
+      }
+    }
+
+    fetchJobs()
   }, [])
 
   useEffect(() => {
@@ -518,6 +621,7 @@ const MaintCalender = () => {
 
       const workbook = new ExcelJS.Workbook()
       const objective1Data = buildObjective1Data(maintenances, year, extruderCodeSet)
+      const objective2Data = buildObjective2Data(jobs, year, extruderCodeSet)
       const extruderRecords = objective1Data.extruderJobs
         .slice()
         .sort((a, b) => {
@@ -724,6 +828,38 @@ const MaintCalender = () => {
         worksheet.getCell('A16').value = 'Result'
         worksheet.getCell('B16').value = '≤ 3%'
         worksheet.getCell('B16').font = boldFont
+
+        worksheet.getCell('C14').value = objective2Data.yearly.hasData
+          ? formatMinutesToObjectiveTime(objective2Data.yearly.totalDowntimeMinutes)
+          : ''
+        worksheet.getCell('C15').value = objective2Data.yearly.hasData
+          ? formatMinutesToObjectiveTime(objective2Data.yearly.totalPlannedProductionTime)
+          : ''
+        worksheet.getCell('C16').value = objective2Data.yearly.hasData
+          ? formatObjectiveRate(objective2Data.yearly.resultRate)
+          : ''
+
+        worksheet.getCell('C14').font = blueNumberFont
+        worksheet.getCell('C15').font = blueNumberFont
+        worksheet.getCell('C16').font = blueNumberFont
+
+        objective2Data.monthly.forEach((item, monthIndex) => {
+          const colNo = monthIndex + 4
+
+          worksheet.getRow(14).getCell(colNo).value = item.hasData
+            ? formatMinutesToObjectiveTime(item.totalDowntimeMinutes)
+            : ''
+          worksheet.getRow(15).getCell(colNo).value = item.hasData
+            ? formatMinutesToObjectiveTime(item.totalPlannedProductionTime)
+            : ''
+          worksheet.getRow(16).getCell(colNo).value = item.hasData
+            ? formatObjectiveRate(item.resultRate)
+            : ''
+
+          worksheet.getRow(14).getCell(colNo).font = blueNumberFont
+          worksheet.getRow(15).getCell(colNo).font = blueNumberFont
+          worksheet.getRow(16).getCell(colNo).font = blueNumberFont
+        })
 
         for (let colNo = 1; colNo <= 15; colNo++) {
           worksheet.getRow(16).getCell(colNo).fill = paleYellowFill
