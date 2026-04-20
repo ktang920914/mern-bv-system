@@ -2084,9 +2084,7 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Completion date</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Job Time</TableHeadCell>
               <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Status</TableHeadCell>
-              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Edit</TableHeadCell>
-              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>MRF</TableHeadCell>
-              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'}`}>Delete</TableHeadCell>
+              <TableHeadCell className={`${theme === 'light' ? 'bg-gray-400 text-gray-900' : 'bg-gray-900 text-gray-300'} text-center whitespace-nowrap`}>Action</TableHeadCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -2147,29 +2145,29 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
                   </Popover>
                 </TableCell>
                 <TableCell className="align-middle">{formatDateTimeForDisplay(maintenance.completiondate)}</TableCell>
-                
+
                 {/* 桌面端 Job Time 颜色修改 */}
                 <TableCell className={`align-middle font-bold ${(maintenance.jobtime || 0) > 360 ? 'text-red-500' : 'text-green-500'}`}>
-                    {formatDuration(maintenance.jobtime)}
+                  {formatDuration(maintenance.jobtime)}
                 </TableCell>
 
                 <TableCell className="align-middle">{maintenance.status}</TableCell>
-                <TableCell className="align-middle">
-                  <Button outline className='cursor-pointer py-1 px-1 text-sm h-8'  onClick={() => {handleUpdate(maintenance)}}>Edit</Button>
-                </TableCell>
-                <TableCell className="align-middle">
-                  <Button color='blue' outline className='cursor-pointer py-1 px-1 text-sm h-8'
-                    onClick={() => handleMRFClick(maintenance)}
-                  >
-                    MRF
-                  </Button>
-                </TableCell>
-                <TableCell className="align-middle">
-                  <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8'
-                    onClick={() => {setMaintenanceIdToDelete(maintenance._id);setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)}}
-                  >
-                    Delete
-                  </Button>
+                <TableCell className="align-middle text-center whitespace-nowrap">
+                  <div className="inline-flex items-center gap-1">
+                    <Button outline className='cursor-pointer py-1 px-1 text-sm h-8' onClick={() => {handleUpdate(maintenance)}}>
+                      Edit
+                    </Button>
+                    <Button color='blue' outline className='cursor-pointer py-1 px-1 text-sm h-8'
+                      onClick={() => handleMRFClick(maintenance)}
+                    >
+                      MRF
+                    </Button>
+                    <Button color='red' outline className='cursor-pointer py-1 px-1 text-sm h-8'
+                      onClick={() => {setMaintenanceIdToDelete(maintenance._id);setOpenModalDeleteMaintenance(!openModalDeleteMaintenance)}}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
