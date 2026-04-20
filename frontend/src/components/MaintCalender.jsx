@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
@@ -14,6 +15,8 @@ import {
   Alert,
 } from 'flowbite-react'
 import useThemeStore from '../themeStore'
+import { saveAs } from 'file-saver'
+import ExcelJS from 'exceljs'
 
 const localizer = momentLocalizer(moment)
 
@@ -137,10 +140,137 @@ const buildMaintenanceEvent = (item) => {
   }
 }
 
+const normalizeMachineCode = (value) => {
+  return String(value || '').trim().toLowerCase()
+}
+
+const extractMachineCode = (item) => {
+  return normalizeMachineCode(
+    item?.code ||
+      item?.machineCode ||
+      item?.machinecode ||
+      item?.itemCode ||
+      item?.itemcode ||
+      ''
+  )
+}
+
+const isExtruderObjectiveJob = (item, extruderCodeSet) => {
+  const code = normalizeMachineCode(item?.code)
+
+  if (!code) return false
+
+  if (extruderCodeSet.size > 0) {
+    return extruderCodeSet.has(code)
+  }
+
+  return (
+    code.includes('extruder') ||
+    code.startsWith('ex') ||
+    code.startsWith('ext')
+  )
+}
+
+const formatMinutesToObjectiveTime = (minutes) => {
+  const safeMinutes = Number(minutes) || 0
+  const hours = Math.floor(safeMinutes / 60)
+  const mins = Math.round(safeMinutes % 60)
+  return `${hours}:${String(mins).padStart(2, '0')}`
+}
+
+const buildObjective1Data = (records, year, extruderCodeSet) => {
+  const extruderJobs = (Array.isArray(records) ? records : []).filter((item) => {
+    const jobDate = parseDate(item.jobdate)
+    if (!jobDate) return false
+    if (jobDate.year() !== Number(year)) return false
+    return isExtruderObjectiveJob(item, extruderCodeSet)
+  })
+
+  const monthly = Array.from({ length: 12 }, (_, monthIndex) => {
+    const jobs = extruderJobs.filter((job) => {
+      const jobDate = parseDate(job.jobdate)
+      if (!jobDate) return false
+      return jobDate.month() === monthIndex
+    })
+
+    const totalDowntimeMinutes = jobs.reduce((sum, job) => {
+      return sum + (Number(job.jobtime) || 0)
+    }, 0)
+
+    const noOfRepairs = jobs.length
+    const mttrMinutes = noOfRepairs > 0 ? totalDowntimeMinutes / noOfRepairs : 0
+
+    return {
+      totalDowntimeMinutes,
+      noOfRepairs,
+      mttrMinutes,
+      hasData: noOfRepairs > 0,
+    }
+  })
+
+  const yearlyTotalDowntimeMinutes = monthly.reduce(
+    (sum, item) => sum + item.totalDowntimeMinutes,
+    0
+  )
+  const yearlyNoOfRepairs = monthly.reduce(
+    (sum, item) => sum + item.noOfRepairs,
+    0
+  )
+  const yearlyMttrMinutes =
+    yearlyNoOfRepairs > 0 ? yearlyTotalDowntimeMinutes / yearlyNoOfRepairs : 0
+
+  return {
+    extruderJobs,
+    monthly,
+    yearly: {
+      totalDowntimeMinutes: yearlyTotalDowntimeMinutes,
+      noOfRepairs: yearlyNoOfRepairs,
+      mttrMinutes: yearlyMttrMinutes,
+      hasData: yearlyNoOfRepairs > 0,
+    },
+  }
+}
+
+const setupWorksheetPrint = (worksheet, options = {}) => {
+  const {
+    paperSize = 9,
+    orientation = 'landscape',
+    margins = {
+      left: 0.2,
+      right: 0.2,
+      top: 0.4,
+      bottom: 0.4,
+      header: 0.2,
+      footer: 0.2,
+    },
+    horizontalCentered = true,
+    verticalCentered = false,
+    fitToPage = true,
+    fitToHeight = 1,
+    fitToWidth = 1,
+    scale = 100,
+  } = options
+
+  worksheet.pageSetup = {
+    paperSize,
+    orientation,
+    margins,
+    horizontalCentered,
+    verticalCentered,
+    fitToPage,
+    fitToHeight,
+    fitToWidth,
+    scale,
+    showGridLines: false,
+    blackAndWhite: false,
+  }
+}
+
 const MaintCalender = () => {
   const { theme } = useThemeStore()
 
   const [maintenances, setMaintenances] = useState([])
+  const [extruders, setExtruders] = useState([])
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -153,6 +283,7 @@ const MaintCalender = () => {
   const [showDayEvents, setShowDayEvents] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [expandedMonths, setExpandedMonths] = useState({})
+  const [isGeneratingObjectiveReport, setIsGeneratingObjectiveReport] = useState(false)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -176,6 +307,26 @@ const MaintCalender = () => {
       setExpandedMonths({})
     }
   }, [selectedMonth, calendarYear])
+
+  useEffect(() => {
+    const fetchExtruders = async () => {
+      try {
+        const res = await fetch('/api/machine/getExtruders')
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data?.message || 'Failed to fetch extruder list')
+        }
+
+        setExtruders(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.log(error.message || 'Error fetching extruder list')
+        setExtruders([])
+      }
+    }
+
+    fetchExtruders()
+  }, [])
 
   useEffect(() => {
     const fetchMaintenances = async () => {
@@ -205,6 +356,14 @@ const MaintCalender = () => {
 
     fetchMaintenances()
   }, [calendarYear])
+
+  const extruderCodeSet = useMemo(() => {
+    return new Set(
+      extruders
+        .map((item) => extractMachineCode(item))
+        .filter(Boolean)
+    )
+  }, [extruders])
 
   const filteredMaintenances = useMemo(() => {
     return maintenances.filter((item) => {
@@ -351,6 +510,586 @@ const MaintCalender = () => {
       }))
       .sort((a, b) => b.monthNumber - a.monthNumber)
   }, [filteredMaintenances, selectedMonth])
+
+  const generateExcelObjectiveReport = async (year = calendarYear) => {
+    try {
+      setIsGeneratingObjectiveReport(true)
+      setErrorMessage('')
+
+      const workbook = new ExcelJS.Workbook()
+      const objective1Data = buildObjective1Data(maintenances, year, extruderCodeSet)
+      const extruderRecords = objective1Data.extruderJobs
+        .slice()
+        .sort((a, b) => {
+          const timeA = parseDate(a.jobdate)?.valueOf() || 0
+          const timeB = parseDate(b.jobdate)?.valueOf() || 0
+          return timeA - timeB
+        })
+
+      const createSummarySheet = () => {
+        const worksheet = workbook.addWorksheet('Summary')
+
+        setupWorksheetPrint(worksheet, {
+          paperSize: 9,
+          orientation: 'landscape',
+          margins: {
+            left: 0.2,
+            right: 0.2,
+            top: 0.4,
+            bottom: 0.4,
+            header: 0.2,
+            footer: 0.2,
+          },
+          horizontalCentered: true,
+          verticalCentered: false,
+          fitToPage: true,
+          fitToHeight: 1,
+          fitToWidth: 1,
+          scale: 100,
+        })
+
+        worksheet.columns = [
+          { width: 42 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+          { width: 10 },
+        ]
+
+        const borderStyle = {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } },
+        }
+
+        const darkBlueFill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF002060' },
+        }
+
+        const lightGreenFill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFC4D79B' },
+        }
+
+        const paleYellowFill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFF2CC' },
+        }
+
+        const boldFont = { name: 'Arial', size: 10, bold: true }
+        const normalFont = { name: 'Arial', size: 10 }
+        const titleFont = { name: 'Arial', size: 18, bold: true }
+        const blueNumberFont = {
+          name: 'Arial',
+          size: 10,
+          bold: true,
+          color: { argb: 'FF0000FF' },
+        }
+        const left = { horizontal: 'left', vertical: 'middle', wrapText: true }
+
+        const applyBorderRange = (fromRow, toRow, fromCol = 1, toCol = 15) => {
+          for (let rowNo = fromRow; rowNo <= toRow; rowNo++) {
+            const row = worksheet.getRow(rowNo)
+            for (let colNo = fromCol; colNo <= toCol; colNo++) {
+              const cell = row.getCell(colNo)
+              cell.border = borderStyle
+              if (!cell.alignment) {
+                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+              }
+            }
+          }
+        }
+
+        const monthHeaders = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+        worksheet.mergeCells('A1:O1')
+        worksheet.getCell('A1').value = 'Operation Dept'
+        worksheet.getCell('A1').font = boldFont
+        worksheet.getCell('A1').alignment = left
+
+        worksheet.mergeCells('A2:O2')
+        worksheet.getCell('A2').value = `MAINTENANCE SECTION OBJECTIVE, KPI & TARGET MONITORING OF YEAR ${year}`
+        worksheet.getCell('A2').font = titleFont
+        worksheet.getCell('A2').alignment = left
+
+        worksheet.mergeCells('A4:G4')
+        worksheet.getCell('A4').value = {
+          richText: [
+            { text: 'MINOR', font: { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFF0000' } } },
+            { text: ' Breakdown = Maintenance Team able to handle', font: boldFont },
+          ],
+        }
+        worksheet.getCell('A4').alignment = left
+
+        worksheet.mergeCells('H4:O4')
+        worksheet.getCell('H4').value = {
+          richText: [
+            { text: 'MAJOR', font: { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFF0000' } } },
+            { text: ' Breakdown = Require External Service Provider', font: boldFont },
+          ],
+        }
+        worksheet.getCell('H4').alignment = left
+
+        const headerRow = worksheet.getRow(6)
+        headerRow.height = 22
+        const headers = ['Description', 'Target', 'Avg', ...monthHeaders.map((month) => `${month}-${String(year).slice(-2)}`)]
+
+        headers.forEach((text, index) => {
+          const cell = headerRow.getCell(index + 1)
+          cell.value = text
+          cell.font = { ...boldFont, color: { argb: 'FFFFFFFF' } }
+          cell.fill = darkBlueFill
+          cell.alignment = { horizontal: index === 0 ? 'left' : 'center', vertical: 'middle' }
+          cell.border = borderStyle
+        })
+
+        worksheet.mergeCells('A7:O7')
+        worksheet.getCell('A7').value = 'objective 1: Extruder Mean Time To Repair (MTTR)'
+        worksheet.getCell('A7').font = boldFont
+        worksheet.getCell('A7').fill = lightGreenFill
+        worksheet.getCell('A7').alignment = left
+
+        worksheet.mergeCells('A8:O8')
+        worksheet.getCell('A8').value = '* to measure the average time required by maintenance team to fix a machine/equipment breakdown, including diagnosis and testing.'
+        worksheet.getCell('A8').font = boldFont
+        worksheet.getCell('A8').fill = lightGreenFill
+        worksheet.getCell('A8').alignment = left
+
+        worksheet.getCell('A9').value = 'Total Maintenance Downtime'
+        worksheet.getCell('A10').value = 'No of Repairs'
+        worksheet.getCell('A11').value = 'Result'
+        worksheet.getCell('B11').value = '6 hours'
+
+        worksheet.getCell('A11').fill = paleYellowFill
+        worksheet.getCell('B11').fill = paleYellowFill
+        worksheet.getCell('B11').font = boldFont
+
+        worksheet.getCell('C9').value = formatMinutesToObjectiveTime(objective1Data.yearly.totalDowntimeMinutes)
+        worksheet.getCell('C10').value = objective1Data.yearly.noOfRepairs
+        worksheet.getCell('C11').value = formatMinutesToObjectiveTime(objective1Data.yearly.mttrMinutes)
+
+        worksheet.getCell('C9').font = blueNumberFont
+        worksheet.getCell('C10').font = blueNumberFont
+        worksheet.getCell('C11').font = blueNumberFont
+
+        objective1Data.monthly.forEach((item, monthIndex) => {
+          const colNo = monthIndex + 4
+
+          worksheet.getRow(9).getCell(colNo).value = item.hasData
+            ? formatMinutesToObjectiveTime(item.totalDowntimeMinutes)
+            : ''
+          worksheet.getRow(10).getCell(colNo).value = item.hasData ? item.noOfRepairs : ''
+          worksheet.getRow(11).getCell(colNo).value = item.hasData
+            ? formatMinutesToObjectiveTime(item.mttrMinutes)
+            : ''
+
+          worksheet.getRow(9).getCell(colNo).font = blueNumberFont
+          worksheet.getRow(10).getCell(colNo).font = blueNumberFont
+          worksheet.getRow(11).getCell(colNo).font = blueNumberFont
+        })
+
+        for (let colNo = 1; colNo <= 15; colNo++) {
+          worksheet.getRow(11).getCell(colNo).fill = paleYellowFill
+        }
+
+        worksheet.mergeCells('A12:O12')
+        worksheet.getCell('A12').value = 'Objective 2: Extruder Unschedule Downtime Rate'
+        worksheet.getCell('A12').font = boldFont
+        worksheet.getCell('A12').fill = lightGreenFill
+        worksheet.getCell('A12').alignment = left
+
+        worksheet.mergeCells('A13:O13')
+        worksheet.getCell('A13').value = '* to measures the overall percentage of time an asset is unavailable due to unexpected breakdown.'
+        worksheet.getCell('A13').font = boldFont
+        worksheet.getCell('A13').fill = lightGreenFill
+        worksheet.getCell('A13').alignment = left
+
+        worksheet.getCell('A14').value = 'Total Downtime'
+        worksheet.getCell('A15').value = 'Total Planned Production Time'
+        worksheet.getCell('A16').value = 'Result'
+        worksheet.getCell('B16').value = '≤ 3%'
+        worksheet.getCell('B16').font = boldFont
+
+        for (let colNo = 1; colNo <= 15; colNo++) {
+          worksheet.getRow(16).getCell(colNo).fill = paleYellowFill
+        }
+
+        worksheet.mergeCells('A17:O17')
+        worksheet.getCell('A17').value = 'Target 1: Data Loss or Corrupted Incidents'
+        worksheet.getCell('A17').font = boldFont
+        worksheet.getCell('A17').fill = lightGreenFill
+        worksheet.getCell('A17').alignment = left
+
+        worksheet.getCell('A18').value = 'Data Loss or Corrupted Incidents'
+        worksheet.getCell('B18').value = '0 Case'
+        worksheet.getCell('B18').font = boldFont
+
+        for (let colNo = 1; colNo <= 15; colNo++) {
+          worksheet.getRow(18).getCell(colNo).fill = paleYellowFill
+        }
+
+        worksheet.mergeCells('A19:O19')
+        worksheet.getCell('A19').value = 'Target 2: Machine Maintenance Cost'
+        worksheet.getCell('A19').font = boldFont
+        worksheet.getCell('A19').fill = lightGreenFill
+        worksheet.getCell('A19').alignment = left
+
+        worksheet.mergeCells('A20:O20')
+        worksheet.getCell('A20').value = '* to measure whether the current maintenance (preventive vs. corrective) is cost-effective relative to the total cost of producing goods.'
+        worksheet.getCell('A20').font = boldFont
+        worksheet.getCell('A20').fill = lightGreenFill
+        worksheet.getCell('A20').alignment = left
+
+        worksheet.getCell('A21').value = 'Maintenance Team Labour Cost'
+        worksheet.getCell('A22').value = 'Electrical & Spare Parts Replacement'
+        worksheet.getCell('A23').value = 'Machine repair cost'
+        worksheet.getCell('A24').value = 'Calibration'
+        worksheet.getCell('A25').value = 'Total Maintenance Cost'
+        worksheet.getCell('A26').value = 'Total Manufacturing Cost'
+        worksheet.getCell('A27').value = 'Result'
+        worksheet.getCell('B27').value = '< 10%'
+        worksheet.getCell('B27').font = boldFont
+
+        for (let colNo = 1; colNo <= 15; colNo++) {
+          worksheet.getRow(27).getCell(colNo).fill = paleYellowFill
+        }
+
+        worksheet.mergeCells('A29:O29')
+        worksheet.getCell('A29').value = 'Target 2 Standard Benchmarking: For most industries, the target objective is to keep this ratio below 10%.'
+        worksheet.getCell('A29').font = normalFont
+        worksheet.getCell('A29').alignment = left
+
+        worksheet.mergeCells('A30:O30')
+        worksheet.getCell('A30').value = '< 5%: Exemplary performance; indicates high operational efficiency.'
+        worksheet.getCell('A30').font = normalFont
+        worksheet.getCell('A30').alignment = left
+
+        worksheet.mergeCells('A31:O31')
+        worksheet.getCell('A31').value = '5% – 10%: Acceptable; requires active monitoring.'
+        worksheet.getCell('A31').font = normalFont
+        worksheet.getCell('A31').alignment = left
+
+        worksheet.mergeCells('A32:O32')
+        worksheet.getCell('A32').value = '> 10%: Critical warning; indicates inefficiencies or aging equipment.'
+        worksheet.getCell('A32').font = normalFont
+        worksheet.getCell('A32').alignment = left
+
+        for (let rowNo = 9; rowNo <= 27; rowNo++) {
+          const row = worksheet.getRow(rowNo)
+          row.height = 20
+          for (let colNo = 1; colNo <= 15; colNo++) {
+            const cell = row.getCell(colNo)
+            cell.border = borderStyle
+            if (!cell.font) cell.font = normalFont
+            if (!cell.alignment) {
+              cell.alignment = {
+                horizontal: colNo === 1 ? 'left' : 'center',
+                vertical: 'middle',
+                wrapText: true,
+              }
+            }
+          }
+        }
+
+        applyBorderRange(6, 27, 1, 15)
+
+        for (let rowNo = 7; rowNo <= 8; rowNo++) {
+          for (let colNo = 1; colNo <= 15; colNo++) {
+            worksheet.getRow(rowNo).getCell(colNo).border = borderStyle
+          }
+        }
+
+        for (let rowNo = 12; rowNo <= 13; rowNo++) {
+          for (let colNo = 1; colNo <= 15; colNo++) {
+            worksheet.getRow(rowNo).getCell(colNo).border = borderStyle
+          }
+        }
+
+        for (let rowNo = 17; rowNo <= 20; rowNo++) {
+          for (let colNo = 1; colNo <= 15; colNo++) {
+            worksheet.getRow(rowNo).getCell(colNo).border = borderStyle
+          }
+        }
+
+        worksheet.getRow(1).height = 18
+        worksheet.getRow(2).height = 28
+        worksheet.getRow(4).height = 20
+        worksheet.getRow(6).height = 22
+        worksheet.getRow(7).height = 22
+        worksheet.getRow(8).height = 22
+        worksheet.getRow(12).height = 22
+        worksheet.getRow(13).height = 22
+        worksheet.getRow(17).height = 22
+        worksheet.getRow(19).height = 22
+        worksheet.getRow(20).height = 22
+      }
+
+      const createObjective1Sheet = () => {
+        const worksheet = workbook.addWorksheet('Objective 1')
+
+        setupWorksheetPrint(worksheet, {
+          paperSize: 9,
+          orientation: 'landscape',
+          margins: {
+            left: 0.2,
+            right: 0.2,
+            top: 0.4,
+            bottom: 0.4,
+            header: 0.2,
+            footer: 0.2,
+          },
+          horizontalCentered: true,
+          verticalCentered: false,
+          fitToPage: true,
+          fitToHeight: 1,
+          fitToWidth: 1,
+          scale: 95,
+        })
+
+        worksheet.columns = [
+          { width: 5 },
+          { width: 12 },
+          { width: 18 },
+          { width: 14 },
+          { width: 28 },
+          { width: 18 },
+          { width: 18 },
+          { width: 15 },
+          { width: 18 },
+          { width: 12 },
+          { width: 18 },
+          { width: 14 },
+          { width: 16 },
+          { width: 16 },
+          { width: 12 },
+        ]
+
+        const borderStyle = {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } },
+        }
+
+        const lightGreenFill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFC4D79B' },
+        }
+
+        const headerFill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9D2B6' },
+        }
+
+        const yellowFill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFF00' },
+        }
+
+        const boldFont = { name: 'Arial', size: 10, bold: true }
+        const normalFont = { name: 'Arial', size: 10 }
+        const titleFont = { name: 'Arial', size: 18, bold: true }
+        const left = { horizontal: 'left', vertical: 'middle', wrapText: true }
+        const center = { horizontal: 'center', vertical: 'middle', wrapText: true }
+
+        const formatRequestDate = (value) => {
+          const parsed = parseDate(value)
+          if (!parsed) return ''
+          return parsed.format('M/D/YY h:mm A')
+        }
+
+        const monthTitle = (monthIndex) => {
+          return moment().year(Number(year)).month(monthIndex).format('MMMM YYYY').toUpperCase()
+        }
+
+        worksheet.mergeCells('A1:O1')
+        worksheet.getCell('A1').value = 'Operation Dept'
+        worksheet.getCell('A1').font = boldFont
+        worksheet.getCell('A1').alignment = left
+
+        worksheet.mergeCells('A2:O2')
+        worksheet.getCell('A2').value = `MAINTENANCE SECTION OBJECTIVE, KPI & TARGET MONITORING OF YEAR ${year}`
+        worksheet.getCell('A2').font = titleFont
+        worksheet.getCell('A2').alignment = left
+
+        worksheet.mergeCells('A4:O4')
+        worksheet.getCell('A4').value = {
+          richText: [
+            { text: 'MINOR', font: { name: 'Arial', size: 11, bold: true, color: { argb: 'FF0000FF' } } },
+            { text: ' Breakdown = Maintenance Team able to handle', font: { name: 'Arial', size: 10, bold: true } },
+          ],
+        }
+        worksheet.getCell('A4').alignment = left
+
+        worksheet.mergeCells('A6:O6')
+        worksheet.getCell('A6').value = 'Objective 1: Extruder Mean Time To Repair (MTTR) - Minor Breakdown'
+        worksheet.getCell('A6').font = { name: 'Arial', size: 12, bold: true }
+        worksheet.getCell('A6').fill = lightGreenFill
+        worksheet.getCell('A6').alignment = left
+
+        worksheet.mergeCells('A7:O7')
+        worksheet.getCell('A7').value = '* to measure the average time required by maintenance team to fix a machine/equipment breakdown, including diagnosis and testing.'
+        worksheet.getCell('A7').font = { name: 'Arial', size: 10, bold: true }
+        worksheet.getCell('A7').fill = lightGreenFill
+        worksheet.getCell('A7').alignment = left
+
+        const headerLabels = [
+          'No',
+          'Machine/\nItem',
+          'Date/Time Request',
+          'Requested by',
+          'Problem Description',
+          'Root Cause',
+          'Corrective Action',
+          'Attended by',
+          'Date/Time Action\nTaken',
+          'Maintenance\nDowntime\n(hh:mm)',
+          'Preventive Action',
+          'Date/Time\nAction Taken',
+          'Effectiveness\n(Re-Occurrence)',
+          'Supplier /\nService\nProvider',
+          'Repair Cost\n(RM) If any',
+        ]
+
+        const headerRow = worksheet.getRow(8)
+        headerRow.height = 34
+        headerLabels.forEach((label, idx) => {
+          const cell = headerRow.getCell(idx + 1)
+          cell.value = label
+          cell.font = boldFont
+          cell.fill = headerFill
+          cell.border = borderStyle
+          cell.alignment = center
+        })
+
+        let rowIndex = 9
+
+        const groupedByMonth = Array.from({ length: 12 }, (_, monthIndex) => ({
+          monthIndex,
+          records: extruderRecords.filter((item) => parseDate(item.jobdate)?.month() === monthIndex),
+        })).filter((group) => group.records.length > 0)
+
+        groupedByMonth.forEach((group) => {
+          let monthlyTotal = 0
+
+          group.records.forEach((item, index) => {
+            const row = worksheet.getRow(rowIndex)
+            row.height = 26
+
+            const jobtime = Number(item.jobtime) || 0
+            monthlyTotal += jobtime
+
+            const rowValues = [
+              index + 1,
+              item.code || '',
+              formatRequestDate(item.jobdate),
+              item.requestby || '',
+              item.problem || '',
+              item.rootcause || '',
+              item.jobdetail || '',
+              item.supplier || '',
+              formatRequestDate(item.completiondate),
+              formatMinutesToObjectiveTime(jobtime),
+              item.commentPreventive || '',
+              '',
+              item.comment || '',
+              '',
+              Number(item.cost || 0) > 0 ? Number(item.cost || 0) : '-',
+            ]
+
+            rowValues.forEach((value, colIndex) => {
+              const cell = row.getCell(colIndex + 1)
+              cell.value = value
+              cell.font = normalFont
+              cell.border = borderStyle
+              cell.alignment = colIndex === 0 || colIndex === 9 || colIndex === 14 ? center : left
+            })
+
+            row.getCell(4).fill = yellowFill
+            row.getCell(12).fill = yellowFill
+
+            rowIndex += 1
+          })
+
+          const totalRow = worksheet.getRow(rowIndex)
+          totalRow.height = 22
+          totalRow.getCell(3).value = monthTitle(group.monthIndex)
+          totalRow.getCell(3).font = boldFont
+          totalRow.getCell(3).alignment = left
+          worksheet.mergeCells(`C${rowIndex}:I${rowIndex}`)
+
+          totalRow.getCell(10).value = formatMinutesToObjectiveTime(monthlyTotal)
+          totalRow.getCell(10).font = boldFont
+          totalRow.getCell(10).alignment = center
+
+          for (let colNo = 1; colNo <= 15; colNo++) {
+            const cell = totalRow.getCell(colNo)
+            cell.border = borderStyle
+          }
+
+          rowIndex += 1
+        })
+
+        if (groupedByMonth.length === 0) {
+          const emptyRow = worksheet.getRow(rowIndex)
+          emptyRow.height = 24
+          worksheet.mergeCells(`A${rowIndex}:O${rowIndex}`)
+          emptyRow.getCell(1).value = 'No extruder records found for the selected year.'
+          emptyRow.getCell(1).font = normalFont
+          emptyRow.getCell(1).alignment = center
+          emptyRow.getCell(1).border = borderStyle
+        }
+      }
+
+      createSummarySheet()
+      createObjective1Sheet()
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0]
+      const timeStr = now.toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
+      const fileName = `Maintenance_Summary_Objective1_${year}_${dateStr}_${timeStr}.xlsx`
+
+      saveAs(blob, fileName)
+
+      if (objective1Data.yearly.noOfRepairs === 0) {
+        setErrorMessage(
+          'Objective report generated, but no extruder maintenance data matched the selected year. Please check the extruder code master list and maintenance code.'
+        )
+      }
+    } catch (error) {
+      console.error('Error generating objective report:', error)
+      setErrorMessage('Failed to generate objective report')
+    } finally {
+      setIsGeneratingObjectiveReport(false)
+    }
+  }
+
+const handleDownloadObjectiveReport = async () => {
+    await generateExcelObjectiveReport(calendarYear)
+  }
 
   const handleSelectEvent = (event) => {
     setSelectedJob(event.resource)
@@ -773,6 +1512,16 @@ const MaintCalender = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Button
+              color="success"
+              className="cursor-pointer"
+              onClick={handleDownloadObjectiveReport}
+              isProcessing={isGeneratingObjectiveReport}
+              disabled={isGeneratingObjectiveReport}
+            >
+              {isGeneratingObjectiveReport ? 'Generating...' : 'Objective Report'}
+            </Button>
+
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
