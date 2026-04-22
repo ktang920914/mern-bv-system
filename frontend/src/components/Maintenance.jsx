@@ -2252,8 +2252,8 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
               </div>
 
               <div className="mb-4 block">
-                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job detail</Label>
-                <Textarea value={formData.jobdetail || ''} id="jobdetail" placeholder='Enter job detail' onChange={handleChange} onFocus={handleFocus} required/>
+                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Corrective action</Label>
+                <Textarea value={formData.jobdetail || ''} id="jobdetail" placeholder='Enter corrective action' onChange={handleChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
@@ -2438,8 +2438,8 @@ const generateMaintenanceRequestForm = async (maintenance, returnBlob = false) =
               </div>
 
               <div className="mb-4 block">
-                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Job detail</Label>
-                <Textarea value={updateFormData.jobdetail} id="jobdetail" placeholder='Enter job detail' onChange={handleUpdateChange} onFocus={handleFocus} required/>
+                <Label className={`${theme === 'light' ? '' : 'bg-gray-900 text-gray-50'}`}>Corrective action</Label>
+                <Textarea value={updateFormData.jobdetail} id="jobdetail" placeholder='Enter corrective action' onChange={handleUpdateChange} onFocus={handleFocus} required/>
               </div>
 
               <div className="mb-4 block">
