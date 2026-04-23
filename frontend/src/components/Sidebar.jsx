@@ -183,6 +183,17 @@ const DashSidebar = () => {
                     <span className={itemTextClass}>Statistics</span>
                   </SidebarItem>
                 </Link>
+
+                <Link to="/?tab=Telemetry">
+                  <SidebarItem
+                    onClick={() => setSidebarOpen(false)}
+                    active={tab === "Telemetry"}
+                    as="div"
+                    className={tab === "Telemetry" ? currentTheme.itemActive : currentTheme.item}
+                  >
+                    <span className={itemTextClass}>Telemetry</span>
+                  </SidebarItem>
+                </Link>
               </SidebarCollapse>
 
               <SidebarCollapse

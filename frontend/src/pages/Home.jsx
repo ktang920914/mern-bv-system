@@ -33,6 +33,7 @@ import CustomerOutputs from "../components/CustomerOutputs"
 import CustomerDetails from "../components/CustomerDetails"
 import CustomerColorant from "../components/CustomerColorant"
 import MaintCalender from "../components/MaintCalender"
+import TelemetryCard from "../components/TelemetryCard"
 
 const Home = () => {
   const { theme } = useThemeStore()
@@ -77,6 +78,7 @@ const Home = () => {
           {tab === 'Oee' && <Oee/>}
           {tab === 'Outputs' && <Outputs/>}
           {tab === 'Statistics' && <Statistics/>}
+          {tab === 'Telemetry' && <TelemetryCard/>}
           {tab === 'Customers' && <Customers/>}
           {tab === 'Customerschedule' && <CustomerSchedule/>}
           {tab === 'Customeroutput' && <CustomerOutputs/>}
