@@ -160,6 +160,8 @@ const isExtruderObjectiveJob = (item, extruderCodeSet) => {
 
   if (!code) return false
 
+  if (code === 'l11') return true
+
   if (extruderCodeSet.size > 0) {
     return extruderCodeSet.has(code)
   }
@@ -244,8 +246,15 @@ const buildObjective1Data = (records, year, extruderCodeSet) => {
   }
 }
 
-const buildObjective2Data = (records, year, extruderCodeSet) => {
-  const extruderJobs = (Array.isArray(records) ? records : []).filter((item) => {
+const buildObjective2Data = (maintenanceRecords, productionRecords, year, extruderCodeSet) => {
+  const extruderMaintenanceJobs = (Array.isArray(maintenanceRecords) ? maintenanceRecords : []).filter((item) => {
+    const jobDate = parseDate(item?.jobdate)
+    if (!jobDate) return false
+    if (jobDate.year() !== Number(year)) return false
+    return isExtruderObjectiveJob(item, extruderCodeSet)
+  })
+
+  const extruderProductionJobs = (Array.isArray(productionRecords) ? productionRecords : []).filter((item) => {
     const jobDate = getJobObjectiveDate(item)
     if (!jobDate) return false
     if (jobDate.year() !== Number(year)) return false
@@ -253,18 +262,24 @@ const buildObjective2Data = (records, year, extruderCodeSet) => {
   })
 
   const monthly = Array.from({ length: 12 }, (_, monthIndex) => {
-    const jobs = extruderJobs.filter((job) => {
+    const maintenanceJobs = extruderMaintenanceJobs.filter((job) => {
+      const jobDate = parseDate(job?.jobdate)
+      if (!jobDate) return false
+      return jobDate.month() === monthIndex
+    })
+
+    const productionJobs = extruderProductionJobs.filter((job) => {
       const jobDate = getJobObjectiveDate(job)
       if (!jobDate) return false
       return jobDate.month() === monthIndex
     })
 
-    const totalDowntimeMinutes = jobs.reduce((sum, job) => {
-      return sum + (Number(job.downtime) || 0)
+    const totalDowntimeMinutes = maintenanceJobs.reduce((sum, job) => {
+      return sum + (Number(job?.jobtime) || 0)
     }, 0)
 
-    const totalPlannedProductionTime = jobs.reduce((sum, job) => {
-      return sum + (Number(job.planprodtime) || 0)
+    const totalPlannedProductionTime = productionJobs.reduce((sum, job) => {
+      return sum + (Number(job?.planprodtime) || 0)
     }, 0)
 
     const resultRate =
@@ -276,7 +291,7 @@ const buildObjective2Data = (records, year, extruderCodeSet) => {
       totalDowntimeMinutes,
       totalPlannedProductionTime,
       resultRate,
-      hasData: jobs.length > 0,
+      hasData: maintenanceJobs.length > 0 || productionJobs.length > 0,
     }
   })
 
@@ -296,13 +311,16 @@ const buildObjective2Data = (records, year, extruderCodeSet) => {
       : 0
 
   return {
-    extruderJobs,
+    maintenanceJobs: extruderMaintenanceJobs,
+    productionJobs: extruderProductionJobs,
     monthly,
     yearly: {
       totalDowntimeMinutes: yearlyTotalDowntimeMinutes,
       totalPlannedProductionTime: yearlyTotalPlannedProductionTime,
       resultRate: yearlyResultRate,
-      hasData: extruderJobs.length > 0,
+      hasData:
+        extruderMaintenanceJobs.length > 0 ||
+        extruderProductionJobs.length > 0,
     },
   }
 }
@@ -621,7 +639,7 @@ const MaintCalender = () => {
 
       const workbook = new ExcelJS.Workbook()
       const objective1Data = buildObjective1Data(maintenances, year, extruderCodeSet)
-      const objective2Data = buildObjective2Data(jobs, year, extruderCodeSet)
+      const objective2Data = buildObjective2Data(maintenances, jobs, year, extruderCodeSet)
       const extruderRecords = objective1Data.extruderJobs
         .slice()
         .sort((a, b) => {
