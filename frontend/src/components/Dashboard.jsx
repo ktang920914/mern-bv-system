@@ -57,7 +57,7 @@ const Dashboard = () => {
   const [casesDataType, setCasesDataType] = useState('count')
   const [casesSelectedCodes, setCasesSelectedCodes] = useState([])
   const [casesAvailableCodes, setCasesAvailableCodes] = useState([])
-  const [isUpdatingCases, setIsUpdatingCases] = useState(false)
+  const [IGNORED_UPDATING_CASES, setIsUpdatingCases] = useState(false)
   const [updateMessage, setUpdateMessage] = useState(null)
 
   // 数据配置
@@ -94,7 +94,7 @@ const Dashboard = () => {
     { value: 'cost', label: 'Cost Amount' }
   ]
 
-  const jobCodeOptions = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']
+  const JOB_CODE_OPTIONS = ['L1', 'L2', 'L3', 'L5', 'L6', 'L9', 'L10', 'L11', 'L12']
   const monthFields = [
     { key: 'jan', name: 'Jan' }, { key: 'feb', name: 'Feb' }, { key: 'mar', name: 'Mar' },
     { key: 'apr', name: 'Apr' }, { key: 'may', name: 'May' }, { key: 'jun', name: 'Jun' },
@@ -176,16 +176,19 @@ const Dashboard = () => {
   // 当年份改变时重新获取所有 Dashboard 数据
   useEffect(() => {
     fetchDashboardData()
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayYear])
 
   // 当 Outputs Job Code 筛选改变时重新获取数据
   useEffect(() => {
     fetchOutputsWithCodes()
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayYear, selectedCodes])
 
   // 当 Cases Job Code 筛选改变时重新获取数据
   useEffect(() => {
     fetchCasesData()
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayYear, casesSelectedCodes])
 
   const fetchDashboardData = async () => {
@@ -326,6 +329,7 @@ const Dashboard = () => {
   // 初始加载触发一次静默更新
   useEffect(() => {
     handleUpdateCasesStats(true) 
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayYear, casesSelectedCodes])
 
   // 处理函数

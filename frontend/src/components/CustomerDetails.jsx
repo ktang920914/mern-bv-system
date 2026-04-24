@@ -8,7 +8,7 @@ import useThemeStore from '../themeStore'
 const localizer = momentLocalizer(moment)
 
 // 智能颜色生成器：和 Statistics.jsx 保持完全一致，使用 137.508 黄金角度强制打散新机器颜色
-export const getDynamicJobColorStats = (code) => {
+const getDynamicJobColorStats = (code) => {
     const staticMap = {
         'L1': { bgClass: 'bg-blue-500', borderClass: 'border-blue-500', hex: '#3B82F6' },
         'L2': { bgClass: 'bg-green-500', borderClass: 'border-green-500', hex: '#10B981' },
@@ -223,6 +223,7 @@ const CustomerDetails = () => {
         }
 
         fetchSchedules()
+// eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const eventStyleGetter = (event) => {

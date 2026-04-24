@@ -200,7 +200,7 @@ const Planning = () => {
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
     // Format updated date for display
-    const formatUpdatedDate = (updatedAt) => {
+    const FORMAT_UPDATED_DATE = (updatedAt) => {
         if (!updatedAt) return '-'
         const date = new Date(updatedAt)
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

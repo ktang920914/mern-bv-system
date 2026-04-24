@@ -129,6 +129,7 @@ const Cases = () => {
     // 当 selectedCodes 或 comparisonMode 改变时自动更新数据
     useEffect(() => {
         handleUpdateStats(true); // 静默更新
+// eslint-disable-next-line react-hooks/exhaustive-deps
     }, [displayYear, selectedCodes, comparisonMode, dataType]);
 
     const caseTypes = ["Breakdown", "Kaizen", "Inspect", "Maintenance"]

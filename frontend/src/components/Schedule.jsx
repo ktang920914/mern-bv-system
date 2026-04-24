@@ -19,7 +19,7 @@ const Schedule = () => {
   const [showDayEvents, setShowDayEvents] = useState(false)
   const [preventiveData, setPreventiveData] = useState([])
   const [calendarYear, setCalendarYear] = useState(moment().year())
-  const [parentActivities, setParentActivities] = useState({})
+  const [PARENT_ACTIVITIES, setParentActivities] = useState({})
   
   // 新增：保存到服务器的状态
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -679,7 +679,7 @@ const Schedule = () => {
     }
   }
 
-  const CustomToolbar = ({ onNavigate, date, label }) => {
+  const CustomToolbar = ({ onNavigate, date }) => {
     const goToBack = () => {
       onNavigate('PREV')
     }

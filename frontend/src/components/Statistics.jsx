@@ -568,7 +568,7 @@ const Statistics = () => {
     }
   }
 
-  const CustomToolbar = ({ onNavigate, date, label }) => {
+  const CustomToolbar = ({ onNavigate, date }) => {
     const goToBack = () => {
       const newDate = moment(date).subtract(1, 'month')
       setCurrentDate(newDate)

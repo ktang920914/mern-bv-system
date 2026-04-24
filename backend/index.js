@@ -27,12 +27,10 @@ import clientRoute from './routes/client.route.js'
 import customerRoute from './routes/customer.route.js'
 import colorantRoute from './routes/colorant.route.js'
 import telemetryRoute from './routes/telemetry.route.js'
-import https from 'https'
-import fs from 'fs'
 
 dotenv.config()
 const app = express()
-const port = process.env.port
+const port = process.env.PORT || 3000
 
 app.use(express.json())
 app.use(cookieParser())
@@ -72,14 +70,7 @@ app.get('/', (req,res) => {
     res.send('<h1>Welcome to Bold Vision</h1>')
 })
 
-/*const httpsOptions = {
-  key: fs.readFileSync('./server.key'),   // mkcert 私钥
-  cert: fs.readFileSync('./server.crt')   // mkcert 证书
-}
 
-https.createServer(httpsOptions, app).listen(port, () => {
-  console.log(`HTTPS Server running at https://localhost:${port}`)
-})*/
 
 app.listen(port, () => {
   console.log(`http://localhost:${port}`)
