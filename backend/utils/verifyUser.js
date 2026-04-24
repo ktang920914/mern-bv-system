@@ -14,7 +14,7 @@ export const verifyToken = async (req, res, next) => {
             if(!currentUser){
                 // 删除用户逻辑
                 if(req.path === '/logout' && req.method === 'POST'){
-                    req.user = { id: decoded.id, username: 'Deleted User' }
+                    req.user = { id: decoded.id, username: 'Deleted User', isDeleted: true }
                     return next()
                 }
                 res.clearCookie('access_token')
