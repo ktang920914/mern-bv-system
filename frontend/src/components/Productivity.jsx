@@ -205,7 +205,7 @@ const Productivity = () => {
     const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPage))
 
     // 格式化 updated date 用于显示
-    const formatUpdatedDate = (updatedAt) => {
+    const FORMAT_UPDATED_DATE = (updatedAt) => {
         if (!updatedAt) return '-'
         const date = new Date(updatedAt)
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

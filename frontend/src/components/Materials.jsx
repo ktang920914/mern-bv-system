@@ -513,7 +513,7 @@ const Materials = () => {
       // 准备数据
       const excelData = materials.map(material => ({
         'Material': material.material,
-        'Lot No': product.lotno,
+        'Lot No': material.lotno,
         'Quantity': Number(material.quantity) || 0,
         'Pallet No': material.palletno,
         'Location': material.location,

@@ -60,7 +60,7 @@ const ActivityLogs = () => {
         if (search !== null && search !== searchTerm) {
             setSearchTerm(search)
         }
-    }, [searchParams])
+    }, [searchParams, currentPage, searchTerm])
 
     useEffect(() => {
         const fetchLogs = async () => {

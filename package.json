@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon backend/index.js",
-    "start": "node backend/index.js"
+    "start": "node backend/index.js",
+    "test": "npm run test --prefix frontend"
   },
   "keywords": [],
   "author": "",

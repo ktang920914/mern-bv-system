@@ -30,7 +30,7 @@ const ToDoListPreventive = () => {
     const [searchTerm,setSearchTerm] = useState(searchParams.get('search') || '')
     const [currentPage,setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
     const [itemsPage] = useState(10)
-    const [showCustomInterval, setShowCustomInterval] = useState(false)
+    const [SHOW_CUSTOM_INTERVAL, setShowCustomInterval] = useState(false)
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
     const [sortOrder, setSortOrder] = useState('desc')
     
@@ -317,7 +317,7 @@ const ToDoListPreventive = () => {
     }
 
     const handleUpdateChange = (e) => {
-        const { id, value, type } = e.target;
+        const { id, value } = e.target;
         
         if (id === 'repeatType') {
             setShowCustomInterval(value === 'custom');

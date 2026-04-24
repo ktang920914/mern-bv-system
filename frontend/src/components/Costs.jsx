@@ -223,6 +223,7 @@ const Costs = () => {
             }
         }
         fetchInitialCosts()
+// eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser._id]) 
 
     const handleCreateCost = () => {

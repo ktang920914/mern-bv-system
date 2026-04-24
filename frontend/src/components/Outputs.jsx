@@ -187,6 +187,7 @@ const Outputs = () => {
         if (showTable && debouncedSelectedCodes.length >= 0) {
             fetchOutputsForYear(displayYear);
         }
+// eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSelectedCodes, comparisonMode]);
 
     const monthFields = [
@@ -269,6 +270,7 @@ const Outputs = () => {
 
     useEffect(() => {
         fetchOutputsForYear(new Date().getFullYear().toString())
+// eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser._id])
 
     // 数据处理函数

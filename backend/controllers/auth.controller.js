@@ -8,13 +8,13 @@ import jwt from 'jsonwebtoken'
 export const login = async (req, res, next) => {
     const { username, password } = req.body
     try {
-        if (!username || !password) return next(errorHandler(404, 'Login Failed'))
+        if (!username || !password) return next(errorHandler(400, 'Username and password are required'))
 
         const validUser = await User.findOne({ username })
-        if (!validUser) return next(errorHandler(404, 'Login Failed'))
+        if (!validUser) return next(errorHandler(401, 'Login Failed'))
 
         const validPassword = bcryptjs.compareSync(password, validUser.password)
-        if (!validPassword) return next(errorHandler(404, 'Login Failed'))
+        if (!validPassword) return next(errorHandler(401, 'Login Failed'))
 
         // 生成 token 时加 tokenVersion
         const token = jwt.sign(
@@ -35,6 +35,8 @@ export const login = async (req, res, next) => {
 
         res.cookie('access_token', token, {
             httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
             maxAge: 90*24*60*60*1000
         })
         res.status(200).json(rest)
@@ -44,18 +46,24 @@ export const login = async (req, res, next) => {
 }
 
 export const register = async (req,res,next) => {
-    const {username,password,role} = req.body
+    const {username,password} = req.body
     try {
         const existingName = await User.findOne({username})
         if(existingName){
-            return next(errorHandler(404, 'Username is exists'))
+            return next(errorHandler(409, 'Username already exists'))
         }
 
         if (!username || username.length < 3 || username.length > 8) {
             return next(errorHandler(400, 'Failed'));
         }
 
+        if (!password || password.length < 6) {
+            return next(errorHandler(400, 'Password must be at least 6 characters'))
+        }
+
         const hashedPassword = await bcryptjs.hash(password,10)
+        const hasAnyUsers = await User.exists({})
+        const role = hasAnyUsers ? 'user' : 'admin'
 
         const newUser = new User({
             username,
@@ -90,7 +98,11 @@ export const logout = async (req, res, next) => {
         await newActivity.save()
         
         // 清除cookie
-        res.clearCookie('access_token')
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production'
+        })
         res.status(200).json({message:'Signout Successfully'})
     } catch (error) {
         next(error)
@@ -99,7 +111,7 @@ export const logout = async (req, res, next) => {
 
 export const getUsers = async (req,res,next) => {
     try {
-        const users = await User.find().sort({updatedAt:-1})
+        const users = await User.find().select('-password').sort({updatedAt:-1})
         res.status(200).json(users)
     } catch (error) {
         next(error)
@@ -124,25 +136,41 @@ export const deleteUser = async (req,res,next) => {
 
 export const updateUser = async (req, res, next) => {
     try {
-        const existingUser = await User.findOne({ 
-            username: req.body.username,
-            _id: { $ne: req.params.userId } 
-        })
-        if(existingUser) return next(errorHandler(404, 'Update Failed'))
+        const updatePayload = {}
+
+        if(req.body.username){
+            updatePayload.username = req.body.username
+        }
+
+        if(req.body.username){
+            const existingUser = await User.findOne({ 
+                username: req.body.username,
+                _id: { $ne: req.params.userId } 
+            })
+            if(existingUser) return next(errorHandler(409, 'Username already exists'))
+        }
 
         if(req.body.password){
+            if(req.body.password.length < 6){
+                return next(errorHandler(400, 'Password must be at least 6 characters'))
+            }
             req.body.password = bcryptjs.hashSync(req.body.password, 10)
+            updatePayload.password = req.body.password
+        }
+
+        if(req.body.role){
+            updatePayload.role = req.body.role
+        }
+
+        if(Object.keys(updatePayload).length === 0){
+            return next(errorHandler(400, 'No valid fields to update'))
         }
 
         // 更新 user 并 tokenVersion +1
         const updatedUser = await User.findByIdAndUpdate(
             req.params.userId,
             { 
-                $set: {
-                    username: req.body.username,
-                    password: req.body.password,
-                    role: req.body.role
-                },
+                $set: updatePayload,
                 $inc: { tokenversion: 1 }  // <- 强制旧 token 失效
             },
             { new: true }
@@ -163,4 +191,3 @@ export const updateUser = async (req, res, next) => {
         next(error)
     }
 }
-
