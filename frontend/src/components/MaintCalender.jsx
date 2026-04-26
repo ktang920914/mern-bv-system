@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
@@ -632,6 +631,103 @@ const MaintCalender = () => {
       .sort((a, b) => b.monthNumber - a.monthNumber)
   }, [filteredMaintenances, selectedMonth])
 
+  const objectiveTargetMonthKeys = [
+    'jan',
+    'feb',
+    'mar',
+    'apr',
+    'may',
+    'jun',
+    'jul',
+    'aug',
+    'sep',
+    'oct',
+    'nov',
+    'dec',
+  ]
+
+  const createEmptyObjectiveMonthlyActual = () => {
+    const result = {}
+
+    objectiveTargetMonthKeys.forEach((key) => {
+      result[key] = 0
+    })
+
+    return result
+  }
+
+  const fetchObjectiveTargetForReport = async (year, targetCode) => {
+    try {
+      const res = await fetch(
+        `/api/objective-target/get?year=${year}&targetCode=${targetCode}`
+      )
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to fetch objective target')
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        return {
+          ...data[0],
+          monthlyActual: {
+            ...createEmptyObjectiveMonthlyActual(),
+            ...(data[0].monthlyActual || {}),
+          },
+        }
+      }
+
+      return {
+        year,
+        targetCode,
+        title: 'Data Loss or Corrupted Incidents',
+        targetText: '0 Case',
+        targetValue: 0,
+        unit: 'Case',
+        monthlyActual: createEmptyObjectiveMonthlyActual(),
+      }
+    } catch (error) {
+      console.log(error.message || 'Error fetching objective target')
+
+      return {
+        year,
+        targetCode,
+        title: 'Data Loss or Corrupted Incidents',
+        targetText: '0 Case',
+        targetValue: 0,
+        unit: 'Case',
+        monthlyActual: createEmptyObjectiveMonthlyActual(),
+      }
+    }
+  }
+
+  const getObjectiveTargetTotal = (monthlyActual = {}) => {
+    return objectiveTargetMonthKeys.reduce((sum, key) => {
+      return sum + (Number(monthlyActual[key]) || 0)
+    }, 0)
+  }
+
+  const formatObjectiveTargetActual = (value, unit = 'Case') => {
+    const safeValue = Number(value) || 0
+    const safeUnit = String(unit || '').trim()
+
+    if (safeUnit.toLowerCase().includes('case')) {
+      return `${Math.round(safeValue)} Case`
+    }
+
+    if (safeUnit === '%') {
+      return `${safeValue.toFixed(2)}%`
+    }
+
+    if (Number.isInteger(safeValue)) {
+      return safeUnit ? `${safeValue} ${safeUnit}` : `${safeValue}`
+    }
+
+    return safeUnit
+      ? `${safeValue.toFixed(2)} ${safeUnit}`
+      : `${safeValue.toFixed(2)}`
+  }
+
   const generateExcelObjectiveReport = async (year = calendarYear) => {
     try {
       setIsGeneratingObjectiveReport(true)
@@ -640,6 +736,7 @@ const MaintCalender = () => {
       const workbook = new ExcelJS.Workbook()
       const objective1Data = buildObjective1Data(maintenances, year, extruderCodeSet)
       const objective2Data = buildObjective2Data(maintenances, jobs, year, extruderCodeSet)
+      const target1Data = await fetchObjectiveTargetForReport(year, 'TARGET_1')
       const extruderRecords = objective1Data.extruderJobs
         .slice()
         .sort((a, b) => {
@@ -769,7 +866,7 @@ const MaintCalender = () => {
 
         const headerRow = worksheet.getRow(6)
         headerRow.height = 22
-        const headers = ['Description', 'Target', 'Avg', ...monthHeaders.map((month) => `${month}-${String(year).slice(-2)}`)]
+        const headers = ['Description', 'Target', 'Yearly', ...monthHeaders.map((month) => `${month}-${String(year).slice(-2)}`)]
 
         headers.forEach((text, index) => {
           const cell = headerRow.getCell(index + 1)
@@ -884,14 +981,32 @@ const MaintCalender = () => {
         }
 
         worksheet.mergeCells('A17:O17')
-        worksheet.getCell('A17').value = 'Target 1: Data Loss or Corrupted Incidents'
+        worksheet.getCell('A17').value = `Target 1: ${target1Data.title || 'Data Loss or Corrupted Incidents'}`
         worksheet.getCell('A17').font = boldFont
         worksheet.getCell('A17').fill = lightGreenFill
         worksheet.getCell('A17').alignment = left
 
-        worksheet.getCell('A18').value = 'Data Loss or Corrupted Incidents'
-        worksheet.getCell('B18').value = '0 Case'
+        worksheet.getCell('A18').value = target1Data.title || 'Data Loss or Corrupted Incidents'
+        worksheet.getCell('B18').value = target1Data.targetText || '0 Case'
         worksheet.getCell('B18').font = boldFont
+
+        worksheet.getCell('C18').value = formatObjectiveTargetActual(
+          getObjectiveTargetTotal(target1Data.monthlyActual),
+          target1Data.unit || 'Case'
+        )
+        worksheet.getCell('C18').font = blueNumberFont
+
+        objectiveTargetMonthKeys.forEach((monthKey, monthIndex) => {
+          const colNo = monthIndex + 4
+          const actualValue = Number(target1Data.monthlyActual?.[monthKey]) || 0
+
+          worksheet.getRow(18).getCell(colNo).value = formatObjectiveTargetActual(
+            actualValue,
+            target1Data.unit || 'Case'
+          )
+
+          worksheet.getRow(18).getCell(colNo).font = blueNumberFont
+        })
 
         for (let colNo = 1; colNo <= 15; colNo++) {
           worksheet.getRow(18).getCell(colNo).fill = paleYellowFill
@@ -1015,22 +1130,27 @@ const MaintCalender = () => {
           scale: 95,
         })
 
+        // Keep HOD template structure unchanged.
+        // Only improve readability: better width, row height, wrap text, freeze header.
+        worksheet.views = [{ state: 'frozen', ySplit: 8 }]
+        worksheet.properties.defaultRowHeight = 18
+
         worksheet.columns = [
-          { width: 5 },
-          { width: 12 },
-          { width: 18 },
-          { width: 14 },
-          { width: 28 },
-          { width: 18 },
-          { width: 18 },
-          { width: 15 },
-          { width: 18 },
-          { width: 12 },
-          { width: 18 },
-          { width: 14 },
-          { width: 16 },
-          { width: 16 },
-          { width: 12 },
+          { width: 5 },   // No
+          { width: 12 },  // Machine / Item
+          { width: 19 },  // Date/Time Request
+          { width: 14 },  // Requested by
+          { width: 36 },  // Problem Description - slightly wider for long data
+          { width: 28 },  // Root Cause - slightly wider for long data
+          { width: 36 },  // Corrective Action - slightly wider for long data
+          { width: 15 },  // Attended by
+          { width: 19 },  // Date/Time Action Taken
+          { width: 13 },  // Maintenance Downtime
+          { width: 30 },  // Preventive Action
+          { width: 16 },  // Date/Time Action Taken
+          { width: 26 },  // Effectiveness
+          { width: 18 },  // Supplier / Service Provider
+          { width: 14 },  // Repair Cost
         ]
 
         const borderStyle = {
@@ -1061,8 +1181,8 @@ const MaintCalender = () => {
         const boldFont = { name: 'Arial', size: 10, bold: true }
         const normalFont = { name: 'Arial', size: 10 }
         const titleFont = { name: 'Arial', size: 18, bold: true }
-        const left = { horizontal: 'left', vertical: 'middle', wrapText: true }
-        const center = { horizontal: 'center', vertical: 'middle', wrapText: true }
+        const left = { horizontal: 'left', vertical: 'top', wrapText: true, shrinkToFit: false }
+        const center = { horizontal: 'center', vertical: 'middle', wrapText: true, shrinkToFit: false }
 
         const formatRequestDate = (value) => {
           const parsed = parseDate(value)
@@ -1072,6 +1192,52 @@ const MaintCalender = () => {
 
         const monthTitle = (monthIndex) => {
           return moment().year(Number(year)).month(monthIndex).format('MMMM YYYY').toUpperCase()
+        }
+
+        const breakLongText = (value, maxChunk = 34) => {
+          const text = String(value || '').trim()
+          if (!text) return ''
+
+          // Excel wraps normal sentences well, but very long text without spaces
+          // such as test data "dasdasdasdasdas..." needs manual line breaks.
+          return text
+            .split(/(\s+)/)
+            .map((part) => {
+              if (/^\s+$/.test(part)) return part
+              if (part.length <= maxChunk) return part
+              return part.match(new RegExp(`.{1,${maxChunk}}`, 'g'))?.join('\n') || part
+            })
+            .join('')
+        }
+
+        const getReadableRowHeight = (values) => {
+          const longTextColumns = [
+            { index: 4, charsPerLine: 36 },  // Problem Description
+            { index: 5, charsPerLine: 28 },  // Root Cause
+            { index: 6, charsPerLine: 36 },  // Corrective Action
+            { index: 10, charsPerLine: 30 }, // Preventive Action
+            { index: 12, charsPerLine: 26 }, // Effectiveness
+          ]
+
+          const maxLines = longTextColumns.reduce((lineCount, col) => {
+            const value = String(values[col.index] || '').trim()
+            if (!value) return lineCount
+
+            const manualLines = value.split('\n').length
+            const estimatedLines = Math.ceil(value.length / col.charsPerLine)
+
+            return Math.max(lineCount, manualLines, estimatedLines)
+          }, 1)
+
+          // Let long data create enough space, but avoid unlimited row height.
+          const calculatedHeight = 20 + maxLines * 15
+          return Math.min(Math.max(calculatedHeight, 28), 180)
+        }
+
+        const setStandardCellStyle = (cell, alignment = left) => {
+          cell.font = normalFont
+          cell.border = borderStyle
+          cell.alignment = alignment
         }
 
         worksheet.mergeCells('A1:O1')
@@ -1105,6 +1271,12 @@ const MaintCalender = () => {
         worksheet.getCell('A7').fill = lightGreenFill
         worksheet.getCell('A7').alignment = left
 
+        worksheet.getRow(1).height = 18
+        worksheet.getRow(2).height = 30
+        worksheet.getRow(4).height = 24
+        worksheet.getRow(6).height = 22
+        worksheet.getRow(7).height = 24
+
         const headerLabels = [
           'No',
           'Machine/\nItem',
@@ -1124,7 +1296,7 @@ const MaintCalender = () => {
         ]
 
         const headerRow = worksheet.getRow(8)
-        headerRow.height = 34
+        headerRow.height = 42
         headerLabels.forEach((label, idx) => {
           const cell = headerRow.getCell(idx + 1)
           cell.value = label
@@ -1146,7 +1318,6 @@ const MaintCalender = () => {
 
           group.records.forEach((item, index) => {
             const row = worksheet.getRow(rowIndex)
-            row.height = 26
 
             const jobtime = Number(item.jobtime) || 0
             monthlyTotal += jobtime
@@ -1156,35 +1327,46 @@ const MaintCalender = () => {
               item.code || '',
               formatRequestDate(item.jobdate),
               item.requestby || '',
-              item.problem || '',
-              item.rootcause || '',
-              item.jobdetail || '',
+              breakLongText(item.problem || '', 34),
+              breakLongText(item.rootcause || '', 30),
+              breakLongText(item.jobdetail || '', 34),
               item.supplier || '',
               formatRequestDate(item.completiondate),
               formatMinutesToObjectiveTime(jobtime),
-              item.commentPreventive || '',
+              breakLongText(item.commentPreventive || '', 32),
               '',
-              item.comment || '',
+              breakLongText(item.comment || '', 30),
               '',
               Number(item.cost || 0) > 0 ? Number(item.cost || 0) : '-',
             ]
 
+            row.height = getReadableRowHeight(rowValues)
+
             rowValues.forEach((value, colIndex) => {
               const cell = row.getCell(colIndex + 1)
               cell.value = value
-              cell.font = normalFont
-              cell.border = borderStyle
-              cell.alignment = colIndex === 0 || colIndex === 9 || colIndex === 14 ? center : left
+
+              const centeredColumns = [0, 1, 2, 3, 7, 8, 9, 11, 14]
+              setStandardCellStyle(cell, centeredColumns.includes(colIndex) ? center : left)
             })
 
             row.getCell(4).fill = yellowFill
             row.getCell(12).fill = yellowFill
 
+            if (isOverKpiJobTime(jobtime)) {
+              row.getCell(10).font = {
+                name: 'Arial',
+                size: 10,
+                bold: true,
+                color: { argb: 'FFFF0000' },
+              }
+            }
+
             rowIndex += 1
           })
 
           const totalRow = worksheet.getRow(rowIndex)
-          totalRow.height = 22
+          totalRow.height = 24
           totalRow.getCell(3).value = monthTitle(group.monthIndex)
           totalRow.getCell(3).font = boldFont
           totalRow.getCell(3).alignment = left
@@ -1197,6 +1379,10 @@ const MaintCalender = () => {
           for (let colNo = 1; colNo <= 15; colNo++) {
             const cell = totalRow.getCell(colNo)
             cell.border = borderStyle
+            if (!cell.font) cell.font = normalFont
+            if (!cell.alignment) {
+              cell.alignment = colNo === 10 ? center : left
+            }
           }
 
           rowIndex += 1
